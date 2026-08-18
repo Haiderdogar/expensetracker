@@ -111,12 +111,16 @@ class AppShell extends StatelessWidget {
                                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
                                             ),
                                             const SizedBox(height: 12),
-                                            Row(
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 4,
                                               children: [
                                                 ElevatedButton.icon(
                                                   style: ElevatedButton.styleFrom(
                                                     backgroundColor: Colors.white24,
                                                     elevation: 0,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                    minimumSize: const Size(0, 36),
                                                   ),
                                                   onPressed: () {
                                                     Navigator.of(context).pop();
@@ -125,12 +129,15 @@ class AppShell extends StatelessWidget {
                                                   icon: const Icon(Icons.edit, color: Colors.white, size: 18),
                                                   label: const Text('View profile', style: TextStyle(color: Colors.white)),
                                                 ),
-                                                const SizedBox(width: 8),
                                                 TextButton(
                                                   onPressed: () {
                                                     Navigator.of(context).pop();
                                                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
                                                   },
+                                                  style: TextButton.styleFrom(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                                    minimumSize: const Size(0, 36),
+                                                  ),
                                                   child: const Text('Settings', style: TextStyle(color: Colors.white)),
                                                 ),
                                               ],
