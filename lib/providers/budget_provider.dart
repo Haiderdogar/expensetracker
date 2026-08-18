@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/database/database_tables.dart';
+import '../models/category_model.dart';
 import '../core/utils/error_handler.dart';
 import '../core/utils/formatters.dart';
 import '../models/budget_model.dart';
@@ -113,15 +114,18 @@ Future<List<BudgetProgress>> currentMonthBudgetProgress(
             Formatters.monthYear(DateTime.parse(t.date)) == monthKey)
         .fold(0.0, (s, t) => s + t.amount);
 
-    final category = categories.firstWhere(
-      (c) => c.id == budget.categoryId,
-      orElse: () => throw ErrorHandler.from(Exception('category')),
-    );
+    // Resolve category name safely. If category has been deleted, fall back to 'Unknown'.
+    CategoryModel? category;
+    try {
+      category = categories.firstWhere((c) => c.id == budget.categoryId);
+    } catch (_) {
+      category = null;
+    }
 
     return BudgetProgress(
       budget: budget,
       spent: spent,
-      categoryName: category.name,
+      categoryName: category?.name ?? 'Unknown',
     );
   }).toList();
 }

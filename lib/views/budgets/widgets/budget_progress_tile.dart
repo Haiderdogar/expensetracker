@@ -31,9 +31,11 @@ class BudgetProgressTile extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  progress.categoryName,
-                  style: Theme.of(context).textTheme.titleSmall,
+                Expanded(
+                  child: Text(
+                    progress.categoryName,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                 ),
                 Text(
                   '${pct.toStringAsFixed(0)}%',
@@ -43,6 +45,64 @@ class BudgetProgressTile extends ConsumerWidget {
                         : AppColors.primaryEmerald,
                     fontWeight: FontWeight.w600,
                   ),
+                ),
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  onSelected: (v) async {
+                    if (v == 'edit') {
+                      // simple inline edit dialog for amount
+                      final controller = TextEditingController(text: progress.budget.amount.toString());
+                      final result = await showDialog<String?>(
+                        context: context,
+                        builder: (dctx) => AlertDialog(
+                          title: const Text('Edit budget amount'),
+                          content: TextField(
+                            controller: controller,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(hintText: 'Amount'),
+                          ),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.of(dctx).pop(null), child: const Text('Cancel')),
+                            TextButton(onPressed: () => Navigator.of(dctx).pop(controller.text.trim()), child: const Text('Save')),
+                          ],
+                        ),
+                      );
+                      if (result != null && result.isNotEmpty) {
+                        try {
+                          final newAmt = double.parse(result);
+                          final updated = progress.budget.copyWith(amount: newAmt);
+                          await ref.read(budgetsProvider.notifier).upsert(updated);
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Budget updated')));
+                        } catch (e) {
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
+                        }
+                      }
+                    } else if (v == 'delete') {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (dctx) => AlertDialog(
+                          title: const Text('Delete budget'),
+                          content: Text('Delete budget for "${progress.categoryName}"?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
+                            TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        try {
+                          await ref.read(budgetsProvider.notifier).delete(progress.budget.id);
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Budget deleted')));
+                        } catch (e) {
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
+                        }
+                      }
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  ],
                 ),
               ],
             ),
@@ -62,6 +122,13 @@ class BudgetProgressTile extends ConsumerWidget {
               '${Formatters.currency(progress.budget.amount, symbol: symbol)}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
+            if (overBudget) ...[
+              const SizedBox(height: 8),
+              Text('Over budget', style: TextStyle(color: AppColors.expenseRed, fontWeight: FontWeight.bold)),
+            ] else if (progress.remaining / progress.budget.amount <= 0.1) ...[
+              const SizedBox(height: 8),
+              Text('Near budget limit', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600)),
+            ],
           ],
         ),
       ),
