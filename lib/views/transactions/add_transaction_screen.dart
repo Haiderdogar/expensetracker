@@ -40,15 +40,15 @@ class AddTransactionScreen extends StatelessWidget {
         // Initialize once when editing
         final initialized = ref.watch(_initializedAddTxProvider);
         if (!initialized && _isEditing) {
-          final t = transaction!;
-          ref.read(_titleProvider.notifier).state = t.title;
-          ref.read(_amountProvider.notifier).state = t.amount.toString();
-          ref.read(_noteProvider.notifier).state = t.note ?? '';
-          ref.read(_typeProvider.notifier).state = t.type;
-          ref.read(_categoryIdProvider.notifier).state = t.categoryId;
-          ref.read(_walletIdProvider.notifier).state = t.walletId;
-          ref.read(_dateProvider.notifier).state = DateTime.parse(t.date);
-          ref.read(_initializedAddTxProvider.notifier).state = true;
+           final t = transaction!;
+           ref.read(_titleProvider.notifier).state = t.title;
+           ref.read(_amountProvider.notifier).state = t.amount.toString();
+           ref.read(_noteProvider.notifier).state = t.note ?? '';
+           ref.read(_typeProvider.notifier).state = t.type;
+           ref.read(_categoryIdProvider.notifier).state = t.categoryId;
+           // keep existing wallet on edit (wallet selection removed from UI)
+           ref.read(_dateProvider.notifier).state = DateTime.parse(t.date);
+           ref.read(_initializedAddTxProvider.notifier).state = true;
         }
 
         final title = ref.watch(_titleProvider);
@@ -91,6 +91,20 @@ class AddTransactionScreen extends StatelessWidget {
             final parsedAmount = double.parse(amount);
             final notifier = ref.read(transactionsProvider.notifier);
 
+            // Determine walletId to use: prefer selectedWalletIdProvider, else first available wallet
+            String? walletIdToUse = ref.read(selectedWalletIdProvider);
+            if (walletIdToUse == null) {
+              final wallets = ref.read(walletsProvider).value ?? [];
+              if (wallets.isNotEmpty) {
+                walletIdToUse = wallets.first.id;
+              }
+            }
+
+            if (walletIdToUse == null) {
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Create a wallet first')));
+              return;
+            }
+
             if (_isEditing) {
               await notifier.updateTransaction(
                 transaction!.copyWith(
@@ -108,6 +122,7 @@ class AddTransactionScreen extends StatelessWidget {
                 amount: parsedAmount,
                 type: type,
                 categoryId: categoryId,
+                walletId: walletIdToUse,
                 date: Formatters.isoDateTimeWithCurrentTime(date),
                 note: note.trim().isEmpty ? null : note.trim(),
               );
