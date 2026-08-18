@@ -6,6 +6,7 @@ import '../../core/utils/formatters.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
+import 'package:currency_picker/currency_picker.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
@@ -20,7 +21,6 @@ final _amountProvider = StateProvider.autoDispose<String>((ref) => '');
 final _noteProvider = StateProvider.autoDispose<String>((ref) => '');
 final _typeProvider = StateProvider.autoDispose<String>((ref) => 'expense');
 final _categoryIdProvider = StateProvider.autoDispose<String?>((ref) => null);
-final _walletIdProvider = StateProvider.autoDispose<String?>((ref) => null);
 final _dateProvider = StateProvider.autoDispose<DateTime>(
   (ref) => DateTime.now(),
 );
@@ -56,12 +56,10 @@ class AddTransactionScreen extends StatelessWidget {
         final note = ref.watch(_noteProvider);
         final type = ref.watch(_typeProvider);
         final categoryId = ref.watch(_categoryIdProvider);
-        final walletId = ref.watch(_walletIdProvider);
         final date = ref.watch(_dateProvider);
         final loading = ref.watch(_loadingProvider);
 
         final categoriesAsync = ref.watch(categoriesProvider);
-        final walletsAsync = ref.watch(walletsProvider);
 
         final categories = (categoriesAsync.value ?? [])
             .where((c) => c.type == type)
@@ -81,9 +79,9 @@ class AddTransactionScreen extends StatelessWidget {
 
         Future<void> save() async {
           if (!formKey.currentState!.validate()) return;
-          if (categoryId == null || walletId == null) {
+          if (categoryId == null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Select category and wallet')),
+              const SnackBar(content: Text('Select category')),
             );
             return;
           }
@@ -100,7 +98,6 @@ class AddTransactionScreen extends StatelessWidget {
                   amount: parsedAmount,
                   type: type,
                   categoryId: categoryId,
-                  walletId: walletId,
                   date: Formatters.isoDateTimeWithCurrentTime(date),
                   note: note.trim().isEmpty ? null : note.trim(),
                 ),
@@ -111,7 +108,6 @@ class AddTransactionScreen extends StatelessWidget {
                 amount: parsedAmount,
                 type: type,
                 categoryId: categoryId,
-                walletId: walletId,
                 date: Formatters.isoDateTimeWithCurrentTime(date),
                 note: note.trim().isEmpty ? null : note.trim(),
               );
@@ -284,47 +280,51 @@ class AddTransactionScreen extends StatelessWidget {
                     );
                   },
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  AppStrings.wallet,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-                const SizedBox(height: 8),
-                walletsAsync.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (e, _) => Text(e.toString()),
-                  data: (wallets) {
-                    if (wallets.isEmpty) {
-                      return const Text('Create a wallet first.');
-                    }
-                    final defaultWalletId = walletId ?? wallets.first.id;
-                    if (walletId == null) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        ref.read(_walletIdProvider.notifier).state =
-                            defaultWalletId;
-                      });
-                    }
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: wallets.map<Widget>((w) {
-                        final selected = (walletId ?? defaultWalletId) == w.id;
-                        return ChoiceChip(
-                          label: Text(w.name),
-                          selected: selected,
-                          onSelected: (_) async {
-                            ref.read(_walletIdProvider.notifier).state = w.id;
-                            ref.read(selectedWalletIdProvider.notifier).state = w.id;
-                            try {
-                              await ref.read(databaseHelperProvider).setSelectedWalletId(w.id);
-                            } catch (e) {
-                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                            }
-                          },
-                        );
-                      }).toList(),
-                    );
-                  },
+                const SizedBox(height: 12),
+                // Currency picker
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Currency'),
+                  subtitle: Text(ref.watch(currencySymbolProvider).value ?? '\$'),
+                  trailing: TextButton(
+                    onPressed: () {
+                      showCurrencyPicker(
+                        context: context,
+                        showFlag: true,
+                        showCurrencyName: true,
+                        showCurrencyCode: true,
+                        showSearchField: true,
+                        theme: CurrencyPickerThemeData(
+                          flagSize: 24,
+                          titleTextStyle: Theme.of(context).textTheme.titleMedium,
+                          subtitleTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
+                          bottomSheetHeight: MediaQuery.of(context).size.height * 0.6,
+                          inputDecoration: InputDecoration(
+                            labelText: 'Search',
+                            hintText: 'Start typing to search',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Theme.of(context).hintColor.withOpacity(0.2),
+                              ),
+                            ),
+                          ),
+                        ),
+                        onSelect: (Currency currency) async {
+                          // Save symbol and code in settings
+                          try {
+                            await ref.read(databaseHelperProvider).setCurrencySymbol(currency.symbol);
+                            await ref.read(databaseHelperProvider).setSetting('currency_code', currency.code);
+                            ref.invalidate(currencySymbolProvider);
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Currency set to ${currency.code}')));
+                          } catch (e) {
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                          }
+                        },
+                      );
+                    },
+                    child: const Text('Change'),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 ListTile(

@@ -24,6 +24,7 @@ dependencies:
   crypto: ^3.0.7
   file_picker: ^10.3.8
   share_plus: ^10.1.4
+  currency_picker: ^2.0.22
 
 dev_dependencies:
   flutter_test:
