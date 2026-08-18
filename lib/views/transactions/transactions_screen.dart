@@ -41,11 +41,12 @@ class TransactionsScreen extends StatelessWidget {
           floatingActionButton: Padding(
             padding: const EdgeInsets.only(bottom: 90),
             child: FloatingActionButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const AddTransactionScreen()),
-              ),
-              child: const Icon(Icons.add),
-            ),
+                          heroTag: 'fab_transactions',
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(builder: (_) => const AddTransactionScreen()),
+                          ),
+                          child: const Icon(Icons.add),
+                        ),
           ),
           body: Column(
             children: [

@@ -44,6 +44,7 @@ class BudgetsScreen extends ConsumerWidget {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 90),
         child: FloatingActionButton(
+          heroTag: 'fab_budgets',
           onPressed: () => _showAddBudget(context),
           child: const Icon(Icons.add),
         ),
