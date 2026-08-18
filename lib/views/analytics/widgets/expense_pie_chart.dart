@@ -37,16 +37,17 @@ class ExpensePieChart extends ConsumerWidget {
               centerSpaceRadius: 40,
               sections: List.generate(entries.length, (i) {
                 final entry = entries[i];
-                final color = AppColors.primaryEmerald.withValues(
-                  alpha: 1 - (i * 0.12),
-                );
+                // Generate visually distinct palette using HSL hues
+                final hue = (i * 360 / entries.length) % 360;
+                final color = HSLColor.fromAHSL(1.0, hue, 0.6, 0.5).toColor();
+                final titleColor = color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
                 return PieChartSectionData(
                   value: entry.value,
                   title: '${(entry.value / total * 100).toStringAsFixed(0)}%',
                   color: color,
                   radius: 60,
-                  titleStyle: const TextStyle(
-                    color: Colors.white,
+                  titleStyle: TextStyle(
+                    color: titleColor,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),

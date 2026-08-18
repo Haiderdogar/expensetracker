@@ -83,6 +83,10 @@ class BackupService extends _$BackupService {
 
 @riverpod
 Future<Map<String, double>> expenseByCategory(Ref ref) async {
+  // Depend on transactions and categories so this provider auto-refreshes when they change
+  await ref.watch(transactionsProvider.future);
+  await ref.watch(categoriesProvider.future);
+
   final db = await ref.watch(databaseProvider.future);
   final rows = await db.rawQuery('''
     SELECT c.name, c.color, SUM(t.amount) as total
@@ -103,6 +107,9 @@ Future<Map<String, double>> expenseByCategory(Ref ref) async {
 Future<List<MapEntry<String, double>>> monthlySpendingTrend(
   Ref ref,
 ) async {
+  // Depend on transactions so chart refreshes automatically on changes
+  await ref.watch(transactionsProvider.future);
+
   final db = await ref.watch(databaseProvider.future);
   final rows = await db.rawQuery('''
     SELECT substr(date, 1, 7) as month, SUM(amount) as total

@@ -29,15 +29,42 @@ class SpendingBarChart extends ConsumerWidget {
         final maxY = trend.map((e) => e.value).reduce((a, b) => a > b ? a : b);
 
         return SizedBox(
-          height: 220,
+          height: 260,
           child: BarChart(
             BarChartData(
-              maxY: maxY * 1.2,
+              maxY: maxY * 1.25,
               gridData: const FlGridData(show: false),
               borderData: FlBorderData(show: false),
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchTooltipData: BarTouchTooltipData(
+                  tooltipBgColor: Theme.of(context).cardColor,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final month = trend[group.x.toInt()].key;
+                    final value = trend[group.x.toInt()].value;
+                    String subtitle = Formatters.currency(value, symbol: ref.watch(currencySymbolProvider).value ?? '\$');
+                    // percentage change from previous month
+                    if (group.x.toInt() > 0) {
+                      final prev = trend[group.x.toInt() - 1].value;
+                      if (prev > 0) {
+                        final change = ((value - prev) / prev) * 100;
+                        subtitle += '\n${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}% vs prev';
+                      }
+                    }
+                    return BarTooltipItem('$month\n', const TextStyle(fontWeight: FontWeight.bold))
+                      .merge(TextSpan(text: subtitle).toTextSpan());
+                  },
+                ),
+              ),
               titlesData: FlTitlesData(
-                leftTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      return Text(Formatters.currency(value, symbol: ref.watch(currencySymbolProvider).value ?? '\$'), style: const TextStyle(fontSize: 10));
+                    },
+                    reservedSize: 64,
+                  ),
                 ),
                 topTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
@@ -61,13 +88,17 @@ class SpendingBarChart extends ConsumerWidget {
                 ),
               ),
               barGroups: List.generate(trend.length, (i) {
+                final val = trend[i].value;
+                // color ramp based on value
+                final hue = (120 - (i * 8)).clamp(0, 240).toDouble();
+                final color = HSLColor.fromAHSL(1.0, hue, 0.6, 0.45).toColor();
                 return BarChartGroupData(
                   x: i,
                   barRods: [
                     BarChartRodData(
-                      toY: trend[i].value,
-                      color: AppColors.mintAccent,
-                      width: 16,
+                      toY: val,
+                      color: color,
+                      width: 18,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(6),
                       ),
