@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../core/constants/app_strings.dart';
@@ -6,7 +6,6 @@ import '../../core/utils/formatters.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
-import 'package:currency_picker/currency_picker.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -62,9 +61,9 @@ class AddTransactionScreen extends StatelessWidget {
 
         final categoriesAsync = ref.watch(categoriesProvider);
 
-        final categories = (categoriesAsync.value ?? [])
-            .where((c) => c.type == type)
-            .toList();
+        // final categories = (categoriesAsync.value ?? [])
+        //     .where((c) => c.type == type)
+        //     .toList();
 
         final formKey = GlobalKey<FormState>();
 
@@ -297,61 +296,6 @@ class AddTransactionScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 12),
-                // Currency picker
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Currency'),
-                  // show currency code (e.g., PKR, USD) instead of an icon
-                  subtitle: Consumer(builder: (cctx, cref, _) {
-                    final codeAsync = cref.watch(currencyCodeProvider);
-                    final symbolAsync = cref.watch(currencySymbolProvider);
-                    return codeAsync.when(
-                      loading: () => Text(symbolAsync.value ?? '\$'),
-                      error: (_, __) => Text(symbolAsync.value ?? '\$'),
-                      data: (code) => Text(code ?? (symbolAsync.value ?? '\$')),
-                    );
-                  }),
-                  trailing: TextButton(
-                    onPressed: () {
-                      showCurrencyPicker(
-                        context: context,
-                        showFlag: true,
-                        showCurrencyName: true,
-                        showCurrencyCode: true,
-                        showSearchField: true,
-                        theme: CurrencyPickerThemeData(
-                          flagSize: 24,
-                          titleTextStyle: Theme.of(context).textTheme.titleMedium,
-                          subtitleTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
-                          bottomSheetHeight: MediaQuery.of(context).size.height * 0.6,
-                          inputDecoration: InputDecoration(
-                            labelText: 'Search',
-                            hintText: 'Start typing to search',
-                            prefixIcon: const Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Theme.of(context).hintColor.withOpacity(0.2),
-                              ),
-                            ),
-                          ),
-                        ),
-                        onSelect: (Currency currency) async {
-                          // Save symbol and code in settings
-                          try {
-                            await ref.read(databaseHelperProvider).setCurrencySymbol(currency.symbol);
-                            await ref.read(databaseHelperProvider).setSetting('currency_code', currency.code);
-                            ref.invalidate(currencySymbolProvider);
-                            ref.invalidate(currencyCodeProvider);
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Currency set to ${currency.code}')));
-                          } catch (e) {
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                          }
-                        },
-                      );
-                    },
-                    child: const Text('Change'),
-                  ),
-                ),
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
