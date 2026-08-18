@@ -8,6 +8,7 @@ import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
 import 'package:currency_picker/currency_picker.dart';
 import '../../providers/database_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
