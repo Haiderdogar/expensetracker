@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DrawerItem extends StatelessWidget {
-  const _DrawerItem({
+  const DrawerItem({
     required this.icon,
     required this.label,
     required this.onTap,
