@@ -8,6 +8,8 @@ import 'package:share_plus/share_plus.dart';
 import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
 import 'database_provider.dart';
+import 'transaction_provider.dart';
+import 'category_provider.dart';
 
 part 'backup_provider.g.dart';
 

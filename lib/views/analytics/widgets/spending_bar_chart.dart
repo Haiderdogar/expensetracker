@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../providers/backup_provider.dart';
+import '../../../providers/auth_provider.dart';
 
 class SpendingBarChart extends ConsumerWidget {
   const SpendingBarChart({super.key});
@@ -38,11 +40,12 @@ class SpendingBarChart extends ConsumerWidget {
               barTouchData: BarTouchData(
                 enabled: true,
                 touchTooltipData: BarTouchTooltipData(
-                  tooltipBgColor: Theme.of(context).cardColor,
+                  // build a simple tooltip text combining month and formatted value
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final month = trend[group.x.toInt()].key;
                     final value = trend[group.x.toInt()].value;
-                    String subtitle = Formatters.currency(value, symbol: ref.watch(currencySymbolProvider).value ?? '\$');
+                    final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
+                    String subtitle = Formatters.currency(value, symbol: symbol);
                     // percentage change from previous month
                     if (group.x.toInt() > 0) {
                       final prev = trend[group.x.toInt() - 1].value;
@@ -51,8 +54,7 @@ class SpendingBarChart extends ConsumerWidget {
                         subtitle += '\n${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}% vs prev';
                       }
                     }
-                    return BarTooltipItem('$month\n', const TextStyle(fontWeight: FontWeight.bold))
-                      .merge(TextSpan(text: subtitle).toTextSpan());
+                    return BarTooltipItem('$month\n$subtitle', TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color));
                   },
                 ),
               ),
