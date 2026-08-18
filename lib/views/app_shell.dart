@@ -107,7 +107,7 @@ class AppShell extends StatelessWidget {
                                             ),
                                             const SizedBox(height: 6),
                                             Text(
-                                              email.isNotEmpty ? email : AppStrings.addProfileHint,
+                                              email.isNotEmpty ? email : 'Add your details',
                                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
                                             ),
                                             const SizedBox(height: 12),
@@ -206,6 +206,7 @@ class AppShell extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ),
           body: IndexedStack(index: index, children: screens),
           extendBody: true,
           bottomNavigationBar: GlassNavbar(
