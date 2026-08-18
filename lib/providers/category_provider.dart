@@ -6,6 +6,7 @@ import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
 import '../models/category_model.dart';
 import 'database_provider.dart';
+import 'transaction_provider.dart';
 
 part 'category_provider.g.dart';
 
@@ -64,6 +65,16 @@ class Categories extends _$Categories {
     await add(category);
     return category;
   }
+
+  Future<void> delete(String id) async {
+    try {
+      final db = await ref.read(databaseProvider.future);
+      await db.delete(DatabaseTables.categories, where: 'id = ?', whereArgs: [id]);
+      await refresh();
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
 }
 
 @riverpod
@@ -79,3 +90,12 @@ Future<List<CategoryModel>> expenseCategories(Ref ref) async {
         (list) => list.where((c) => c.isExpense).toList(),
       );
 }
+
+// Categories that are actually used in transactions. Returns categories of the
+// given type that have at least one transaction referencing them.
+final usedCategoriesProvider = FutureProvider.family<List<CategoryModel>, String?>((ref, type) async {
+  final all = await ref.watch(categoriesProvider.future);
+  final txs = await ref.watch(transactionsProvider.future);
+  final usedIds = txs.map((t) => t.categoryId).toSet();
+  return all.where((c) => usedIds.contains(c.id) && (type == null || c.type == type)).toList();
+});

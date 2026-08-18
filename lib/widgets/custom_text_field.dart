@@ -9,6 +9,7 @@ class CustomTextField extends StatelessWidget {
     this.hint,
     this.keyboardType,
     this.prefixIcon,
+    this.prefix,
     this.suffixIcon,
     this.obscureText = false,
     this.maxLines = 1,
@@ -21,7 +22,10 @@ class CustomTextField extends StatelessWidget {
   final String? initialValue;
   final String? hint;
   final TextInputType? keyboardType;
+  // Backwards-compatible icon parameter
   final IconData? prefixIcon;
+  // New: allow a full widget prefix (e.g., currency symbol Text)
+  final Widget? prefix;
   final Widget? suffixIcon;
   final bool obscureText;
   final int maxLines;
@@ -45,7 +49,7 @@ class CustomTextField extends StatelessWidget {
             onChanged: onChanged,
             decoration: InputDecoration(
               hintText: hint,
-              prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+              prefixIcon: prefix ?? (prefixIcon != null ? Icon(prefixIcon) : null),
               suffixIcon: suffixIcon,
             ),
           )
@@ -59,7 +63,7 @@ class CustomTextField extends StatelessWidget {
             onChanged: onChanged,
             decoration: InputDecoration(
               hintText: hint,
-              prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+              prefixIcon: prefix ?? (prefixIcon != null ? Icon(prefixIcon) : null),
               suffixIcon: suffixIcon,
             ),
           ),
@@ -67,3 +71,4 @@ class CustomTextField extends StatelessWidget {
     );
   }
 }
+

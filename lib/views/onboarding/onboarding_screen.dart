@@ -114,7 +114,10 @@ class OnboardingScreen extends StatelessWidget {
                     initialValue: currency,
                     label: 'Custom currency',
                     hint: 'PKR, USD, AED, etc.',
-                    prefixIcon: Icons.attach_money,
+                    prefix: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: Text(currency),
+                    ),
                     onChanged: (value) {
                       final sanitized = value.trim();
                       if (sanitized.isNotEmpty) {

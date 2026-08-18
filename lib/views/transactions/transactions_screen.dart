@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/global_keys.dart';
 import '../../providers/transaction_provider.dart';
 import '../../widgets/shimmer_loader.dart';
 import 'add_transaction_screen.dart';
@@ -12,6 +13,7 @@ import 'widgets/transaction_tile.dart';
 
 final _searchProvider = StateProvider<String>((ref) => '');
 final _typeFilterProvider = StateProvider<String?>((ref) => null);
+final _categoryFilterProvider = StateProvider<List<String>?>((ref) => null);
 
 class TransactionsScreen extends StatelessWidget {
   const TransactionsScreen({super.key});
@@ -22,12 +24,19 @@ class TransactionsScreen extends StatelessWidget {
       builder: (context, ref, _) {
         final type = ref.watch(_typeFilterProvider);
         final search = ref.watch(_searchProvider);
+        final categoryFilter = ref.watch(_categoryFilterProvider);
         final transactionsAsync = ref.watch(
-          filteredTransactionsProvider(type: type, search: search),
+          filteredTransactionsProvider(type: type, search: search, categories: categoryFilter),
         );
 
         return Scaffold(
-          appBar: AppBar(title: const Text(AppStrings.transactions)),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => appShellScaffoldKey.currentState?.openDrawer(),
+            ),
+            title: const Text(AppStrings.transactions),
+          ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           floatingActionButton: Padding(
             padding: const EdgeInsets.only(bottom: 90),
@@ -44,8 +53,10 @@ class TransactionsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: TransactionFilter(
                   selectedType: type,
+                  selectedCategories: categoryFilter,
                   onTypeChanged: (v) => ref.read(_typeFilterProvider.notifier).state = v,
                   onSearchChanged: (v) => ref.read(_searchProvider.notifier).state = v,
+                  onCategorySelected: (v) => ref.read(_categoryFilterProvider.notifier).state = v,
                 ),
               ),
               Expanded(

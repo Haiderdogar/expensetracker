@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -8,6 +9,21 @@ import '../models/wallet_model.dart';
 import 'database_provider.dart';
 
 part 'wallet_provider.g.dart';
+
+final selectedWalletIdProvider = StateProvider<String?>((ref) => null);
+
+@riverpod
+String activeWalletName(Ref ref) {
+  final selectedId = ref.watch(selectedWalletIdProvider);
+  final wallets = ref.watch(walletsProvider).value ?? const <WalletModel>[];
+  if (selectedId != null) {
+    for (final wallet in wallets) {
+      if (wallet.id == selectedId) return wallet.name;
+    }
+  }
+  if (wallets.isNotEmpty) return wallets.first.name;
+  return 'Wallet';
+}
 
 @Riverpod(keepAlive: true)
 class Wallets extends _$Wallets {

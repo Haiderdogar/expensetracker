@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/theme_provider.dart';
+import '../../core/utils/global_keys.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/backup_provider.dart';
 import '../../providers/budget_provider.dart';
@@ -104,7 +105,13 @@ class SettingsScreen extends ConsumerWidget {
     final pinEnabledAsync = ref.watch(pinEnabledProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.settings)),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () => appShellScaffoldKey.currentState?.openDrawer(),
+        ),
+        title: const Text(AppStrings.settings),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
         children: [
@@ -206,6 +213,167 @@ class SettingsScreen extends ConsumerWidget {
               ),
               onTap: () => _toggleBiometric(context, ref, !enabled),
             ),
+          ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text('Manage categories', style: Theme.of(context).textTheme.titleSmall),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final nameController = TextEditingController();
+                    String type = 'expense';
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (dctx) => AlertDialog(
+                        title: const Text('Add category'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextField(controller: nameController, decoration: const InputDecoration(hintText: 'Name')),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Radio<String>(value: 'expense', groupValue: type, onChanged: (v) => type = v ?? 'expense'),
+                                const Text('Expense'),
+                                const SizedBox(width: 12),
+                                Radio<String>(value: 'income', groupValue: type, onChanged: (v) => type = v ?? 'income'),
+                                const Text('Income'),
+                              ],
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Save')),
+                        ],
+                      ),
+                    );
+                    if (result != true) return;
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) return;
+                    try {
+                      await ref.read(categoriesProvider.notifier).create(
+                        name: name,
+                        type: type,
+                        icon: type == 'income' ? 'work' : 'shopping_bag',
+                        color: type == 'income' ? '#2ECC71' : '#FF6B6B',
+                      );
+                      ref.invalidate(categoriesProvider);
+                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category added')));
+                    } catch (e) {
+                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add category'),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Consumer(builder: (cctx, cref, _) {
+              final all = cref.watch(categoriesProvider);
+              return all.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (e, _) => Text(e.toString()),
+                data: (cats) {
+                  if (cats.isEmpty) return const Text('No categories yet');
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: cats.map((c) {
+                      return InputChip(
+                        label: Text('${c.name} (${c.type})'),
+                        onPressed: () {},
+                        onDeleted: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (dctx) => AlertDialog(
+                              title: const Text('Delete category'),
+                              content: Text('Delete "${c.name}"? This cannot be undone.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
+                                TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            try {
+                              await cref.read(categoriesProvider.notifier).delete(c.id);
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category deleted')));
+                            } catch (e) {
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
+                          }
+                        },
+                      );
+                    }).toList(),
+                  );
+                },
+              );
+            }),
+          ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text('Currency', style: Theme.of(context).textTheme.titleSmall),
+          ),
+          FutureBuilder<String>(
+            future: ref.read(databaseHelperProvider).getCurrencySymbol(),
+            builder: (ctx, snap) {
+              final current = snap.data ?? '\$';
+              return ListTile(
+                leading: const Icon(Icons.money),
+                title: Text('Currency: $current'),
+                trailing: TextButton(
+                  onPressed: () async {
+                    final chosen = await showDialog<String>(
+                      context: context,
+                      builder: (dctx) {
+                        final controller = TextEditingController();
+                        final options = ['\$', 'PKR', 'USD', 'AED', 'SAR', 'JPY'];
+                        return AlertDialog(
+                          title: const Text('Select currency'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Wrap(
+                                spacing: 8,
+                                children: options.map((o) => ElevatedButton(onPressed: () => Navigator.of(dctx).pop(o), child: Text(o))).toList(),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: controller,
+                                decoration: const InputDecoration(hintText: 'Custom (PKR, USD, etc.)'),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.of(dctx).pop(null), child: const Text('Cancel')),
+                            TextButton(onPressed: () => Navigator.of(dctx).pop(controller.text.trim().isEmpty ? null : controller.text.trim()), child: const Text('Save')),
+                          ],
+                        );
+                      },
+                    );
+                    if (chosen == null || chosen.isEmpty) return;
+                    try {
+                      await ref.read(databaseHelperProvider).setCurrencySymbol(chosen);
+                      ref.invalidate(currencySymbolProvider);
+                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Currency updated')));
+                    } catch (e) {
+                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                    }
+                  },
+                  child: const Text('Change'),
+                ),
+              );
+            },
           ),
           const Divider(),
           SettingsTile(

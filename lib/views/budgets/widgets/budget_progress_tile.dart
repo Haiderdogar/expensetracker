@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -11,10 +11,7 @@ import '../../../providers/category_provider.dart';
 import '../../../widgets/custom_button.dart';
 
 class BudgetProgressTile extends ConsumerWidget {
-  const BudgetProgressTile({
-    super.key,
-    required this.progress,
-  });
+  const BudgetProgressTile({super.key, required this.progress});
 
   final BudgetProgress progress;
 
@@ -41,7 +38,9 @@ class BudgetProgressTile extends ConsumerWidget {
                 Text(
                   '${pct.toStringAsFixed(0)}%',
                   style: TextStyle(
-                    color: overBudget ? AppColors.expenseRed : AppColors.primaryEmerald,
+                    color: overBudget
+                        ? AppColors.expenseRed
+                        : AppColors.primaryEmerald,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -70,73 +69,125 @@ class BudgetProgressTile extends ConsumerWidget {
   }
 }
 
-final _addBudgetCategoryProvider =  StateProvider.autoDispose<String?>((ref) => null);
+final _addBudgetCategoryProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
 final _addBudgetAmountProvider = StateProvider.autoDispose<String>((ref) => '');
-final _addBudgetLoadingProvider = StateProvider.autoDispose<bool>((ref) => false);
+final _addBudgetLoadingProvider = StateProvider.autoDispose<bool>(
+  (ref) => false,
+);
 
 class AddBudgetSheet extends StatelessWidget {
   const AddBudgetSheet({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer(builder: (context, ref, _) {
-      final categories = ref.watch(expenseCategoriesProvider);
-      final selectedCategory = ref.watch(_addBudgetCategoryProvider);
-      final amount = ref.watch(_addBudgetAmountProvider);
-      final loading = ref.watch(_addBudgetLoadingProvider);
+    return Consumer(
+      builder: (context, ref, _) {
+        final categories = ref.watch(expenseCategoriesProvider);
+        final selectedCategory = ref.watch(_addBudgetCategoryProvider);
+        final amount = ref.watch(_addBudgetAmountProvider);
+        final loading = ref.watch(_addBudgetLoadingProvider);
 
-      Future<void> save() async {
-        if (selectedCategory == null || amount.isEmpty) return;
-        ref.read(_addBudgetLoadingProvider.notifier).state = true;
-        try {
-          await ref.read(budgetsProvider.notifier).create(
-                categoryId: selectedCategory,
-                amount: double.parse(amount),
-              );
-          if (context.mounted) Navigator.of(context).pop();
-        } finally {
-          if (context.mounted) ref.read(_addBudgetLoadingProvider.notifier).state = false;
+        Future<void> save() async {
+          if (selectedCategory == null || amount.isEmpty) return;
+          ref.read(_addBudgetLoadingProvider.notifier).state = true;
+          try {
+            await ref
+                .read(budgetsProvider.notifier)
+                .create(
+                  categoryId: selectedCategory,
+                  amount: double.parse(amount),
+                );
+            if (context.mounted) Navigator.of(context).pop();
+          } finally {
+            if (context.mounted)
+              ref.read(_addBudgetLoadingProvider.notifier).state = false;
+          }
         }
-      }
 
-      return Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(AppStrings.addBudget, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 16),
-            categories.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text(e.toString()),
-              data: (cats) => DropdownButtonFormField<String>(
-                decoration: const InputDecoration(hintText: 'Category'),
-                initialValue: selectedCategory,
-                items: cats.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                onChanged: (v) => ref.read(_addBudgetCategoryProvider.notifier).state = v,
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                AppStrings.addBudget,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(hintText: 'Budget amount'),
-              onChanged: (v) => ref.read(_addBudgetAmountProvider.notifier).state = v,
-            ),
-            const SizedBox(height: 16),
-            CustomButton(
-              label: AppStrings.save,
-              isLoading: loading,
-              onPressed: save,
-            ),
-          ],
-        ),
-      );
-    });
+              const SizedBox(height: 16),
+              categories.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (e, _) => Text(e.toString()),
+                data: (cats) {
+                  if (cats.isEmpty) {
+                    return const Text('No expense categories yet.');
+                  }
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: cats.map((c) {
+                      final selected = selectedCategory == c.id;
+                      return GestureDetector(
+                        onLongPress: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (dctx) => AlertDialog(
+                              title: const Text('Delete category'),
+                              content: Text('Delete "${c.name}"? This cannot be undone.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
+                                TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            try {
+                              await ref.read(categoriesProvider.notifier).delete(c.id);
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category deleted')));
+                            } catch (e) {
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
+                          }
+                        },
+                        child: ChoiceChip(
+                          label: Text(c.name),
+                          selected: selected,
+                          onSelected: (_) => ref
+                                  .read(_addBudgetCategoryProvider.notifier)
+                                  .state =
+                              c.id,
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(hintText: 'Budget amount'),
+                onChanged: (v) =>
+                    ref.read(_addBudgetAmountProvider.notifier).state = v,
+              ),
+              const SizedBox(height: 16),
+              CustomButton(
+                label: AppStrings.save,
+                isLoading: loading,
+                onPressed: save,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

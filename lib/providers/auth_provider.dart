@@ -12,7 +12,6 @@ enum AuthStatus { loading, unauthenticated, authenticated, needsPinSetup }
 class AuthController extends _$AuthController {
   @override
   Future<AuthStatus> build() async {
-    await Future<void>.delayed(const Duration(seconds: 1));
     final storage = ref.read(secureStorageProvider);
     final hasPin = await storage.hasPin();
     final pinEnabled = await storage.isPinEnabled();

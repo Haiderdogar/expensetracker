@@ -81,11 +81,10 @@ class DatabaseHelper {
   Future<void> setSetting(String key, String value) async {
     try {
       final db = await database;
-      await db.insert(
-        DatabaseTables.settings,
-        {'key': key, 'value': value},
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await db.insert(DatabaseTables.settings, {
+        'key': key,
+        'value': value,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -106,5 +105,25 @@ class DatabaseHelper {
 
   Future<void> setCurrencySymbol(String symbol) async {
     await setSetting('currency_symbol', symbol);
+  }
+
+  Future<String?> getThemeMode() async {
+    return await getSetting('theme_mode');
+  }
+
+  Future<void> setThemeMode(String mode) async {
+    await setSetting('theme_mode', mode);
+  }
+
+  Future<String?> getSelectedWalletId() async {
+    return await getSetting('selected_wallet_id');
+  }
+
+  Future<void> setSelectedWalletId(String? walletId) async {
+    if (walletId == null || walletId.isEmpty) {
+      await setSetting('selected_wallet_id', '');
+      return;
+    }
+    await setSetting('selected_wallet_id', walletId);
   }
 }

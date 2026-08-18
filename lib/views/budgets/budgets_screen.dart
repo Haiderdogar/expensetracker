@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_strings.dart';
+import '../../core/utils/global_keys.dart';
 import '../../core/utils/formatters.dart';
 import '../../providers/budget_provider.dart';
 import '../../widgets/shimmer_loader.dart';
@@ -24,7 +25,13 @@ class BudgetsScreen extends ConsumerWidget {
     final monthLabel = Formatters.monthYearLabel(DateTime.now());
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.budgets)),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () => appShellScaffoldKey.currentState?.openDrawer(),
+        ),
+        title: const Text(AppStrings.budgets),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 90),

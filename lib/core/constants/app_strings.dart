@@ -5,6 +5,7 @@ abstract final class AppStrings {
   static const String analytics = 'Analytics';
   static const String budgets = 'Budgets';
   static const String settings = 'Settings';
+  static const String profile = 'Profile';
 
   static const String totalBalance = 'Total Balance';
   static const String income = 'Income';

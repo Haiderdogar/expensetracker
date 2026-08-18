@@ -15,7 +15,12 @@ class ExpenseTrackerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeControllerProvider.notifier).flutterThemeMode;
+    final selectedMode = ref.watch(themeModeControllerProvider);
+    final themeMode = switch (selectedMode) {
+      AppThemeMode.light => ThemeMode.light,
+      AppThemeMode.dark => ThemeMode.dark,
+      AppThemeMode.system => ThemeMode.system,
+    };
 
     return MaterialApp(
       title: AppStrings.appName,
@@ -36,9 +41,9 @@ class AppBootstrap extends ConsumerWidget {
     final onboardingAsync = ref.watch(onboardingCompleteProvider);
 
     return onboardingAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: ShimmerLoader(height: 48, width: 48, borderRadius: 24)),
-      ),
+      loading: () => Scaffold(
+                    body: Container(color: Theme.of(context).scaffoldBackgroundColor),
+            ),
       error: (e, _) => Scaffold(body: Center(child: Text(e.toString()))),
       data: (complete) {
         if (!complete) return const OnboardingScreen();
@@ -56,9 +61,7 @@ class AuthGate extends ConsumerWidget {
     final authAsync = ref.watch(authControllerProvider);
 
     return authAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () => Scaffold(body: Container(color: Theme.of(context).scaffoldBackgroundColor)),
       error: (e, _) => Scaffold(body: Center(child: Text(e.toString()))),
       data: (status) {
         return switch (status) {
@@ -66,8 +69,8 @@ class AuthGate extends ConsumerWidget {
           AuthStatus.needsPinSetup => const AuthScreen(isSetup: true),
           AuthStatus.unauthenticated => const AuthScreen(),
           AuthStatus.loading => const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            ),
+                      body: SizedBox.shrink(),
+          ),
         };
       },
     );
