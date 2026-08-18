@@ -12,7 +12,7 @@ import 'settings/settings_screen.dart';
 import 'transactions/transactions_screen.dart';
 import 'profile/profile_view_screen.dart';
 import '../../providers/database_provider.dart';
-import '../../views/app_shell_drawer_item.dart';
+import 'package:expensetracker/views/app_shell_drawer_item.dart';
 
 final _navIndexProvider = StateProvider<int>((_) => 0);
 
