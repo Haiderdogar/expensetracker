@@ -14,6 +14,7 @@ import '../../providers/category_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
+import 'package:currency_picker/currency_picker.dart';
 import '../auth/auth_screen.dart';
 import 'widgets/settings_tile.dart';
 
@@ -329,57 +330,62 @@ class SettingsScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Text('Currency', style: Theme.of(context).textTheme.titleSmall),
           ),
-          FutureBuilder<String>(
-            future: ref.read(databaseHelperProvider).getCurrencySymbol(),
-            builder: (ctx, snap) {
-              final current = snap.data ?? '\$';
-              return ListTile(
-                leading: const Icon(Icons.money),
-                title: Text('Currency: $current'),
-                trailing: TextButton(
-                  onPressed: () async {
-                    final chosen = await showDialog<String>(
-                      context: context,
-                      builder: (dctx) {
-                        final controller = TextEditingController();
-                        final options = ['\$', 'PKR', 'USD', 'AED', 'SAR', 'JPY'];
-                        return AlertDialog(
-                          title: const Text('Select currency'),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Wrap(
-                                spacing: 8,
-                                children: options.map((o) => ElevatedButton(onPressed: () => Navigator.of(dctx).pop(o), child: Text(o))).toList(),
+          // Use the reactive currencySymbolProvider so changes from elsewhere (Add Transaction) update immediately
+          Consumer(builder: (cctx, cref, _) {
+            final symbolAsync = cref.watch(currencySymbolProvider);
+            return symbolAsync.when(
+              loading: () => const ListTile(
+                leading: Icon(Icons.money),
+                title: Text('Currency: ...'),
+                trailing: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              error: (e, _) => ListTile(leading: const Icon(Icons.money), title: Text('Currency: error')),
+              data: (current) {
+                return ListTile(
+                  leading: const Icon(Icons.money),
+                  title: Text('Currency: $current'),
+                  trailing: TextButton(
+                    onPressed: () {
+                      showCurrencyPicker(
+                        context: context,
+                        showFlag: true,
+                        showCurrencyName: true,
+                        showCurrencyCode: true,
+                        showSearchField: true,
+                        theme: CurrencyPickerThemeData(
+                          flagSize: 24,
+                          titleTextStyle: Theme.of(context).textTheme.titleMedium,
+                          subtitleTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
+                          bottomSheetHeight: MediaQuery.of(context).size.height * 0.6,
+                          inputDecoration: InputDecoration(
+                            labelText: 'Search',
+                            hintText: 'Start typing to search',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Theme.of(context).hintColor.withOpacity(0.2),
                               ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: controller,
-                                decoration: const InputDecoration(hintText: 'Custom (PKR, USD, etc.)'),
-                              ),
-                            ],
+                            ),
                           ),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.of(dctx).pop(null), child: const Text('Cancel')),
-                            TextButton(onPressed: () => Navigator.of(dctx).pop(controller.text.trim().isEmpty ? null : controller.text.trim()), child: const Text('Save')),
-                          ],
-                        );
-                      },
-                    );
-                    if (chosen == null || chosen.isEmpty) return;
-                    try {
-                      await ref.read(databaseHelperProvider).setCurrencySymbol(chosen);
-                      ref.invalidate(currencySymbolProvider);
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Currency updated')));
-                    } catch (e) {
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                    }
-                  },
-                  child: const Text('Change'),
-                ),
-              );
-            },
-          ),
+                        ),
+                        onSelect: (Currency currency) async {
+                          try {
+                            await ref.read(databaseHelperProvider).setCurrencySymbol(currency.symbol);
+                            await ref.read(databaseHelperProvider).setSetting('currency_code', currency.code);
+                            ref.invalidate(currencySymbolProvider);
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Currency set to ${currency.code}')));
+                          } catch (e) {
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                          }
+                        },
+                      );
+                    },
+                    child: const Text('Change'),
+                  ),
+                );
+              },
+            );
+          }),
           const Divider(),
           SettingsTile(
             icon: Icons.upload_outlined,
