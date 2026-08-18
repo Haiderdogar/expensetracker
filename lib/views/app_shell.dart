@@ -151,7 +151,7 @@ class AppShell extends StatelessWidget {
                             child: ListView(
                               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                               children: [
-                                _DrawerItem(
+                                DrawerItem(
                                   icon: Icons.dashboard_outlined,
                                   label: AppStrings.dashboard,
                                   onTap: () {
@@ -159,7 +159,7 @@ class AppShell extends StatelessWidget {
                                     ref.read(_navIndexProvider.notifier).state = 0;
                                   },
                                 ),
-                                _DrawerItem(
+                                DrawerItem(
                                   icon: Icons.receipt_long_outlined,
                                   label: AppStrings.transactions,
                                   onTap: () {
@@ -167,7 +167,7 @@ class AppShell extends StatelessWidget {
                                     ref.read(_navIndexProvider.notifier).state = 1;
                                   },
                                 ),
-                                _DrawerItem(
+                                DrawerItem(
                                   icon: Icons.pie_chart_outline,
                                   label: AppStrings.analytics,
                                   onTap: () {
@@ -175,7 +175,7 @@ class AppShell extends StatelessWidget {
                                     ref.read(_navIndexProvider.notifier).state = 2;
                                   },
                                 ),
-                                _DrawerItem(
+                                DrawerItem(
                                   icon: Icons.savings_outlined,
                                   label: AppStrings.budgets,
                                   onTap: () {
@@ -184,7 +184,7 @@ class AppShell extends StatelessWidget {
                                   },
                                 ),
                                 const Divider(),
-                                _DrawerItem(
+                                DrawerItem(
                                   icon: Icons.person_outline,
                                   label: AppStrings.profile,
                                   onTap: () {
@@ -192,7 +192,7 @@ class AppShell extends StatelessWidget {
                                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileViewScreen()));
                                   },
                                 ),
-                                _DrawerItem(
+                                DrawerItem(
                                   icon: Icons.settings_outlined,
                                   label: AppStrings.settings,
                                   onTap: () {

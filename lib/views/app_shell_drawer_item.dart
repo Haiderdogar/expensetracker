@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class _DrawerItem extends StatelessWidget {
+class DrawerItem extends StatelessWidget {
   const _DrawerItem({
     required this.icon,
     required this.label,
