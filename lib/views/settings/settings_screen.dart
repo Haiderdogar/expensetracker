@@ -106,10 +106,15 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => appShellScaffoldKey.currentState?.openDrawer(),
-        ),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () => appShellScaffoldKey.currentState?.openDrawer(),
+              ),
         title: const Text(AppStrings.settings),
       ),
       body: ListView(
