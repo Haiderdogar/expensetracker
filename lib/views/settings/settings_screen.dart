@@ -335,67 +335,65 @@ class SettingsScreen extends ConsumerWidget {
           Consumer(builder: (cctx, cref, _) {
             final symbolAsync = cref.watch(currencySymbolProvider);
             final codeAsync = cref.watch(currencyCodeProvider);
-            return AsyncValue.guard(() async {
-              // combine to a synced representation
-              final symbol = await symbolAsync.when(
-                data: (d) => d,
-                loading: () async => null,
-                error: (_, __) async => null,
-              );
-              final code = await codeAsync.when(
-                data: (d) => d,
-                loading: () async => null,
-                error: (_, __) async => null,
-              );
-              return [symbol, code];
-            }()).when(
-              data: (list) {
-                final currentSymbol = list[0] as String?;
-                final currentCode = list[1] as String?;
-                final display = currentCode ?? currentSymbol ?? '\$';
-                return ListTile(
-                  // show text code instead of icon
-                  leading: Text(display, style: Theme.of(context).textTheme.titleMedium),
-                  title: Text('Currency: $display'),
-                  trailing: TextButton(
-                    onPressed: () {
-                      showCurrencyPicker(
-                        context: context,
-                        showFlag: true,
-                        showCurrencyName: true,
-                        showCurrencyCode: true,
-                        showSearchField: true,
-                        theme: CurrencyPickerThemeData(
-                          flagSize: 24,
-                          titleTextStyle: Theme.of(context).textTheme.titleMedium,
-                          subtitleTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
-                          bottomSheetHeight: MediaQuery.of(context).size.height * 0.6,
-                          inputDecoration: InputDecoration(
-                            labelText: 'Search',
-                            hintText: 'Start typing to search',
-                            prefixIcon: const Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Theme.of(context).hintColor.withOpacity(0.2),
-                              ),
+
+            Widget buildPickerTrigger(String display) {
+              return ListTile(
+                leading: Text(display, style: Theme.of(context).textTheme.titleMedium),
+                title: Text('Currency: $display'),
+                trailing: TextButton(
+                  onPressed: () {
+                    showCurrencyPicker(
+                      context: context,
+                      showFlag: true,
+                      showCurrencyName: true,
+                      showCurrencyCode: true,
+                      showSearchField: true,
+                      theme: CurrencyPickerThemeData(
+                        flagSize: 24,
+                        titleTextStyle: Theme.of(context).textTheme.titleMedium,
+                        subtitleTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
+                        bottomSheetHeight: MediaQuery.of(context).size.height * 0.6,
+                        inputDecoration: InputDecoration(
+                          labelText: 'Search',
+                          hintText: 'Start typing to search',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Theme.of(context).hintColor.withOpacity(0.2),
                             ),
                           ),
                         ),
-                        onSelect: (Currency currency) async {
-                          try {
-                            await ref.read(databaseHelperProvider).setCurrencySymbol(currency.symbol);
-                            await ref.read(databaseHelperProvider).setSetting('currency_code', currency.code);
-                            ref.invalidate(currencySymbolProvider);
-                            ref.invalidate(currencyCodeProvider);
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Currency set to ${currency.code}')));
-                          } catch (e) {
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                          }
-                        },
-                      );
-                    },
-                    child: const Text('Change'),
-                  ),
+                      ),
+                      onSelect: (Currency currency) async {
+                        try {
+                          await ref.read(databaseHelperProvider).setCurrencySymbol(currency.symbol);
+                          await ref.read(databaseHelperProvider).setSetting('currency_code', currency.code);
+                          ref.invalidate(currencySymbolProvider);
+                          ref.invalidate(currencyCodeProvider);
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Currency set to ${currency.code}')));
+                        } catch (e) {
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                        }
+                      },
+                    );
+                  },
+                  child: const Text('Change'),
+                ),
+              );
+            }
+
+            return symbolAsync.when(
+              loading: () => const ListTile(
+                leading: Icon(Icons.money),
+                title: Text('Currency: ...'),
+                trailing: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              error: (e, _) => ListTile(leading: const Icon(Icons.money), title: Text('Currency: error: $e')),
+              data: (symbol) {
+                return codeAsync.when(
+                  loading: () => buildPickerTrigger(symbol ?? '\$'),
+                  error: (_, __) => buildPickerTrigger(symbol ?? '\$'),
+                  data: (code) => buildPickerTrigger(code ?? symbol ?? '\$'),
                 );
               },
             );
