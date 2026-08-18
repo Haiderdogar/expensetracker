@@ -300,7 +300,16 @@ class AddTransactionScreen extends StatelessWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Currency'),
-                  subtitle: Text(ref.watch(currencySymbolProvider).value ?? '\$'),
+                  // show currency code (e.g., PKR, USD) instead of an icon
+                  subtitle: Consumer(builder: (cctx, cref, _) {
+                    final codeAsync = cref.watch(currencyCodeProvider);
+                    final symbolAsync = cref.watch(currencySymbolProvider);
+                    return codeAsync.when(
+                      loading: () => Text(symbolAsync.value ?? '\$'),
+                      error: (_, __) => Text(symbolAsync.value ?? '\$'),
+                      data: (code) => Text(code ?? (symbolAsync.value ?? '\$')),
+                    );
+                  }),
                   trailing: TextButton(
                     onPressed: () {
                       showCurrencyPicker(
@@ -331,6 +340,7 @@ class AddTransactionScreen extends StatelessWidget {
                             await ref.read(databaseHelperProvider).setCurrencySymbol(currency.symbol);
                             await ref.read(databaseHelperProvider).setSetting('currency_code', currency.code);
                             ref.invalidate(currencySymbolProvider);
+                            ref.invalidate(currencyCodeProvider);
                             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Currency set to ${currency.code}')));
                           } catch (e) {
                             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));

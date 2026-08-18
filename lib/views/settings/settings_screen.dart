@@ -15,6 +15,7 @@ import '../../providers/database_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
 import 'package:currency_picker/currency_picker.dart';
+import '../../providers/currency_provider.dart';
 import '../auth/auth_screen.dart';
 import 'widgets/settings_tile.dart';
 
@@ -333,17 +334,29 @@ class SettingsScreen extends ConsumerWidget {
           // Use the reactive currencySymbolProvider so changes from elsewhere (Add Transaction) update immediately
           Consumer(builder: (cctx, cref, _) {
             final symbolAsync = cref.watch(currencySymbolProvider);
-            return symbolAsync.when(
-              loading: () => const ListTile(
-                leading: Icon(Icons.money),
-                title: Text('Currency: ...'),
-                trailing: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
-              error: (e, _) => ListTile(leading: const Icon(Icons.money), title: Text('Currency: error')),
-              data: (current) {
+            final codeAsync = cref.watch(currencyCodeProvider);
+            return AsyncValue.guard(() async {
+              // combine to a synced representation
+              final symbol = await symbolAsync.when(
+                data: (d) => d,
+                loading: () async => null,
+                error: (_, __) async => null,
+              );
+              final code = await codeAsync.when(
+                data: (d) => d,
+                loading: () async => null,
+                error: (_, __) async => null,
+              );
+              return [symbol, code];
+            }()).when(
+              data: (list) {
+                final currentSymbol = list[0] as String?;
+                final currentCode = list[1] as String?;
+                final display = currentCode ?? currentSymbol ?? '\$';
                 return ListTile(
-                  leading: const Icon(Icons.money),
-                  title: Text('Currency: $current'),
+                  // show text code instead of icon
+                  leading: Text(display, style: Theme.of(context).textTheme.titleMedium),
+                  title: Text('Currency: $display'),
                   trailing: TextButton(
                     onPressed: () {
                       showCurrencyPicker(
@@ -373,6 +386,7 @@ class SettingsScreen extends ConsumerWidget {
                             await ref.read(databaseHelperProvider).setCurrencySymbol(currency.symbol);
                             await ref.read(databaseHelperProvider).setSetting('currency_code', currency.code);
                             ref.invalidate(currencySymbolProvider);
+                            ref.invalidate(currencyCodeProvider);
                             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Currency set to ${currency.code}')));
                           } catch (e) {
                             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
