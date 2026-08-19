@@ -182,33 +182,6 @@ class AddTransactionScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 16),
-                CustomTextField(
-                  initialValue: title,
-                  label: AppStrings.title,
-                  onChanged: (v) => ref.read(_titleProvider.notifier).state = v,
-                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  initialValue: amount,
-                  label: AppStrings.amount,
-                  onChanged: (v) =>
-                      ref.read(_amountProvider.notifier).state = v,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  // show current currency symbol as prefix
-                  prefix: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: Text(ref.watch(currencySymbolProvider).value ?? '\$'),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Required';
-                    if (double.tryParse(v) == null) return 'Invalid amount';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -315,6 +288,32 @@ class AddTransactionScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 12),
+                CustomTextField(
+                  initialValue: title,
+                  label: AppStrings.title,
+                  hint: 'e.g., Lunch at cafe',
+                  onChanged: (v) => ref.read(_titleProvider.notifier).state = v,
+                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  initialValue: amount,
+                  label: AppStrings.amount,
+                  onChanged: (v) => ref.read(_amountProvider.notifier).state = v,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  // show current currency symbol as prefix with symmetric vertical padding
+                  prefix: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+                    child: Text(ref.watch(currencySymbolProvider).value ?? '\$'),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Required';
+                    if (double.tryParse(v) == null) return 'Invalid amount';
+                    return null;
+                  },
+                ),
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -327,6 +326,7 @@ class AddTransactionScreen extends StatelessWidget {
                 CustomTextField(
                   initialValue: note,
                   label: AppStrings.note,
+                  hint: 'e.g., Bought apples and bread',
                   onChanged: (v) => ref.read(_noteProvider.notifier).state = v,
                   maxLines: 3,
                 ),
