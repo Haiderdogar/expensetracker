@@ -97,14 +97,35 @@ class TransactionsScreen extends StatelessWidget {
                             ...items.map(
                               (t) => TransactionTile(
                                 transaction: t,
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => AddTransactionScreen(transaction: t),
-                                  ),
-                                ),
-                                onDelete: () => ref
-                                    .read(transactionsProvider.notifier)
-                                    .delete(t.id),
+                                onTap: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => AddTransactionScreen(transaction: t),
+                                    ),
+                                  );
+                                  // Ensure transactions and dependent providers are refreshed after edit
+                                  await ref.read(transactionsProvider.notifier).refresh();
+                                },
+                                onDelete: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dctx) => AlertDialog(
+                                      title: const Text('Delete transaction'),
+                                      content: const Text('Delete this transaction? This action cannot be undone.'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
+                                        TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm != true) return;
+                                  try {
+                                    await ref.read(transactionsProvider.notifier).delete(t.id);
+                                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction deleted')));
+                                  } catch (e) {
+                                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                  }
+                                },
                               ),
                             ),
                           ],
