@@ -67,14 +67,33 @@ class AddTransactionScreen extends StatelessWidget {
 
         final formKey = GlobalKey<FormState>();
 
-        Future<void> pickDate() async {
-          final picked = await showDatePicker(
+        Future<void> pickDateTime() async {
+          // Pick the date first
+          final pickedDate = await showDatePicker(
             context: context,
             initialDate: date,
             firstDate: DateTime(2020),
             lastDate: DateTime.now().add(const Duration(days: 365)),
           );
-          if (picked != null) ref.read(_dateProvider.notifier).state = picked;
+          if (pickedDate == null) return;
+
+          // Then pick the time (default to currently selected time)
+          final pickedTime = await showTimePicker(
+            context: context,
+            initialTime: TimeOfDay.fromDateTime(date),
+          );
+
+          final timeOfDay = pickedTime ?? TimeOfDay.fromDateTime(date);
+
+          final combined = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            timeOfDay.hour,
+            timeOfDay.minute,
+          );
+
+          ref.read(_dateProvider.notifier).state = combined;
         }
 
         Future<void> save() async {
@@ -112,7 +131,7 @@ class AddTransactionScreen extends StatelessWidget {
                   amount: parsedAmount,
                   type: type,
                   categoryId: categoryId,
-                  date: Formatters.isoDateTimeWithCurrentTime(date),
+                  date: date.toIso8601String(),
                   note: note.trim().isEmpty ? null : note.trim(),
                 ),
               );
@@ -123,7 +142,7 @@ class AddTransactionScreen extends StatelessWidget {
                 type: type,
                 categoryId: categoryId,
                 walletId: walletIdToUse,
-                date: Formatters.isoDateTimeWithCurrentTime(date),
+                date: date.toIso8601String(),
                 note: note.trim().isEmpty ? null : note.trim(),
               );
             }
@@ -299,10 +318,10 @@ class AddTransactionScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(AppStrings.date),
-                  subtitle: Text(Formatters.date(date)),
+                  title: Text('${AppStrings.date} & Time'),
+                  subtitle: Text(Formatters.dateTime(date)),
                   trailing: const Icon(Icons.calendar_today),
-                  onTap: pickDate,
+                  onTap: pickDateTime,
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
