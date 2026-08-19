@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../core/constants/app_strings.dart';
@@ -57,17 +57,13 @@ class AddTransactionScreen extends StatelessWidget {
 
         final title = ref.watch(_titleProvider);
         final amount = ref.watch(_amountProvider);
-        final note = ref.watch(_note_provider);
+        final note = ref.watch(_noteProvider);
         final type = ref.watch(_typeProvider);
         final categoryId = ref.watch(_categoryIdProvider);
         final date = ref.watch(_dateProvider);
         final loading = ref.watch(_loadingProvider);
 
         final categoriesAsync = ref.watch(categoriesProvider);
-
-        // Hints vary by transaction type
-        final titleHint = type == 'income' ? 'e.g., Salary, Freelance payment' : 'e.g., Lunch at cafe';
-        final noteHint = type == 'income' ? 'e.g., August salary or client name' : 'e.g., Bought apples and bread';
 
         // final categories = (categoriesAsync.value ?? [])
         //     .where((c) => c.type == type)
@@ -362,7 +358,7 @@ class AddTransactionScreen extends StatelessWidget {
                 CustomTextField(
                   initialValue: title,
                   label: AppStrings.title,
-                  hint: titleHint,
+                  hint: type == 'income' ? 'e.g., Salary payment' : 'e.g., Lunch at cafe',
                   onChanged: (v) => ref.read(_titleProvider.notifier).state = v,
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
@@ -397,7 +393,7 @@ class AddTransactionScreen extends StatelessWidget {
                 CustomTextField(
                   initialValue: note,
                   label: AppStrings.note,
-                  hint: noteHint,
+                  hint: type == 'income' ? 'e.g., Bonus from client' : 'e.g., Bought apples and bread',
                   onChanged: (v) => ref.read(_noteProvider.notifier).state = v,
                   maxLines: 3,
                 ),
