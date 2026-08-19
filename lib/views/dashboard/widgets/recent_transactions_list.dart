@@ -48,68 +48,38 @@ class RecentTransactionsList extends ConsumerWidget {
                 ? categoryIconFromName(category.icon)
                 : Icons.receipt;
 
-            return Dismissible(
-              key: ValueKey(t.id),
-              direction: DismissDirection.endToStart,
-              confirmDismiss: (direction) async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (dctx) => AlertDialog(
-                    title: const Text('Delete transaction'),
-                    content: const Text('Delete this transaction? This action cannot be undone.'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
-                      TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
-                    ],
-                  ),
-                );
-                return confirm == true;
-              },
-              onDismissed: (_) async {
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: CircleAvatar(
+                backgroundColor: color.withValues(alpha: 0.15),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              title: Text(t.title),
+              subtitle: Text(Formatters.date(DateTime.parse(t.date))),
+              trailing: Text(
+                '${t.isIncome ? '+' : '-'}${Formatters.currency(t.amount, symbol: symbol)}',
+                style: TextStyle(
+                  color: t.isIncome ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () async {
                 try {
-                  await ref.read(transactionsProvider.notifier).delete(t.id);
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction deleted')));
-                } catch (e) {
-                  final msg = ErrorHandler.message(e);
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-                }
-              },
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 20),
-                color: Colors.red,
-                child: const Icon(Icons.delete, color: Colors.white),
-              ),
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  backgroundColor: color.withValues(alpha: 0.15),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                title: Text(t.title),
-                subtitle: Text(Formatters.date(DateTime.parse(t.date))),
-                trailing: Text(
-                  '${t.isIncome ? '+' : '-'}${Formatters.currency(t.amount, symbol: symbol)}',
-                  style: TextStyle(
-                    color: t.isIncome ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                onTap: () async {
-                  try {
-                    final result = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute<bool>(builder: (_) => AddTransactionScreen(transaction: t)),
-                    );
-                    if (result == true) {
-                      await ref.read(transactionsProvider.notifier).refresh();
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction updated')));
-                    }
-                  } catch (e) {
-                    final msg = ErrorHandler.message(e);
-                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                final result = await Navigator.of(context).push<dynamic>(
+                  MaterialPageRoute<dynamic>(builder: (_) => AddTransactionScreen(transaction: t)),
+                  );
+                if (result == 'saved' || result == 'created' || result == 'deleted') {
+                    await ref.read(transactionsProvider.notifier).refresh();
+                  if (context.mounted) {
+                    final msg = result == 'created' ? 'Transaction added' : (result == 'saved' ? 'Transaction updated' : 'Transaction deleted');
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
                   }
-                },
-              ),
+                }
+              } catch (e) {
+                final msg = ErrorHandler.message(e);
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+              }
+              },
             );
           }).toList(),
         );

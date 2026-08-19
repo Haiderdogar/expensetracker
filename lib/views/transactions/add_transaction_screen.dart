@@ -12,6 +12,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../models/transaction_model.dart';
+import '../../core/utils/error_handler.dart';
 
 final _initializedAddTxProvider = StateProvider.autoDispose<bool>(
   (ref) => false,
@@ -151,7 +152,12 @@ class AddTransactionScreen extends StatelessWidget {
             }
 
             // Indicate success to caller so they can refresh dependent state
-            Navigator.of(context).pop(true);
+            // Return a string so callers can distinguish created vs updated vs deleted.
+            if (_isEditing) {
+              Navigator.of(context).pop('saved');
+            } else {
+              Navigator.of(context).pop('created');
+            }
           } catch (e) {
             ScaffoldMessenger.of(
               context,
@@ -168,6 +174,39 @@ class AddTransactionScreen extends StatelessWidget {
                   ? AppStrings.editTransaction
                   : AppStrings.addTransaction,
             ),
+            actions: _isEditing
+                ? [
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (dctx) => AlertDialog(
+                            title: const Text('Delete transaction'),
+                            content: const Text('Delete this transaction? This action cannot be undone.'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
+                              TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                            ],
+                          ),
+                        );
+                        if (confirm != true) return;
+
+                        ref.read(_loadingProvider.notifier).state = true;
+                        try {
+                          await ref.read(transactionsProvider.notifier).delete(transaction!.id);
+                          // Return a result so callers refresh and can show feedback
+                          Navigator.of(context).pop('deleted');
+                        } catch (e) {
+                          final msg = ErrorHandler.message(e);
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                        } finally {
+                          ref.read(_loadingProvider.notifier).state = false;
+                        }
+                      },
+                    ),
+                  ]
+                : null,
           ),
           body: Form(
             key: formKey,

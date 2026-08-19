@@ -44,12 +44,15 @@ class TransactionsScreen extends StatelessWidget {
                           heroTag: 'fab_transactions',
                           onPressed: () async {
                             try {
-                              final result = await Navigator.of(context).push<bool>(
-                                MaterialPageRoute<bool>(builder: (_) => const AddTransactionScreen()),
+                              final result = await Navigator.of(context).push<dynamic>(
+                                MaterialPageRoute<dynamic>(builder: (_) => const AddTransactionScreen()),
                               );
-                              if (result == true) {
+                              if (result == 'created' || result == 'saved' || result == 'deleted') {
                                 await ref.read(transactionsProvider.notifier).refresh();
-                                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction added')));
+                                if (context.mounted) {
+                                  final msg = result == 'created' ? 'Transaction added' : (result == 'saved' ? 'Transaction updated' : 'Transaction deleted');
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                                }
                               }
                             } catch (e) {
                               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
@@ -109,35 +112,18 @@ class TransactionsScreen extends StatelessWidget {
                                 transaction: t,
                                 onTap: () async {
                                   try {
-                                    final result = await Navigator.of(context).push<bool>(
-                                      MaterialPageRoute<bool>(
+                                    final result = await Navigator.of(context).push<dynamic>(
+                                      MaterialPageRoute<dynamic>(
                                         builder: (_) => AddTransactionScreen(transaction: t),
                                       ),
                                     );
-                                    if (result == true) {
+                                    if (result == 'saved' || result == 'created' || result == 'deleted') {
                                       await ref.read(transactionsProvider.notifier).refresh();
-                                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction updated')));
+                                      if (context.mounted) {
+                                        final msg = result == 'created' ? 'Transaction added' : (result == 'saved' ? 'Transaction updated' : 'Transaction deleted');
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                                      }
                                     }
-                                  } catch (e) {
-                                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                                  }
-                                },
-                                onDelete: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (dctx) => AlertDialog(
-                                      title: const Text('Delete transaction'),
-                                      content: const Text('Delete this transaction? This action cannot be undone.'),
-                                      actions: [
-                                        TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
-                                        TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
-                                      ],
-                                    ),
-                                  );
-                                  if (confirm != true) return;
-                                  try {
-                                    await ref.read(transactionsProvider.notifier).delete(t.id);
-                                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction deleted')));
                                   } catch (e) {
                                     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
                                   }
