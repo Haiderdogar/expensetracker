@@ -43,6 +43,10 @@ class DatabaseHelper {
       await db.execute(DatabaseTables.createTransactions);
       await db.execute(DatabaseTables.createBudgets);
       await db.execute(DatabaseTables.createSettings);
+      await setSetting(
+        'account_created_at',
+        DateTime.now().toUtc().toIso8601String(),
+      );
       await _seedDefaultCategories(db);
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -125,5 +129,22 @@ class DatabaseHelper {
       return;
     }
     await setSetting('selected_wallet_id', walletId);
+  }
+
+  Future<DateTime> getAccountCreatedAt() async {
+    final raw = await getSetting('account_created_at');
+    final parsed = raw == null || raw.isEmpty ? null : DateTime.tryParse(raw);
+    final createdAt = parsed ?? DateTime.now();
+    if (raw == null || raw.isEmpty) {
+      await setSetting(
+        'account_created_at',
+        createdAt.toUtc().toIso8601String(),
+      );
+    }
+    return createdAt;
+  }
+
+  Future<void> setAccountCreatedAt(DateTime date) async {
+    await setSetting('account_created_at', date.toUtc().toIso8601String());
   }
 }

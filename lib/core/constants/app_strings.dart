@@ -30,6 +30,14 @@ abstract final class AppStrings {
   static const String getStarted = 'Get Started';
 
   static const String categoryBreakdown = 'Category Breakdown';
+  static const String viewAll = 'View All';
+  static const String onlyExpense = 'Only Expense';
+  static const String onlyIncome = 'Only Income';
+  static const String day = '1 Day';
+  static const String week = '1 Week';
+  static const String month = '1 Month';
+  static const String threeMonths = '3 Months';
+  static const String customRange = 'Custom Range';
   static const String spendingTrend = 'Spending Trend';
   static const String monthlyBudgets = 'Monthly Budgets';
   static const String addBudget = 'Add Budget';
