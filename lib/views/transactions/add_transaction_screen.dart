@@ -37,18 +37,21 @@ class AddTransactionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        // Initialize once when editing
+        // Initialize once when editing. Delay modifications to after build to avoid
+        // "Tried to modify a provider while the widget tree was building" errors.
         final initialized = ref.watch(_initializedAddTxProvider);
         if (!initialized && _isEditing) {
-           final t = transaction!;
-           ref.read(_titleProvider.notifier).state = t.title;
-           ref.read(_amountProvider.notifier).state = t.amount.toString();
-           ref.read(_noteProvider.notifier).state = t.note ?? '';
-           ref.read(_typeProvider.notifier).state = t.type;
-           ref.read(_categoryIdProvider.notifier).state = t.categoryId;
-           // keep existing wallet on edit (wallet selection removed from UI)
-           ref.read(_dateProvider.notifier).state = DateTime.parse(t.date);
-           ref.read(_initializedAddTxProvider.notifier).state = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final t = transaction!;
+            ref.read(_titleProvider.notifier).state = t.title;
+            ref.read(_amountProvider.notifier).state = t.amount.toString();
+            ref.read(_noteProvider.notifier).state = t.note ?? '';
+            ref.read(_typeProvider.notifier).state = t.type;
+            ref.read(_categoryIdProvider.notifier).state = t.categoryId;
+            // keep existing wallet on edit (wallet selection removed from UI)
+            ref.read(_dateProvider.notifier).state = DateTime.parse(t.date);
+            ref.read(_initializedAddTxProvider.notifier).state = true;
+          });
         }
 
         final title = ref.watch(_titleProvider);
