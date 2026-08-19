@@ -9,6 +9,8 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/category_provider.dart';
 import '../../../providers/transaction_provider.dart';
 import '../../../widgets/shimmer_loader.dart';
+import '../../transactions/add_transaction_screen.dart';
+import '../../../core/utils/error_handler.dart';
 
 class RecentTransactionsList extends ConsumerWidget {
   const RecentTransactionsList({super.key});
@@ -46,20 +48,67 @@ class RecentTransactionsList extends ConsumerWidget {
                 ? categoryIconFromName(category.icon)
                 : Icons.receipt;
 
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                backgroundColor: color.withValues(alpha: 0.15),
-                child: Icon(icon, color: color, size: 20),
+            return Dismissible(
+              key: ValueKey(t.id),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (direction) async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (dctx) => AlertDialog(
+                    title: const Text('Delete transaction'),
+                    content: const Text('Delete this transaction? This action cannot be undone.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
+                      TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                    ],
+                  ),
+                );
+                return confirm == true;
+              },
+              onDismissed: (_) async {
+                try {
+                  await ref.read(transactionsProvider.notifier).delete(t.id);
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction deleted')));
+                } catch (e) {
+                  final msg = ErrorHandler.message(e);
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                }
+              },
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                color: Colors.red,
+                child: const Icon(Icons.delete, color: Colors.white),
               ),
-              title: Text(t.title),
-              subtitle: Text(Formatters.date(DateTime.parse(t.date))),
-              trailing: Text(
-                '${t.isIncome ? '+' : '-'}${Formatters.currency(t.amount, symbol: symbol)}',
-                style: TextStyle(
-                  color: t.isIncome ? Colors.green : Colors.red,
-                  fontWeight: FontWeight.w600,
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.15),
+                  child: Icon(icon, color: color, size: 20),
                 ),
+                title: Text(t.title),
+                subtitle: Text(Formatters.date(DateTime.parse(t.date))),
+                trailing: Text(
+                  '${t.isIncome ? '+' : '-'}${Formatters.currency(t.amount, symbol: symbol)}',
+                  style: TextStyle(
+                    color: t.isIncome ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onTap: () async {
+                  try {
+                    final result = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute<bool>(builder: (_) => AddTransactionScreen(transaction: t)),
+                    );
+                    if (result == true) {
+                      await ref.read(transactionsProvider.notifier).refresh();
+                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction updated')));
+                    }
+                  } catch (e) {
+                    final msg = ErrorHandler.message(e);
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                  }
+                },
               ),
             );
           }).toList(),
