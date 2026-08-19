@@ -181,8 +181,32 @@ class AddTransactionScreen extends StatelessWidget {
                   ],
                   selected: {type},
                   onSelectionChanged: (s) {
-                    ref.read(_typeProvider.notifier).state = s.first;
-                    ref.read(_categoryIdProvider.notifier).state = null;
+                    final newType = s.first;
+                    ref.read(_typeProvider.notifier).state = newType;
+
+                    // Preserve category selection if it's still valid for the new type.
+                    // If categories haven't loaded yet, don't change the selection to avoid
+                    // modifying providers during build or inconsistent state.
+                    final currentCatId = ref.read(_categoryIdProvider);
+                    final cats = categoriesAsync.value;
+                    if (currentCatId == null || cats == null) return;
+
+                    try {
+                      final matching = cats.where((c) => c.id == currentCatId).toList();
+                      if (matching.isEmpty) {
+                        // previously selected category no longer exists
+                        ref.read(_categoryIdProvider.notifier).state = null;
+                        return;
+                      }
+                      final selectedCat = matching.first;
+                      if (selectedCat.type != newType) {
+                        // previously selected category doesn't match the newly selected type
+                        // clear it so the user is prompted to pick an appropriate category
+                        ref.read(_categoryIdProvider.notifier).state = null;
+                      }
+                    } catch (_) {
+                      // On any unexpected error, don't change the selection.
+                    }
                   },
                 ),
                 const SizedBox(height: 16),
