@@ -40,6 +40,21 @@ class TransactionTile extends ConsumerWidget {
     return Dismissible(
       key: ValueKey(transaction.id),
       direction: DismissDirection.endToStart,
+      // Ask for confirmation before dismissing
+      confirmDismiss: (direction) async {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (dctx) => AlertDialog(
+            title: const Text('Delete transaction'),
+            content: const Text('Delete this transaction? This action cannot be undone.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+            ],
+          ),
+        );
+        return confirm == true;
+      },
       onDismissed: (_) => onDelete?.call(),
       background: Container(
         alignment: Alignment.centerRight,

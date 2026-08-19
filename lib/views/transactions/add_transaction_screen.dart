@@ -150,7 +150,8 @@ class AddTransactionScreen extends StatelessWidget {
               );
             }
 
-            Navigator.of(context).pop();
+            // Indicate success to caller so they can refresh dependent state
+            Navigator.of(context).pop(true);
           } catch (e) {
             ScaffoldMessenger.of(
               context,

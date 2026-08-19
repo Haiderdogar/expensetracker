@@ -42,9 +42,19 @@ class TransactionsScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 90),
             child: FloatingActionButton(
                           heroTag: 'fab_transactions',
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(builder: (_) => const AddTransactionScreen()),
-                          ),
+                          onPressed: () async {
+                            try {
+                              final result = await Navigator.of(context).push<bool>(
+                                MaterialPageRoute<bool>(builder: (_) => const AddTransactionScreen()),
+                              );
+                              if (result == true) {
+                                await ref.read(transactionsProvider.notifier).refresh();
+                                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction added')));
+                              }
+                            } catch (e) {
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
+                          },
                           child: const Icon(Icons.add),
                         ),
           ),
@@ -98,13 +108,19 @@ class TransactionsScreen extends StatelessWidget {
                               (t) => TransactionTile(
                                 transaction: t,
                                 onTap: () async {
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => AddTransactionScreen(transaction: t),
-                                    ),
-                                  );
-                                  // Ensure transactions and dependent providers are refreshed after edit
-                                  await ref.read(transactionsProvider.notifier).refresh();
+                                  try {
+                                    final result = await Navigator.of(context).push<bool>(
+                                      MaterialPageRoute<bool>(
+                                        builder: (_) => AddTransactionScreen(transaction: t),
+                                      ),
+                                    );
+                                    if (result == true) {
+                                      await ref.read(transactionsProvider.notifier).refresh();
+                                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction updated')));
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                  }
                                 },
                                 onDelete: () async {
                                   final confirm = await showDialog<bool>(
