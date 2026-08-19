@@ -57,13 +57,17 @@ class AddTransactionScreen extends StatelessWidget {
 
         final title = ref.watch(_titleProvider);
         final amount = ref.watch(_amountProvider);
-        final note = ref.watch(_noteProvider);
+        final note = ref.watch(_note_provider);
         final type = ref.watch(_typeProvider);
         final categoryId = ref.watch(_categoryIdProvider);
         final date = ref.watch(_dateProvider);
         final loading = ref.watch(_loadingProvider);
 
         final categoriesAsync = ref.watch(categoriesProvider);
+
+        // Hints vary by transaction type
+        final titleHint = type == 'income' ? 'e.g., Salary, Freelance payment' : 'e.g., Lunch at cafe';
+        final noteHint = type == 'income' ? 'e.g., August salary or client name' : 'e.g., Bought apples and bread';
 
         // final categories = (categoriesAsync.value ?? [])
         //     .where((c) => c.type == type)
@@ -358,7 +362,7 @@ class AddTransactionScreen extends StatelessWidget {
                 CustomTextField(
                   initialValue: title,
                   label: AppStrings.title,
-                  hint: 'e.g., Lunch at cafe',
+                  hint: titleHint,
                   onChanged: (v) => ref.read(_titleProvider.notifier).state = v,
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
@@ -393,7 +397,7 @@ class AddTransactionScreen extends StatelessWidget {
                 CustomTextField(
                   initialValue: note,
                   label: AppStrings.note,
-                  hint: 'e.g., Bought apples and bread',
+                  hint: noteHint,
                   onChanged: (v) => ref.read(_noteProvider.notifier).state = v,
                   maxLines: 3,
                 ),
