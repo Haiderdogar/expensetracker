@@ -14,7 +14,7 @@ import '../../providers/category_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
-import 'package:currency_picker/currency_picker.dart';
+import '../../core/utils/app_currency_picker.dart';
 import '../../providers/currency_provider.dart';
 import '../auth/auth_screen.dart';
 import 'widgets/settings_tile.dart';
@@ -74,7 +74,47 @@ class SettingsScreen extends ConsumerWidget {
     WidgetRef ref,
     bool value,
   ) async {
-    await ref.read(secureStorageProvider).setBiometricEnabled(value);
+    if (value) {
+      final pinOn = await ref.read(pinEnabledProvider.future);
+      if (!pinOn) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Enable PIN lock first')),
+          );
+        }
+        return;
+      }
+
+      final available = await ref
+          .read(authControllerProvider.notifier)
+          .isBiometricAvailable();
+      if (!available) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Biometrics are not available on this device'),
+            ),
+          );
+        }
+        return;
+      }
+
+      final confirmed = await ref
+          .read(authControllerProvider.notifier)
+          .promptBiometric(reason: 'Confirm biometrics for Expense Tracker');
+      if (!confirmed) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric setup was cancelled')),
+          );
+        }
+        return;
+      }
+
+      await ref.read(secureStorageProvider).setBiometricEnabled(true);
+    } else {
+      await ref.read(secureStorageProvider).setBiometricEnabled(false);
+    }
     ref.invalidate(biometricEnabledProvider);
   }
 
@@ -87,16 +127,50 @@ class SettingsScreen extends ConsumerWidget {
       if (context.mounted) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => const AuthScreen(isSetup: true),
+            builder: (_) => const AuthScreen(
+              isSetup: true,
+              offerBiometricAfterSetup: true,
+            ),
           ),
         );
       }
       ref.invalidate(pinEnabledProvider);
+      ref.invalidate(biometricEnabledProvider);
       return;
     }
 
-    await ref.read(secureStorageProvider).setPinEnabled(false);
-    await ref.read(authControllerProvider.notifier).lock();
+    final verified = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const AuthScreen(verifyOnly: true),
+      ),
+    );
+    if (verified == true) {
+      await ref.read(authControllerProvider.notifier).disablePin();
+    }
+  }
+
+  Future<void> _onPinTileTap(
+    BuildContext context,
+    WidgetRef ref,
+    bool enabled,
+  ) async {
+    if (!enabled) {
+      await _togglePinLock(context, ref, true);
+      return;
+    }
+
+    final verified = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const AuthScreen(verifyOnly: true),
+      ),
+    );
+    if (verified == true && context.mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const AuthScreen(isSetup: true),
+        ),
+      );
+    }
     ref.invalidate(pinEnabledProvider);
   }
 
@@ -193,16 +267,12 @@ class SettingsScreen extends ConsumerWidget {
             error: (e, _) => ListTile(title: Text(e.toString())),
             data: (enabled) => SettingsTile(
               icon: Icons.pin_outlined,
-              title: enabled ? AppStrings.changePin : 'Enable PIN lock',
+              title: enabled ? AppStrings.changePin : AppStrings.enablePinLock,
               trailing: Switch(
                 value: enabled,
                 onChanged: (v) => _togglePinLock(context, ref, v),
               ),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const AuthScreen(isSetup: true),
-                ),
-              ),
+              onTap: () => _onPinTileTap(context, ref, enabled),
             ),
           ),
           biometricAsync.when(
@@ -220,6 +290,27 @@ class SettingsScreen extends ConsumerWidget {
               ),
               onTap: () => _toggleBiometric(context, ref, !enabled),
             ),
+          ),
+          SettingsTile(
+            icon: Icons.logout,
+            title: AppStrings.logout,
+            onTap: () async {
+              final pinOn = await ref.read(pinEnabledProvider.future);
+              if (!pinOn) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Enable PIN lock to log out'),
+                    ),
+                  );
+                }
+                return;
+              }
+              if (context.mounted) {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
+              await ref.read(authControllerProvider.notifier).logout();
+            },
           ),
           const Divider(),
           Padding(
@@ -342,29 +433,9 @@ class SettingsScreen extends ConsumerWidget {
                 title: Text('Currency: $display'),
                 trailing: TextButton(
                   onPressed: () {
-                    showCurrencyPicker(
+                    showAppCurrencyPicker(
                       context: context,
-                      showFlag: true,
-                      showCurrencyName: true,
-                      showCurrencyCode: true,
-                      showSearchField: true,
-                      theme: CurrencyPickerThemeData(
-                        flagSize: 24,
-                        titleTextStyle: Theme.of(context).textTheme.titleMedium,
-                        subtitleTextStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
-                        bottomSheetHeight: MediaQuery.of(context).size.height * 0.6,
-                        inputDecoration: InputDecoration(
-                          labelText: 'Search',
-                          hintText: 'Start typing to search',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Theme.of(context).hintColor.withOpacity(0.2),
-                            ),
-                          ),
-                        ),
-                      ),
-                      onSelect: (Currency currency) async {
+                      onSelect: (currency) async {
                         try {
                           await ref.read(databaseHelperProvider).setCurrencySymbol(currency.symbol);
                           await ref.read(databaseHelperProvider).setSetting('currency_code', currency.code);
@@ -392,7 +463,7 @@ class SettingsScreen extends ConsumerWidget {
               data: (symbol) {
                 return codeAsync.when(
                   loading: () => buildPickerTrigger(symbol ?? '\$'),
-                  error: (_, __) => buildPickerTrigger(symbol ?? '\$'),
+                  error: (_, _) => buildPickerTrigger(symbol ?? '\$'),
                   data: (code) => buildPickerTrigger(code ?? symbol ?? '\$'),
                 );
               },

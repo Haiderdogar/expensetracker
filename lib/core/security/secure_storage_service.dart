@@ -14,6 +14,7 @@ class SecureStorageService {
   static const String pinKey = 'app_secure_pin';
   static const String pinEnabledKey = 'pin_enabled';
   static const String biometricKey = 'biometric_enabled';
+  static const String lockPromptKey = 'lock_prompt_completed';
 
   Future<String?> readPinHash() async {
     try {
@@ -90,6 +91,27 @@ class SecureStorageService {
       await _storage.write(
         key: biometricKey,
         value: enabled ? 'true' : 'false',
+      );
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<bool> isLockPromptCompleted() async {
+    try {
+      final value = await _storage.read(key: lockPromptKey);
+      if (value == 'true') return true;
+      return await isPinEnabled() && await hasPin();
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<void> setLockPromptCompleted(bool completed) async {
+    try {
+      await _storage.write(
+        key: lockPromptKey,
+        value: completed ? 'true' : 'false',
       );
     } catch (e) {
       throw ErrorHandler.from(e);

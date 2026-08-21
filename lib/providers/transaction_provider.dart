@@ -159,7 +159,7 @@ Future<List<TransactionModel>> filteredTransactions(
   DateTime? month,
 }) async {
   final all = await ref.watch(transactionsProvider.future);
-  final catSet = categories == null ? null : categories.toSet();
+  final catSet = categories?.toSet();
   return all.where((t) {
     if (type != null && t.type != type) return false;
     if (catSet != null && catSet.isNotEmpty && !catSet.contains(t.categoryId)) return false;

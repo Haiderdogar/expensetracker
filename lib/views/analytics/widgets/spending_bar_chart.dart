@@ -2,7 +2,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../providers/backup_provider.dart';
 import '../../../providers/auth_provider.dart';
@@ -13,6 +12,8 @@ class SpendingBarChart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trendAsync = ref.watch(monthlySpendingTrendProvider);
+
+    final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
 
     return trendAsync.when(
       loading: () => const SizedBox(
@@ -40,13 +41,10 @@ class SpendingBarChart extends ConsumerWidget {
               barTouchData: BarTouchData(
                 enabled: true,
                 touchTooltipData: BarTouchTooltipData(
-                  // build a simple tooltip text combining month and formatted value
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final month = trend[group.x.toInt()].key;
                     final value = trend[group.x.toInt()].value;
-                    final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
                     String subtitle = Formatters.currency(value, symbol: symbol);
-                    // percentage change from previous month
                     if (group.x.toInt() > 0) {
                       final prev = trend[group.x.toInt() - 1].value;
                       if (prev > 0) {
@@ -63,7 +61,7 @@ class SpendingBarChart extends ConsumerWidget {
                   sideTitles: SideTitles(
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
-                      return Text(Formatters.currency(value, symbol: ref.watch(currencySymbolProvider).value ?? '\$'), style: const TextStyle(fontSize: 10));
+                      return Text(Formatters.currency(value, symbol: symbol), style: const TextStyle(fontSize: 10));
                     },
                     reservedSize: 64,
                   ),

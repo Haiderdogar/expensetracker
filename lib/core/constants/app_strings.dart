@@ -22,6 +22,18 @@ abstract final class AppStrings {
   static const String pinMismatch = 'PINs do not match';
   static const String wrongPin = 'Incorrect PIN';
   static const String unlockWithBiometric = 'Unlock with biometrics';
+  static const String unlockSubtitle = 'Unlock with PIN or biometrics';
+  static const String pinCooldown = 'Too many attempts. Try again in 30 seconds.';
+  static const String protectAppTitle = 'Protect your app';
+  static const String protectAppBody =
+      'Lock Expense Tracker with a PIN. You can also unlock with biometrics. You can skip and enable this later in Settings.';
+  static const String setupAppLock = 'Set up app lock';
+  static const String skipForNow = 'Skip for now';
+  static const String enableBiometricTitle = 'Use biometrics?';
+  static const String enableBiometricBody =
+      'Unlock faster with fingerprint or Face ID. Your PIN still works as a backup.';
+  static const String notNow = 'Not now';
+  static const String enablePinLock = 'Enable PIN lock';
 
   static const String welcome = 'Welcome!';
   static const String setupWallet = 'Set up your first wallet';
@@ -49,6 +61,7 @@ abstract final class AppStrings {
   static const String security = 'Security';
   static const String changePin = 'Change PIN';
   static const String enableBiometric = 'Enable biometrics';
+  static const String logout = 'Log out';
   static const String exportData = 'Export data';
   static const String importData = 'Import data';
   static const String backupSuccess = 'Backup exported successfully';

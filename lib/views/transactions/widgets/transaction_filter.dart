@@ -38,7 +38,7 @@ class TransactionFilter extends ConsumerWidget {
                   isScrollControlled: true,
                   builder: (ctx) {
                     final selectedSet = <String>{
-                      if (selectedCategories != null) ...selectedCategories!
+                      ...?selectedCategories
                     };
                     return StatefulBuilder(
                       builder: (ctx2, setStateSb) {

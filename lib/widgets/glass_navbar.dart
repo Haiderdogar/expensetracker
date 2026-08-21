@@ -34,10 +34,11 @@ class GlassNavbar extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+      child: RepaintBoundary(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Container(
             height: 72,
             decoration: BoxDecoration(
@@ -97,6 +98,7 @@ class GlassNavbar extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

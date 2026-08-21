@@ -168,8 +168,9 @@ class AddBudgetSheet extends StatelessWidget {
                 );
             if (context.mounted) Navigator.of(context).pop();
           } finally {
-            if (context.mounted)
+            if (context.mounted) {
               ref.read(_addBudgetLoadingProvider.notifier).state = false;
+            }
           }
         }
 

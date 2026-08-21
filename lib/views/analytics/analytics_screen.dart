@@ -265,7 +265,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         selected: selected,
         onSelected: (_) {
           setState(() => _timeRange = value);
-          if (value != 'custom') return;
+          if (value != 'custom' || !_initialized) return;
           setState(() {
             _customStartDate = _accountCreatedAt;
             _customEndDate = DateTime.now();

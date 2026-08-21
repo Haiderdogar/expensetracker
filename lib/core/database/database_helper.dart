@@ -43,10 +43,10 @@ class DatabaseHelper {
       await db.execute(DatabaseTables.createTransactions);
       await db.execute(DatabaseTables.createBudgets);
       await db.execute(DatabaseTables.createSettings);
-      await setSetting(
-        'account_created_at',
-        DateTime.now().toUtc().toIso8601String(),
-      );
+      await db.insert(DatabaseTables.settings, {
+        'key': 'account_created_at',
+        'value': DateTime.now().toUtc().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
       await _seedDefaultCategories(db);
     } catch (e) {
       throw ErrorHandler.from(e);

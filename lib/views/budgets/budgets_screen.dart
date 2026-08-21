@@ -129,7 +129,7 @@ class BudgetsScreen extends ConsumerWidget {
                               padding: const EdgeInsets.only(bottom: 12),
                               child: BudgetProgressTile(progress: p),
                             ))
-                        .toList(),
+                        ,
                   ],
                 );
               },

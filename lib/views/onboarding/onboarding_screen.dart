@@ -3,17 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../../core/constants/app_strings.dart';
+import '../../core/utils/app_currency_picker.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
-import '../app_shell.dart';
 
 final _walletNameProvider = StateProvider.autoDispose<String>(
   (ref) => 'Main Wallet',
 );
-final _currencyProvider = StateProvider.autoDispose<String>((ref) => '\$');
+final _currencySymbolProvider = StateProvider.autoDispose<String>((ref) => '\$');
+final _currencyCodeProvider = StateProvider.autoDispose<String>((ref) => 'USD');
 final _loadingOnboardingProvider = StateProvider.autoDispose<bool>(
   (ref) => false,
 );
@@ -21,25 +23,13 @@ final _loadingOnboardingProvider = StateProvider.autoDispose<bool>(
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
-  static const _currencies = [
-    '\$',
-    '€',
-    '£',
-    '₹',
-    '¥',
-    'PKR',
-    'AED',
-    'SAR',
-    'BDT',
-    'JPY',
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
         final walletName = ref.watch(_walletNameProvider);
-        final currency = ref.watch(_currencyProvider);
+        final currencySymbol = ref.watch(_currencySymbolProvider);
+        final currencyCode = ref.watch(_currencyCodeProvider);
         final loading = ref.watch(_loadingOnboardingProvider);
 
         Future<void> complete() async {
@@ -48,21 +38,19 @@ class OnboardingScreen extends StatelessWidget {
 
           try {
             final helper = ref.read(databaseHelperProvider);
-            await helper.setCurrencySymbol(currency);
+            await helper.setCurrencySymbol(currencySymbol);
+            await helper.setSetting('currency_code', currencyCode);
             await ref
                 .read(walletsProvider.notifier)
                 .create(name: walletName.trim());
             await helper.setOnboardingComplete(true);
             ref.invalidate(onboardingCompleteProvider);
             ref.invalidate(currencySymbolProvider);
-
-            if (!context.mounted) return;
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute<void>(builder: (_) => const AppShell()),
-            );
+            ref.invalidate(currencyCodeProvider);
           } finally {
-            if (context.mounted)
+            if (context.mounted) {
               ref.read(_loadingOnboardingProvider.notifier).state = false;
+            }
           }
         }
 
@@ -97,33 +85,27 @@ class OnboardingScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    children: _currencies.map((c) {
-                      final selected = c == currency;
-                      return ChoiceChip(
-                        label: Text(c),
-                        selected: selected,
-                        onSelected: (_) =>
-                            ref.read(_currencyProvider.notifier).state = c,
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-                  CustomTextField(
-                    initialValue: currency,
-                    label: 'Custom currency',
-                    hint: 'PKR, USD, AED, etc.',
-                    prefix: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: Text(currency),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Text(
+                      currencySymbol,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    onChanged: (value) {
-                      final sanitized = value.trim();
-                      if (sanitized.isNotEmpty) {
-                        ref.read(_currencyProvider.notifier).state = sanitized;
-                      }
-                    },
+                    title: Text('Currency: $currencyCode'),
+                    trailing: TextButton(
+                      onPressed: () {
+                        showAppCurrencyPicker(
+                          context: context,
+                          onSelect: (currency) {
+                            ref.read(_currencySymbolProvider.notifier).state =
+                                currency.symbol;
+                            ref.read(_currencyCodeProvider.notifier).state =
+                                currency.code;
+                          },
+                        );
+                      },
+                      child: const Text('Change'),
+                    ),
                   ),
                   const Spacer(),
                   CustomButton(
