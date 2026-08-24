@@ -11,7 +11,6 @@ import 'budgets/budgets_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'settings/settings_screen.dart';
 import 'transactions/transactions_screen.dart';
-import 'profile/profile_view_screen.dart';
 import '../../providers/database_provider.dart';
 import 'package:expensetracker/views/app_shell_drawer_item.dart';
 
@@ -91,23 +90,6 @@ class _AppShellState extends ConsumerState<AppShell> {
     await ref.read(authControllerProvider.notifier).logout();
   }
 
-  void _onHeaderAction(String action) {
-    switch (action) {
-      case 'profile':
-        Navigator.of(context).pop();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const ProfileViewScreen()),
-        );
-      case 'settings':
-        Navigator.of(context).pop();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SettingsScreen()),
-        );
-      case 'logout':
-        _logout();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final index = ref.watch(_navIndexProvider);
@@ -119,169 +101,96 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Scaffold(
       key: appShellScaffoldKey,
       drawer: Drawer(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: SafeArea(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                height: 232,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary,
-                        Theme.of(context).colorScheme.secondary,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(18),
-                      bottomRight: Radius.circular(18),
-                    ),
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.secondary,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Colors.white24,
-                              child: Text(
-                                name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    name.isNotEmpty ? name : 'Guest User',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    email.isNotEmpty
-                                        ? email
-                                        : 'Add your details',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(color: Colors.white70),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.white24,
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                        style: const TextStyle(
+                          fontSize: 26,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      SegmentedButton<String>(
-                        emptySelectionAllowed: true,
-                        showSelectedIcon: false,
-                        selected: const <String>{},
-                        style: ButtonStyle(
-                          foregroundColor: WidgetStateProperty.all(
-                            Colors.white,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name.isNotEmpty ? name : 'Guest User',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
-                          visualDensity: VisualDensity.compact,
-                          side: WidgetStateProperty.all(
-                            const BorderSide(color: Colors.white24),
-                          ),
-                        ),
-                        segments: const [
-                          ButtonSegment(
-                            value: 'profile',
-                            label: Text('Profile'),
-                            icon: Icon(Icons.person_outline, size: 16),
-                          ),
-                          ButtonSegment(
-                            value: 'settings',
-                            label: Text(AppStrings.settings),
-                            icon: Icon(Icons.settings_outlined, size: 16),
-                          ),
-                          ButtonSegment(
-                            value: 'logout',
-                            label: Text(AppStrings.logout),
-                            icon: Icon(Icons.logout, size: 16),
+                          const SizedBox(height: 4),
+                          Text(
+                            email.isNotEmpty ? email : 'Add your details',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: Colors.white70),
                           ),
                         ],
-                        onSelectionChanged: (selection) {
-                          if (selection.isEmpty) return;
-                          _onHeaderAction(selection.single);
-                        },
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Pages',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
               const SizedBox(height: 10),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: [
-                    DrawerItem(
-                      icon: Icons.dashboard_outlined,
-                      label: AppStrings.dashboard,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        ref.read(_navIndexProvider.notifier).state = 0;
-                      },
-                    ),
-                    DrawerItem(
-                      icon: Icons.receipt_long_outlined,
-                      label: AppStrings.transactions,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        ref.read(_navIndexProvider.notifier).state = 1;
-                      },
-                    ),
-                    DrawerItem(
-                      icon: Icons.pie_chart_outline,
-                      label: AppStrings.analytics,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        ref.read(_navIndexProvider.notifier).state = 2;
-                      },
-                    ),
-                    DrawerItem(
-                      icon: Icons.savings_outlined,
-                      label: AppStrings.budgets,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        ref.read(_navIndexProvider.notifier).state = 3;
-                      },
-                    ),
-                    const Divider(),
-                    DrawerItem(
-                      icon: Icons.person_outline,
-                      label: AppStrings.profile,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ProfileViewScreen(),
-                          ),
-                        );
-                      },
-                    ),
                     DrawerItem(
                       icon: Icons.settings_outlined,
                       label: AppStrings.settings,
@@ -293,6 +202,26 @@ class _AppShellState extends ConsumerState<AppShell> {
                           ),
                         );
                       },
+                    ),
+                    const SizedBox(height: 6),
+                    Material(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(14),
+                      child: ListTile(
+                        onTap: _logout,
+                        leading: const Icon(Icons.logout_rounded, color: Colors.red),
+                        title: Text(
+                          AppStrings.logout,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                     ),
                   ],
                 ),

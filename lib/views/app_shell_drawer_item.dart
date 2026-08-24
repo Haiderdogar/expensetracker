@@ -14,18 +14,34 @@ class DrawerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Material(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
+        color: surface.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(14),
         child: ListTile(
           onTap: onTap,
-          leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-          title: Text(label, style: Theme.of(context).textTheme.bodyLarge),
-          trailing: const Icon(Icons.chevron_right),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          tileColor: Theme.of(context).colorScheme.surface,
+          leading: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.primary,
+            size: 22,
+          ),
+          title: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          trailing: Icon(
+            Icons.chevron_right_rounded,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         ),
       ),
     );
