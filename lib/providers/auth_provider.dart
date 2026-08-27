@@ -57,8 +57,14 @@ class AuthController extends _$AuthController {
     if (currentPin != null && !await storage.verifyPin(currentPin)) {
       return false;
     }
-    await storage.setPinEnabled(false);
+
+    // Remove stored PIN entirely to avoid leaving stale hashes on device.
+    // deletePin also clears the pin enabled flag.
+    await storage.deletePin();
+
+    // Ensure biometric flag is cleared as well.
     await storage.setBiometricEnabled(false);
+
     ref.invalidate(pinEnabledProvider);
     ref.invalidate(biometricEnabledProvider);
     state = const AsyncData(AuthStatus.authenticated);
@@ -96,22 +102,28 @@ class AuthController extends _$AuthController {
     try {
       final supported = await auth.isDeviceSupported();
       final canCheck = await auth.canCheckBiometrics;
-      return supported && canCheck;
+      // Also check there is at least one enrolled biometric
+      final biometrics = await auth.getAvailableBiometrics();
+      return supported && canCheck && biometrics.isNotEmpty;
     } catch (_) {
       return false;
     }
   }
 
+  /// Prompts the OS biometric (or device credential) prompt.
+  /// By default, biometricOnly is false to allow fallback to device credentials when appropriate.
   Future<bool> promptBiometric({
     String reason = 'Unlock Expense Tracker',
+    bool biometricOnly = false,
   }) async {
     if (!await isBiometricAvailable()) return false;
 
     final auth = LocalAuthentication();
     try {
+      // Use platform parameters; allow device credential fallback by default
       return await auth.authenticate(
         localizedReason: reason,
-        biometricOnly: true,
+        biometricOnly: biometricOnly,
         persistAcrossBackgrounding: true,
       );
     } catch (_) {
@@ -124,16 +136,20 @@ class AuthController extends _$AuthController {
     final enabled = await storage.isBiometricEnabled();
     if (!enabled) return false;
 
-    final success = await promptBiometric();
+    // Allow device credential fallback when unlocking for reliability
+    final success = await promptBiometric(biometricOnly: false, reason: 'Unlock Expense Tracker');
     if (success) {
       state = const AsyncData(AuthStatus.authenticated);
     }
     return success;
   }
 
-  Future<void> enableBiometricUnlock() async {
+  Future<bool> enableBiometricUnlock() async {
+    final available = await isBiometricAvailable();
+    if (!available) return false;
     await ref.read(secureStorageProvider).setBiometricEnabled(true);
     ref.invalidate(biometricEnabledProvider);
+    return true;
   }
 }
 

@@ -111,7 +111,16 @@ class SettingsScreen extends ConsumerWidget {
         return;
       }
 
-      await ref.read(secureStorageProvider).setBiometricEnabled(true);
+      // Use controller to enable so availability checks remain consistent.
+      final enabled = await ref.read(authControllerProvider.notifier).enableBiometricUnlock();
+      if (!enabled) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to enable biometric authentication')),
+          );
+        }
+        return;
+      }
     } else {
       await ref.read(secureStorageProvider).setBiometricEnabled(false);
     }
@@ -323,30 +332,6 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       onTap: () => _toggleBiometric(context, ref, !enabled),
                     ),
-                  ),
-                  SettingsTile(
-                    icon: Icons.logout_rounded,
-                    title: AppStrings.logout,
-                    accentColor: colorScheme.errorContainer,
-                    onTap: () async {
-                      final pinOn = await ref.read(pinEnabledProvider.future);
-                      if (!pinOn) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Enable PIN lock to log out'),
-                            ),
-                          );
-                        }
-                        return;
-                      }
-                      if (context.mounted) {
-                        Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst);
-                      }
-                      await ref.read(authControllerProvider.notifier).logout();
-                    },
                   ),
                 ],
               ),

@@ -33,52 +33,211 @@ class _ProfileViewScreenState extends ConsumerState<ProfileViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         leading: Navigator.canPop(context)
-            ? IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).maybePop())
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
             : null,
         title: const Text(AppStrings.profile),
+        centerTitle: true,
+        elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: CircleAvatar(
-                radius: 48,
-                child: Text(
-                  _name.isNotEmpty ? _name[0].toUpperCase() : 'U',
-                  style: const TextStyle(fontSize: 32),
+            // Header with gradient background
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primary,
+                    colorScheme.primary.withValues(alpha: 0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+              ),
+              child: Column(
+                children: [
+                  // Avatar with shadow
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.4),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 56,
+                      backgroundColor: Colors.white24,
+                      child: Text(
+                        _name.isNotEmpty ? _name[0].toUpperCase() : 'U',
+                        style: const TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Name
+                  Text(
+                    _name.isNotEmpty ? _name : 'User',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Email
+                  Text(
+                    _email.isNotEmpty ? _email : 'No email set',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white70,
+                        ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
-            Text('Name', style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 4),
-            Text(_name.isNotEmpty ? _name : 'Not set', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 16),
-            Text('Email', style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 4),
-            Text(_email.isNotEmpty ? _email : 'Not set', style: Theme.of(context).textTheme.titleMedium),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final result = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(builder: (_) => const ProfileEditScreen()),
-                  );
-                  if (result == true) {
-                    await _loadProfile();
-                  }
-                },
-                child: const Text('Edit Profile'),
+
+            // Profile Info Cards
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Name Card
+                  _buildInfoCard(
+                    context,
+                    icon: Icons.person_rounded,
+                    label: 'Full Name',
+                    value: _name.isNotEmpty ? _name : 'Not set',
+                    accentColor: colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Email Card
+                  _buildInfoCard(
+                    context,
+                    icon: Icons.email_rounded,
+                    label: 'Email Address',
+                    value: _email.isNotEmpty ? _email : 'Not set',
+                    accentColor: colorScheme.secondary,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Status Card
+                  _buildInfoCard(
+                    context,
+                    icon: Icons.verified_user_rounded,
+                    label: 'Account Status',
+                    value: 'Active',
+                    accentColor: Colors.green,
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Edit Profile Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: FilledButton.tonal(
+                      onPressed: () async {
+                        final result = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileEditScreen(),
+                          ),
+                        );
+                        if (result == true) {
+                          await _loadProfile();
+                        }
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.edit_rounded, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Edit Profile',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color accentColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: accentColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

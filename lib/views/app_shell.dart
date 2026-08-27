@@ -122,7 +122,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.2),
                       blurRadius: 18,
                       offset: const Offset(0, 8),
                     ),
@@ -151,9 +153,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                             name.isNotEmpty ? name : 'Guest User',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -164,9 +164,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                             email.isNotEmpty ? email : 'Add your details',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
+                            style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: Colors.white70),
                           ),
                         ],
@@ -204,26 +202,41 @@ class _AppShellState extends ConsumerState<AppShell> {
                       },
                     ),
                     const SizedBox(height: 6),
-                    Material(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(14),
-                      child: ListTile(
-                        onTap: _logout,
-                        leading: const Icon(Icons.logout_rounded, color: Colors.red),
-                        title: Text(
-                          AppStrings.logout,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.error,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
+                    // Add other Drawer items here as needed
+                  ],
+                ),
+              ),
+
+              // Logout button pinned to bottom
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 16.0,
+                ),
+                child: Material(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(14),
+                  child: ListTile(
+                    onTap: _logout,
+                    leading: const Icon(
+                      Icons.logout_rounded,
+                      color: Colors.red,
+                    ),
+                    title: Text(
+                      AppStrings.logout,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: Colors.red,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
                 ),
               ),
             ],
