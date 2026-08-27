@@ -14,9 +14,6 @@ import '../../widgets/custom_text_field.dart';
 import '../../models/transaction_model.dart';
 import '../../core/utils/error_handler.dart';
 
-final _initializedAddTxProvider = StateProvider.autoDispose<bool>(
-  (ref) => false,
-);
 final _titleProvider = StateProvider.autoDispose<String>((ref) => '');
 final _amountProvider = StateProvider.autoDispose<String>((ref) => '');
 final _noteProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -27,37 +24,56 @@ final _dateProvider = StateProvider.autoDispose<DateTime>(
 );
 final _loadingProvider = StateProvider.autoDispose<bool>((ref) => false);
 
-class AddTransactionScreen extends StatelessWidget {
+class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key, this.transaction});
 
   final TransactionModel? transaction;
 
-  bool get _isEditing => transaction != null;
+  @override
+  State<AddTransactionScreen> createState() => _AddTransactionScreenState();
+}
+
+class _AddTransactionScreenState extends State<AddTransactionScreen> {
+  late TextEditingController _titleController;
+  late TextEditingController _amountController;
+  late TextEditingController _noteController;
+
+  bool get _isEditing => widget.transaction != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController();
+    _amountController = TextEditingController();
+    _noteController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        // Initialize once when editing. Delay modifications to after build to avoid
-        // "Tried to modify a provider while the widget tree was building" errors.
-        final initialized = ref.watch(_initializedAddTxProvider);
-        if (!initialized && _isEditing) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final t = transaction!;
-            ref.read(_titleProvider.notifier).state = t.title;
-            ref.read(_amountProvider.notifier).state = t.amount.toString();
-            ref.read(_noteProvider.notifier).state = t.note ?? '';
-            ref.read(_typeProvider.notifier).state = t.type;
-            ref.read(_categoryIdProvider.notifier).state = t.categoryId;
-            // keep existing wallet on edit (wallet selection removed from UI)
-            ref.read(_dateProvider.notifier).state = DateTime.parse(t.date);
-            ref.read(_initializedAddTxProvider.notifier).state = true;
-          });
+        // Initialize controllers once when editing
+        if (_isEditing && _titleController.text.isEmpty) {
+          final t = widget.transaction!;
+          _titleController.text = t.title;
+          _amountController.text = t.amount.toString();
+          _noteController.text = t.note ?? '';
+          ref.read(_titleProvider.notifier).state = t.title;
+          ref.read(_amountProvider.notifier).state = t.amount.toString();
+          ref.read(_noteProvider.notifier).state = t.note ?? '';
+          ref.read(_typeProvider.notifier).state = t.type;
+          ref.read(_categoryIdProvider.notifier).state = t.categoryId;
+          ref.read(_dateProvider.notifier).state = DateTime.parse(t.date);
         }
 
-        final title = ref.watch(_titleProvider);
-        final amount = ref.watch(_amountProvider);
-        final note = ref.watch(_noteProvider);
         final type = ref.watch(_typeProvider);
         final categoryId = ref.watch(_categoryIdProvider);
         final date = ref.watch(_dateProvider);
@@ -103,14 +119,18 @@ class AddTransactionScreen extends StatelessWidget {
         Future<void> save() async {
           if (!formKey.currentState!.validate()) return;
           if (categoryId == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Select category')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Select category')));
             return;
           }
 
           ref.read(_loadingProvider.notifier).state = true;
           try {
+            final title = _titleController.text;
+            final amount = _amountController.text;
+            final note = _noteController.text;
+
             final parsedAmount = double.parse(amount);
             final notifier = ref.read(transactionsProvider.notifier);
 
@@ -124,13 +144,17 @@ class AddTransactionScreen extends StatelessWidget {
             }
 
             if (walletIdToUse == null) {
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Create a wallet first')));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Create a wallet first')),
+                );
+              }
               return;
             }
 
             if (_isEditing) {
               await notifier.updateTransaction(
-                transaction!.copyWith(
+                widget.transaction!.copyWith(
                   title: title.trim(),
                   amount: parsedAmount,
                   type: type,
@@ -183,10 +207,18 @@ class AddTransactionScreen extends StatelessWidget {
                           context: context,
                           builder: (dctx) => AlertDialog(
                             title: const Text('Delete transaction'),
-                            content: const Text('Delete this transaction? This action cannot be undone.'),
+                            content: const Text(
+                              'Delete this transaction? This action cannot be undone.',
+                            ),
                             actions: [
-                              TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
-                              TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                              TextButton(
+                                onPressed: () => Navigator.of(dctx).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.of(dctx).pop(true),
+                                child: const Text('Delete'),
+                              ),
                             ],
                           ),
                         );
@@ -194,12 +226,18 @@ class AddTransactionScreen extends StatelessWidget {
 
                         ref.read(_loadingProvider.notifier).state = true;
                         try {
-                          await ref.read(transactionsProvider.notifier).delete(transaction!.id);
+                          await ref
+                              .read(transactionsProvider.notifier)
+                              .delete(widget.transaction!.id);
                           // Return a result so callers refresh and can show feedback
                           Navigator.of(context).pop('deleted');
                         } catch (e) {
                           final msg = ErrorHandler.message(e);
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text(msg)));
+                          }
                         } finally {
                           ref.read(_loadingProvider.notifier).state = false;
                         }
@@ -231,7 +269,9 @@ class AddTransactionScreen extends StatelessWidget {
                     if (currentCatId == null || cats == null) return;
 
                     try {
-                      final matching = cats.where((c) => c.id == currentCatId).toList();
+                      final matching = cats
+                          .where((c) => c.id == currentCatId)
+                          .toList();
                       if (matching.isEmpty) {
                         // previously selected category no longer exists
                         ref.read(_categoryIdProvider.notifier).state = null;
@@ -328,26 +368,50 @@ class AddTransactionScreen extends StatelessWidget {
                               context: context,
                               builder: (dctx) => AlertDialog(
                                 title: const Text('Delete category'),
-                                content: Text('Delete "${c.name}"? This cannot be undone.'),
+                                content: Text(
+                                  'Delete "${c.name}"? This cannot be undone.',
+                                ),
                                 actions: [
-                                  TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
-                                  TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(dctx).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(dctx).pop(true),
+                                    child: const Text('Delete'),
+                                  ),
                                 ],
                               ),
                             );
                             if (confirm == true) {
                               try {
-                                await ref.read(categoriesProvider.notifier).delete(c.id);
-                                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category deleted')));
+                                await ref
+                                    .read(categoriesProvider.notifier)
+                                    .delete(c.id);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Category deleted'),
+                                    ),
+                                  );
+                                }
                               } catch (e) {
-                                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(e.toString())),
+                                  );
+                                }
                               }
                             }
                           },
                           child: ChoiceChip(
                             label: Text(c.name),
                             selected: selected,
-                            onSelected: (_) => ref.read(_categoryIdProvider.notifier).state = c.id,
+                            onSelected: (_) =>
+                                ref.read(_categoryIdProvider.notifier).state =
+                                    c.id,
                           ),
                         );
                       }).toList(),
@@ -356,24 +420,29 @@ class AddTransactionScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 CustomTextField(
-                  initialValue: title,
+                  controller: _titleController,
                   label: AppStrings.title,
-                  hint: type == 'income' ? 'e.g., Salary payment' : 'e.g., Lunch at cafe',
-                  onChanged: (v) => ref.read(_titleProvider.notifier).state = v,
+                  hint: type == 'income'
+                      ? 'e.g., Salary payment'
+                      : 'e.g., Lunch at cafe',
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
-                  initialValue: amount,
+                  controller: _amountController,
                   label: AppStrings.amount,
-                  onChanged: (v) => ref.read(_amountProvider.notifier).state = v,
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
                   // show current currency symbol as prefix with symmetric vertical padding
                   prefix: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
-                    child: Text(ref.watch(currencySymbolProvider).value ?? '\$'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0,
+                      vertical: 12.0,
+                    ),
+                    child: Text(
+                      ref.watch(currencySymbolProvider).value ?? '\$',
+                    ),
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Required';
@@ -391,10 +460,11 @@ class AddTransactionScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
-                  initialValue: note,
+                  controller: _noteController,
                   label: AppStrings.note,
-                  hint: type == 'income' ? 'e.g., Bonus from client' : 'e.g., Bought apples and bread',
-                  onChanged: (v) => ref.read(_noteProvider.notifier).state = v,
+                  hint: type == 'income'
+                      ? 'e.g., Bonus from client'
+                      : 'e.g., Bought apples and bread',
                   maxLines: 3,
                 ),
                 const SizedBox(height: 24),

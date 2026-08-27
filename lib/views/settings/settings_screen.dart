@@ -127,10 +127,8 @@ class SettingsScreen extends ConsumerWidget {
       if (context.mounted) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => const AuthScreen(
-              isSetup: true,
-              offerBiometricAfterSetup: true,
-            ),
+            builder: (_) =>
+                const AuthScreen(isSetup: true, offerBiometricAfterSetup: true),
           ),
         );
       }
@@ -140,9 +138,7 @@ class SettingsScreen extends ConsumerWidget {
     }
 
     final verified = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const AuthScreen(verifyOnly: true),
-      ),
+      MaterialPageRoute(builder: (_) => const AuthScreen(verifyOnly: true)),
     );
     if (verified == true) {
       await ref.read(authControllerProvider.notifier).disablePin();
@@ -160,9 +156,7 @@ class SettingsScreen extends ConsumerWidget {
     }
 
     final verified = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const AuthScreen(verifyOnly: true),
-      ),
+      MaterialPageRoute(builder: (_) => const AuthScreen(verifyOnly: true)),
     );
     if (verified == true && context.mounted) {
       await Navigator.of(context).push(
@@ -174,313 +168,476 @@ class SettingsScreen extends ConsumerWidget {
     ref.invalidate(pinEnabledProvider);
   }
 
+  static Widget _sectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10, left: 4, top: 2),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          letterSpacing: 0.8,
+          fontWeight: FontWeight.w700,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
+  static Widget _sectionCard({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeControllerProvider);
     final biometricAsync = ref.watch(biometricEnabledProvider);
     final pinEnabledAsync = ref.watch(pinEnabledProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         leading: Navigator.canPop(context)
             ? IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back_rounded),
                 onPressed: () => Navigator.of(context).maybePop(),
               )
             : IconButton(
-                icon: const Icon(Icons.menu),
+                icon: const Icon(Icons.menu_rounded),
                 onPressed: () => appShellScaffoldKey.currentState?.openDrawer(),
               ),
-        title: const Text(AppStrings.settings),
+        title: Text(
+          AppStrings.settings,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text(
-              AppStrings.theme,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-          SettingsTile(
-            icon: Icons.light_mode_outlined,
-            title: AppStrings.lightMode,
-            trailing: Radio<AppThemeMode>(
-              value: AppThemeMode.light,
-              groupValue: themeMode,
-              onChanged: (v) {
-                if (v != null) {
-                  ref.read(themeModeControllerProvider.notifier).setMode(v);
-                }
-              },
-            ),
-            onTap: () => ref
-                .read(themeModeControllerProvider.notifier)
-                .setMode(AppThemeMode.light),
-          ),
-          SettingsTile(
-            icon: Icons.dark_mode_outlined,
-            title: AppStrings.darkMode,
-            trailing: Radio<AppThemeMode>(
-              value: AppThemeMode.dark,
-              groupValue: themeMode,
-              onChanged: (v) {
-                if (v != null) {
-                  ref.read(themeModeControllerProvider.notifier).setMode(v);
-                }
-              },
-            ),
-            onTap: () => ref
-                .read(themeModeControllerProvider.notifier)
-                .setMode(AppThemeMode.dark),
-          ),
-          SettingsTile(
-            icon: Icons.brightness_auto_outlined,
-            title: AppStrings.systemMode,
-            trailing: Radio<AppThemeMode>(
-              value: AppThemeMode.system,
-              groupValue: themeMode,
-              onChanged: (v) {
-                if (v != null) {
-                  ref.read(themeModeControllerProvider.notifier).setMode(v);
-                }
-              },
-            ),
-            onTap: () => ref
-                .read(themeModeControllerProvider.notifier)
-                .setMode(AppThemeMode.system),
-          ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text(
-              AppStrings.security,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-          pinEnabledAsync.when(
-            loading: () => const ListTile(
-              leading: CircularProgressIndicator(),
-              title: Text('PIN lock'),
-            ),
-            error: (e, _) => ListTile(title: Text(e.toString())),
-            data: (enabled) => SettingsTile(
-              icon: Icons.pin_outlined,
-              title: enabled ? AppStrings.changePin : AppStrings.enablePinLock,
-              trailing: Switch(
-                value: enabled,
-                onChanged: (v) => _togglePinLock(context, ref, v),
-              ),
-              onTap: () => _onPinTileTap(context, ref, enabled),
-            ),
-          ),
-          biometricAsync.when(
-            loading: () => const ListTile(
-              leading: CircularProgressIndicator(),
-              title: Text(AppStrings.enableBiometric),
-            ),
-            error: (e, _) => ListTile(title: Text(e.toString())),
-            data: (enabled) => SettingsTile(
-              icon: Icons.fingerprint,
-              title: AppStrings.enableBiometric,
-              trailing: Switch(
-                value: enabled,
-                onChanged: (v) => _toggleBiometric(context, ref, v),
-              ),
-              onTap: () => _toggleBiometric(context, ref, !enabled),
-            ),
-          ),
-          SettingsTile(
-            icon: Icons.logout,
-            title: AppStrings.logout,
-            onTap: () async {
-              final pinOn = await ref.read(pinEnabledProvider.future);
-              if (!pinOn) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Enable PIN lock to log out'),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          children: [
+            _sectionHeader(context, AppStrings.theme),
+            _sectionCard(
+              child: Column(
+                children: [
+                  SettingsTile(
+                    icon: Icons.light_mode_outlined,
+                    title: AppStrings.lightMode,
+                    trailing: Radio<AppThemeMode>(
+                      value: AppThemeMode.light,
+                      groupValue: themeMode,
+                      onChanged: (v) {
+                        if (v != null) {
+                          ref
+                              .read(themeModeControllerProvider.notifier)
+                              .setMode(v);
+                        }
+                      },
                     ),
-                  );
-                }
-                return;
-              }
-              if (context.mounted) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              }
-              await ref.read(authControllerProvider.notifier).logout();
-            },
-          ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text('Manage categories', style: Theme.of(context).textTheme.titleSmall),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final nameController = TextEditingController();
-                    String type = 'expense';
-                    final result = await showDialog<bool>(
-                      context: context,
-                      builder: (dctx) => AlertDialog(
-                        title: const Text('Add category'),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TextField(controller: nameController, decoration: const InputDecoration(hintText: 'Name')),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Radio<String>(value: 'expense', groupValue: type, onChanged: (v) => type = v ?? 'expense'),
-                                const Text('Expense'),
-                                const SizedBox(width: 12),
-                                Radio<String>(value: 'income', groupValue: type, onChanged: (v) => type = v ?? 'income'),
-                                const Text('Income'),
-                              ],
-                            ),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
-                          TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Save')),
-                        ],
-                      ),
-                    );
-                    if (result != true) return;
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) return;
-                    try {
-                      await ref.read(categoriesProvider.notifier).create(
-                        name: name,
-                        type: type,
-                        icon: type == 'income' ? 'work' : 'shopping_bag',
-                        color: type == 'income' ? '#2ECC71' : '#FF6B6B',
-                      );
-                      ref.invalidate(categoriesProvider);
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category added')));
-                    } catch (e) {
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                    }
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add category'),
-                ),
-              ],
+                    onTap: () => ref
+                        .read(themeModeControllerProvider.notifier)
+                        .setMode(AppThemeMode.light),
+                  ),
+                  SettingsTile(
+                    icon: Icons.dark_mode_outlined,
+                    title: AppStrings.darkMode,
+                    trailing: Radio<AppThemeMode>(
+                      value: AppThemeMode.dark,
+                      groupValue: themeMode,
+                      onChanged: (v) {
+                        if (v != null) {
+                          ref
+                              .read(themeModeControllerProvider.notifier)
+                              .setMode(v);
+                        }
+                      },
+                    ),
+                    onTap: () => ref
+                        .read(themeModeControllerProvider.notifier)
+                        .setMode(AppThemeMode.dark),
+                  ),
+                  SettingsTile(
+                    icon: Icons.brightness_auto_outlined,
+                    title: AppStrings.systemMode,
+                    trailing: Radio<AppThemeMode>(
+                      value: AppThemeMode.system,
+                      groupValue: themeMode,
+                      onChanged: (v) {
+                        if (v != null) {
+                          ref
+                              .read(themeModeControllerProvider.notifier)
+                              .setMode(v);
+                        }
+                      },
+                    ),
+                    onTap: () => ref
+                        .read(themeModeControllerProvider.notifier)
+                        .setMode(AppThemeMode.system),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Consumer(builder: (cctx, cref, _) {
-              final all = cref.watch(categoriesProvider);
-              return all.when(
-                loading: () => const LinearProgressIndicator(),
-                error: (e, _) => Text(e.toString()),
-                data: (cats) {
-                  if (cats.isEmpty) return const Text('No categories yet');
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: cats.map((c) {
-                      return InputChip(
-                        label: Text('${c.name} (${c.type})'),
-                        onPressed: () {},
-                        onDeleted: () async {
-                          final confirm = await showDialog<bool>(
+            const SizedBox(height: 18),
+            _sectionHeader(context, AppStrings.security),
+            _sectionCard(
+              child: Column(
+                children: [
+                  pinEnabledAsync.when(
+                    loading: () => const ListTile(
+                      leading: CircularProgressIndicator(),
+                      title: Text('PIN lock'),
+                    ),
+                    error: (e, _) => ListTile(title: Text(e.toString())),
+                    data: (enabled) => SettingsTile(
+                      icon: Icons.pin_outlined,
+                      title: enabled
+                          ? AppStrings.changePin
+                          : AppStrings.enablePinLock,
+                      trailing: Switch(
+                        value: enabled,
+                        onChanged: (v) => _togglePinLock(context, ref, v),
+                      ),
+                      onTap: () => _onPinTileTap(context, ref, enabled),
+                    ),
+                  ),
+                  biometricAsync.when(
+                    loading: () => const ListTile(
+                      leading: CircularProgressIndicator(),
+                      title: Text(AppStrings.enableBiometric),
+                    ),
+                    error: (e, _) => ListTile(title: Text(e.toString())),
+                    data: (enabled) => SettingsTile(
+                      icon: Icons.fingerprint_rounded,
+                      title: AppStrings.enableBiometric,
+                      trailing: Switch(
+                        value: enabled,
+                        onChanged: (v) => _toggleBiometric(context, ref, v),
+                      ),
+                      onTap: () => _toggleBiometric(context, ref, !enabled),
+                    ),
+                  ),
+                  SettingsTile(
+                    icon: Icons.logout_rounded,
+                    title: AppStrings.logout,
+                    accentColor: colorScheme.errorContainer,
+                    onTap: () async {
+                      final pinOn = await ref.read(pinEnabledProvider.future);
+                      if (!pinOn) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Enable PIN lock to log out'),
+                            ),
+                          );
+                        }
+                        return;
+                      }
+                      if (context.mounted) {
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
+                      }
+                      await ref.read(authControllerProvider.notifier).logout();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            _sectionHeader(context, 'Manage categories'),
+            _sectionCard(
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final nameController = TextEditingController();
+                          String type = 'expense';
+                          final result = await showDialog<bool>(
                             context: context,
                             builder: (dctx) => AlertDialog(
-                              title: const Text('Delete category'),
-                              content: Text('Delete "${c.name}"? This cannot be undone.'),
+                              title: const Text('Add category'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextField(
+                                    controller: nameController,
+                                    decoration: const InputDecoration(
+                                      hintText: 'Name',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Radio<String>(
+                                        value: 'expense',
+                                        groupValue: type,
+                                        onChanged: (v) => type = v ?? 'expense',
+                                      ),
+                                      const Text('Expense'),
+                                      const SizedBox(width: 12),
+                                      Radio<String>(
+                                        value: 'income',
+                                        groupValue: type,
+                                        onChanged: (v) => type = v ?? 'income',
+                                      ),
+                                      const Text('Income'),
+                                    ],
+                                  ),
+                                ],
+                              ),
                               actions: [
-                                TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
-                                TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(dctx).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(dctx).pop(true),
+                                  child: const Text('Save'),
+                                ),
                               ],
                             ),
                           );
-                          if (confirm == true) {
-                            try {
-                              await cref.read(categoriesProvider.notifier).delete(c.id);
-                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category deleted')));
-                            } catch (e) {
-                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                          if (result != true) return;
+                          final name = nameController.text.trim();
+                          if (name.isEmpty) return;
+                          try {
+                            await ref
+                                .read(categoriesProvider.notifier)
+                                .create(
+                                  name: name,
+                                  type: type,
+                                  icon: type == 'income'
+                                      ? 'work'
+                                      : 'shopping_bag',
+                                  color: type == 'income'
+                                      ? '#2ECC71'
+                                      : '#FF6B6B',
+                                );
+                            ref.invalidate(categoriesProvider);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Category added')),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(e.toString())),
+                              );
                             }
                           }
                         },
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Add category'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Consumer(
+                      builder: (cctx, cref, _) {
+                        final all = cref.watch(categoriesProvider);
+                        return all.when(
+                          loading: () => const LinearProgressIndicator(),
+                          error: (e, _) => Text(e.toString()),
+                          data: (cats) {
+                            if (cats.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  'No categories yet',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              );
+                            }
+                            return Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: cats.map((c) {
+                                return InputChip(
+                                  label: Text('${c.name} (${c.type})'),
+                                  onPressed: () {},
+                                  onDeleted: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (dctx) => AlertDialog(
+                                        title: const Text('Delete category'),
+                                        content: Text(
+                                          'Delete "${c.name}"? This cannot be undone.',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(dctx).pop(false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(dctx).pop(true),
+                                            child: const Text('Delete'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      try {
+                                        await cref
+                                            .read(categoriesProvider.notifier)
+                                            .delete(c.id);
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Category deleted'),
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(e.toString()),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                                );
+                              }).toList(),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            _sectionHeader(context, 'Currency'),
+            _sectionCard(
+              child: Consumer(
+                builder: (cctx, cref, _) {
+                  final symbolAsync = cref.watch(currencySymbolProvider);
+                  final codeAsync = cref.watch(currencyCodeProvider);
+
+                  Widget buildPickerTrigger(String display) {
+                    return SettingsTile(
+                      icon: Icons.currency_exchange_rounded,
+                      title: 'Currency',
+                      subtitle: display,
+                      trailing: FilledButton.tonal(
+                        onPressed: () {
+                          showAppCurrencyPicker(
+                            context: context,
+                            onSelect: (currency) async {
+                              try {
+                                await ref
+                                    .read(databaseHelperProvider)
+                                    .setCurrencySymbol(currency.symbol);
+                                await ref
+                                    .read(databaseHelperProvider)
+                                    .setSetting('currency_code', currency.code);
+                                ref.invalidate(currencySymbolProvider);
+                                ref.invalidate(currencyCodeProvider);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Currency set to ${currency.code}',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(e.toString())),
+                                  );
+                                }
+                              }
+                            },
+                          );
+                        },
+                        child: const Text('Change'),
+                      ),
+                    );
+                  }
+
+                  return symbolAsync.when(
+                    loading: () => const ListTile(
+                      leading: Icon(Icons.money_rounded),
+                      title: Text('Currency: ...'),
+                      trailing: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    error: (e, _) => ListTile(
+                      leading: const Icon(Icons.money_rounded),
+                      title: Text('Currency: error: $e'),
+                    ),
+                    data: (symbol) {
+                      return codeAsync.when(
+                        loading: () => buildPickerTrigger(symbol),
+                        error: (_, _) => buildPickerTrigger(symbol),
+                        data: (code) => buildPickerTrigger(code ?? symbol),
                       );
-                    }).toList(),
+                    },
                   );
                 },
-              );
-            }),
-          ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text('Currency', style: Theme.of(context).textTheme.titleSmall),
-          ),
-          // Use the reactive currencySymbolProvider so changes from elsewhere (Add Transaction) update immediately
-          Consumer(builder: (cctx, cref, _) {
-            final symbolAsync = cref.watch(currencySymbolProvider);
-            final codeAsync = cref.watch(currencyCodeProvider);
-
-            Widget buildPickerTrigger(String display) {
-              return ListTile(
-                leading: Text(display, style: Theme.of(context).textTheme.titleMedium),
-                title: Text('Currency: $display'),
-                trailing: TextButton(
-                  onPressed: () {
-                    showAppCurrencyPicker(
-                      context: context,
-                      onSelect: (currency) async {
-                        try {
-                          await ref.read(databaseHelperProvider).setCurrencySymbol(currency.symbol);
-                          await ref.read(databaseHelperProvider).setSetting('currency_code', currency.code);
-                          ref.invalidate(currencySymbolProvider);
-                          ref.invalidate(currencyCodeProvider);
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Currency set to ${currency.code}')));
-                        } catch (e) {
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                        }
-                      },
-                    );
-                  },
-                  child: const Text('Change'),
-                ),
-              );
-            }
-
-            return symbolAsync.when(
-              loading: () => const ListTile(
-                leading: Icon(Icons.money),
-                title: Text('Currency: ...'),
-                trailing: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
               ),
-              error: (e, _) => ListTile(leading: const Icon(Icons.money), title: Text('Currency: error: $e')),
-              data: (symbol) {
-                return codeAsync.when(
-                  loading: () => buildPickerTrigger(symbol ?? '\$'),
-                  error: (_, _) => buildPickerTrigger(symbol ?? '\$'),
-                  data: (code) => buildPickerTrigger(code ?? symbol ?? '\$'),
-                );
-              },
-            );
-          }),
-          const Divider(),
-          SettingsTile(
-            icon: Icons.upload_outlined,
-            title: AppStrings.exportData,
-            onTap: () => _export(context, ref),
-          ),
-          SettingsTile(
-            icon: Icons.download_outlined,
-            title: AppStrings.importData,
-            onTap: () => _import(context, ref),
-          ),
-        ],
+            ),
+            const SizedBox(height: 18),
+            _sectionHeader(context, 'Data'),
+            _sectionCard(
+              child: Column(
+                children: [
+                  SettingsTile(
+                    icon: Icons.upload_outlined,
+                    title: AppStrings.exportData,
+                    accentColor: colorScheme.primary.withValues(alpha: 0.10),
+                    onTap: () => _export(context, ref),
+                  ),
+                  SettingsTile(
+                    icon: Icons.download_outlined,
+                    title: AppStrings.importData,
+                    accentColor: colorScheme.secondaryContainer,
+                    onTap: () => _import(context, ref),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
