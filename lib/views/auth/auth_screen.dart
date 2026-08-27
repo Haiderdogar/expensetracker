@@ -62,10 +62,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       final filtered = text.replaceAll(RegExp(r'[^0-9]'), '');
       if (filtered != text) {
         // sanitize input and keep cursor at end
-      _pinController.text = filtered;
-      _pinController.selection = TextSelection.fromPosition(
-          TextPosition(offset: _pinController.text.length));
-      return;
+        _pinController.text = filtered;
+        _pinController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _pinController.text.length),
+        );
+        return;
       }
 
       // sync to provider
@@ -273,7 +274,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: (widget.isSetup || widget.verifyOnly) &&
+      appBar:
+          (widget.isSetup || widget.verifyOnly) &&
               Navigator.of(context).canPop()
           ? AppBar(backgroundColor: Colors.transparent, elevation: 0)
           : null,
@@ -281,7 +283,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final maxH = constraints.maxHeight;
-            final keypadHeight = (maxH * 0.45).clamp(280.0, 520.0);
+            const keypadRowHeight = 72.0;
+            const keypadSpacing = 12.0;
+            final keypadHeight = (maxH * 0.45).clamp(
+              keypadRowHeight * 4 + keypadSpacing * 3,
+              520.0,
+            );
             return SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: maxH),
@@ -292,7 +299,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
-                            vertical: 36, horizontal: 24),
+                          vertical: 36,
+                          horizontal: 24,
+                        ),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
@@ -330,9 +339,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             const SizedBox(height: 20),
                             Text(
                               _title(isConfirmStep),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
+                              style: Theme.of(context).textTheme.headlineSmall
                                   ?.copyWith(fontWeight: FontWeight.w600),
                               textAlign: TextAlign.center,
                             ),
@@ -359,8 +366,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               // Tappable area to open system numeric keyboard
                               GestureDetector(
                                 behavior: HitTestBehavior.translucent,
-                                onTap: () => FocusScope.of(context)
-                                    .requestFocus(_pinFocusNode),
+                                onTap: () => FocusScope.of(
+                                  context,
+                                ).requestFocus(_pinFocusNode),
                                 child: AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 250),
                                   child: Row(
@@ -370,23 +378,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       final filled = i < pin.length;
                                       final focused = i == pin.length;
                                       return AnimatedContainer(
-                                        duration:
-                                            const Duration(milliseconds: 200),
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
                                         margin: const EdgeInsets.symmetric(
-                                            horizontal: 10),
+                                          horizontal: 10,
+                                        ),
                                         width: 64,
                                         height: 56,
                                         decoration: BoxDecoration(
                                           color: Theme.of(context).cardColor,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: Border.all(
                                             color: filled
                                                 ? AppColors.primaryEmerald
                                                 : focused
-                                                    ? AppColors.primaryEmerald
-                                                        .withOpacity(0.28)
-                                                    : AppColors.gray200,
+                                                ? AppColors.primaryEmerald
+                                                      .withOpacity(0.28)
+                                                : AppColors.gray200,
                                             width: filled ? 2 : 1.2,
                                           ),
                                           boxShadow: filled
@@ -397,7 +408,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                                         .withOpacity(0.12),
                                                     blurRadius: 10,
                                                     offset: const Offset(0, 6),
-                                                  )
+                                                  ),
                                                 ]
                                               : null,
                                         ),
@@ -408,25 +419,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                                   height: 14,
                                                   decoration:
                                                       const BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    color: AppColors
-                                                        .primaryEmerald,
-                                                  ),
-                                                )
-                                              : focused
-                                                  ? Container(
-                                                      width: 2,
-                                                      height: 24,
-                                                      decoration:
-                                                          BoxDecoration(
+                                                        shape: BoxShape.circle,
                                                         color: AppColors
                                                             .primaryEmerald,
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(2),
                                                       ),
-                                                    )
-                                                  : const SizedBox.shrink(),
+                                                )
+                                              : focused
+                                              ? Container(
+                                                  width: 2,
+                                                  height: 24,
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors
+                                                        .primaryEmerald,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          2,
+                                                        ),
+                                                  ),
+                                                )
+                                              : const SizedBox.shrink(),
                                         ),
                                       );
                                     }),
@@ -456,8 +467,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       if (_pinController.text.length == 4)
                                         _handleComplete();
                                     },
-                                    decoration:
-                                        const InputDecoration.collapsed(hintText: ''),
+                                    decoration: const InputDecoration.collapsed(
+                                      hintText: '',
+                                    ),
                                   ),
                                 ),
                               ),
@@ -466,19 +478,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 Container(
                                   width: double.infinity,
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: 12, horizontal: 16),
+                                    vertical: 12,
+                                    horizontal: 16,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.expenseRed.withOpacity(0.08),
+                                    color: AppColors.expenseRed.withOpacity(
+                                      0.08,
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                        color:
-                                            AppColors.expenseRed.withOpacity(
-                                                0.12)),
+                                      color: AppColors.expenseRed.withOpacity(
+                                        0.12,
+                                      ),
+                                    ),
                                   ),
                                   child: Text(
                                     error,
                                     style: const TextStyle(
-                                        color: AppColors.expenseRed),
+                                      color: AppColors.expenseRed,
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
                                 ),
@@ -489,80 +507,104 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
 
                       // Keypad fixed height area with bottom safe padding
-                      Builder(builder: (ctx) {
-                        final bottomPad = MediaQuery.of(ctx).viewPadding.bottom;
-                        return Padding(
-                          padding: EdgeInsets.fromLTRB(24, 0, 24, bottomPad + 36),
-                          child: SizedBox(
-                            height: keypadHeight,
-                            child: GridView.count(
-                              physics: const NeverScrollableScrollPhysics(),
-                              shrinkWrap: true,
-                              crossAxisCount: 3,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 1.05,
-                              children: [
-                                for (final d in [
-                                  '1',
-                                  '2',
-                                  '3',
-                                  '4',
-                                  '5',
-                                  '6',
-                                  '7',
-                                  '8',
-                                  '9',
-                                ])
+                      Builder(
+                        builder: (ctx) {
+                          final bottomPad = MediaQuery.of(
+                            ctx,
+                          ).viewPadding.bottom;
+                          return Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              24,
+                              0,
+                              24,
+                              bottomPad + 36,
+                            ),
+                            child: SizedBox(
+                              height: keypadHeight,
+                              child: GridView.custom(
+                                physics: const NeverScrollableScrollPhysics(),
+                                shrinkWrap: true,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      mainAxisSpacing: keypadSpacing,
+                                      crossAxisSpacing: keypadSpacing,
+                                      mainAxisExtent: keypadRowHeight,
+                                    ),
+                                childrenDelegate: SliverChildListDelegate.fixed([
+                                  for (final d in [
+                                    '1',
+                                    '2',
+                                    '3',
+                                    '4',
+                                    '5',
+                                    '6',
+                                    '7',
+                                    '8',
+                                    '9',
+                                  ])
+                                    Center(
+                                      child: PinPadButton(
+                                        label: d,
+                                        onTap: coolingDown
+                                            ? () {}
+                                            : () => _onDigit(d),
+                                      ),
+                                    ),
+                                  Center(
+                                    child: _isUnlock
+                                        ? biometricAsync.when(
+                                            data: (enabled) => enabled
+                                                ? PinPadButton(
+                                                    label: '',
+                                                    icon: Icons.fingerprint,
+                                                    onTap: () async {
+                                                      final success = await ref
+                                                          .read(
+                                                            authControllerProvider
+                                                                .notifier,
+                                                          )
+                                                          .authenticateWithBiometric();
+                                                      if (success)
+                                                        await _finishUnlocked();
+                                                    },
+                                                  )
+                                                : const SizedBox(
+                                                    width: 72,
+                                                    height: 72,
+                                                  ),
+                                            loading: () => const SizedBox(
+                                              width: 72,
+                                              height: 72,
+                                            ),
+                                            error: (_, __) => const SizedBox(
+                                              width: 72,
+                                              height: 72,
+                                            ),
+                                          )
+                                        : const SizedBox(width: 72, height: 72),
+                                  ),
                                   Center(
                                     child: PinPadButton(
-                                      label: d,
-                                      onTap: coolingDown ? () {} : () => _onDigit(d),
+                                      label: '0',
+                                      onTap: coolingDown
+                                          ? () {}
+                                          : () => _onDigit('0'),
                                     ),
                                   ),
-                                Center(
-                                  child: _isUnlock
-                                      ? biometricAsync.when(
-                                          data: (enabled) => enabled
-                                              ? PinPadButton(
-                                                  label: '',
-                                                  icon: Icons.fingerprint,
-                                                  onTap: () async {
-                                                    final success = await ref
-                                                        .read(authControllerProvider
-                                                            .notifier)
-                                                        .authenticateWithBiometric();
-                                                    if (success) await
-                                                        _finishUnlocked();
-                                                  },
-                                                )
-                                              : const SizedBox(width: 72,
-                                                  height: 72),
-                                          loading: () => const SizedBox(
-                                              width: 72, height: 72),
-                                          error: (_, __) => const SizedBox(
-                                              width: 72, height: 72),
-                                        )
-                                      : const SizedBox(width: 72, height: 72),
-                                ),
-                                Center(
-                                  child: PinPadButton(
-                                    label: '0',
-                                    onTap: coolingDown ? () {} : () => _onDigit('0'),
+                                  Center(
+                                    child: PinPadButton(
+                                      label: '',
+                                      icon: Icons.backspace_outlined,
+                                      onTap: _onBackspace,
+                                    ),
                                   ),
-                                ),
-                                Center(
-                                  child: PinPadButton(
-                                    label: '',
-                                    icon: Icons.backspace_outlined,
-                                    onTap: _onBackspace,
-                                  ),
-                                ),
-                              ],
+                                ]),
+                              ),
                             ),
-                          ),
-                        );
-                      }),
+                          );
+                        },
+                      ),
 
                       const SizedBox(height: 12),
                     ],
