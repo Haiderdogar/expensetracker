@@ -133,10 +133,8 @@ class NotesScreen extends ConsumerWidget {
                     child: _NoteCard(
                       note: entry.value,
                       accent: _noteAccents[entry.key % _noteAccents.length],
-                      onTap: () =>
-                          _editNote(context, ref, note: entry.value),
-                      onDelete: () =>
-                          _deleteNote(context, ref, entry.value),
+                      onTap: () => _editNote(context, ref, note: entry.value),
+                      onDelete: () => _deleteNote(context, ref, entry.value),
                     ),
                   ),
                 ),
@@ -197,7 +195,10 @@ class _NotesHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.lightbulb_rounded, color: AppColors.mintAccent),
+                  const Icon(
+                    Icons.lightbulb_rounded,
+                    color: AppColors.mintAccent,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'A space for what matters',
@@ -233,7 +234,9 @@ class _NotesHeader extends StatelessWidget {
                     label: const Text('Create'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
                     ),
                   ),
                 ],
@@ -356,9 +359,9 @@ class _NotesMessage extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
@@ -378,8 +381,18 @@ class _NotesMessage extends StatelessWidget {
 String _noteDate(DateTime date) {
   final local = date.toLocal();
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return 'Updated ${months[local.month - 1]} ${local.day}, ${local.year}';
 }
