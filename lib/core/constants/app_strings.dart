@@ -5,6 +5,7 @@ abstract final class AppStrings {
   static const String analytics = 'Analytics';
   static const String budgets = 'Budgets';
   static const String settings = 'Settings';
+  static const String notes = 'Notes';
   static const String profile = 'Profile';
 
   static const String totalBalance = 'Total Balance';
@@ -23,6 +24,9 @@ abstract final class AppStrings {
   static const String wrongPin = 'Incorrect PIN';
   static const String unlockWithBiometric = 'Unlock with biometrics';
   static const String unlockSubtitle = 'Unlock with PIN or biometrics';
+  static const String usePin = 'Use PIN';
+  static const String unlockWithFingerprint = 'Unlock with fingerprint';
+  static const String unlockWithFace = 'Unlock with Face';
   static const String pinCooldown = 'Too many attempts. Try again in 30 seconds.';
   static const String protectAppTitle = 'Protect your app';
   static const String protectAppBody =

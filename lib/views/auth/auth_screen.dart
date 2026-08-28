@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:local_auth/local_auth.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
@@ -10,7 +11,6 @@ import 'widgets/pin_pad_button.dart';
 
 final _pinProvider = StateProvider<String>((ref) => '');
 final _firstPinProvider = StateProvider<String?>((ref) => null);
-final _errorProvider = StateProvider<String?>((ref) => null);
 final _isConfirmStepProvider = StateProvider<bool>((ref) => false);
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -31,6 +31,9 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _didPromptBiometric = false;
+  bool _biometricMode = true;
+  BiometricType? _biometricType;
+  bool _isSubmitting = false;
   int _failures = 0;
   DateTime? _cooldownUntil;
 
@@ -47,6 +50,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
     return AppStrings.enterPin;
   }
+
+  IconData get _biometricIcon =>
+      _biometricType == BiometricType.face ? Icons.face : Icons.fingerprint;
+
+  String get _biometricTitle => _biometricType == BiometricType.face
+      ? AppStrings.unlockWithFace
+      : AppStrings.unlockWithFingerprint;
 
   @override
   void initState() {
@@ -71,7 +81,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
       // sync to provider
       ref.read(_pinProvider.notifier).state = filtered;
-      ref.read(_errorProvider.notifier).state = null;
 
       if (filtered.length == 4) {
         // allow UI to update before handling completion
@@ -98,11 +107,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     if (_didPromptBiometric || !_isUnlock || !mounted) return;
     _didPromptBiometric = true;
     final enabled = await ref.read(biometricEnabledProvider.future);
-    if (!enabled || !mounted) return;
+    if (enabled) await _promptBiometric();
+    if (mounted && _biometricMode) setState(() => _biometricMode = false);
+  }
+
+  Future<void> _promptBiometric() async {
+    if (!_isUnlock || !mounted) return;
+    _biometricType = await ref
+        .read(authControllerProvider.notifier)
+        .preferredBiometric();
+    if (_biometricType == null || !mounted) return;
+
+    setState(() => _biometricMode = true);
     final success = await ref
         .read(authControllerProvider.notifier)
         .authenticateWithBiometric();
-    if (success) await _finishUnlocked();
+    if (success) {
+      await _finishUnlocked();
+    } else if (mounted) {
+      setState(() => _biometricMode = false);
+    }
+  }
+
+  void _usePin() {
+    if (!_isUnlock) return;
+    setState(() => _biometricMode = false);
+    FocusScope.of(context).requestFocus(_pinFocusNode);
   }
 
   bool _inCooldown() {
@@ -169,79 +199,94 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _handleComplete() async {
+    if (_isSubmitting) return;
     if (_inCooldown()) {
-      ref.read(_errorProvider.notifier).state = AppStrings.pinCooldown;
+      _showPinMessage(AppStrings.pinCooldown);
       return;
     }
 
     final currentPin = ref.read(_pinProvider);
     if (currentPin.length != 4) return;
+    _isSubmitting = true;
 
-    if (widget.verifyOnly) {
+    try {
+      if (widget.verifyOnly) {
+        final valid = await ref
+            .read(authControllerProvider.notifier)
+            .checkPin(currentPin);
+        if (!valid) {
+          await _onWrongPin();
+          return;
+        }
+        await _finishUnlocked();
+        return;
+      }
+
+      if (widget.isSetup) {
+        if (!ref.read(_isConfirmStepProvider)) {
+          ref.read(_firstPinProvider.notifier).state = currentPin;
+          _pinController.clear();
+          ref.read(_isConfirmStepProvider.notifier).state = true;
+          return;
+        }
+
+        final firstPin = ref.read(_firstPinProvider);
+        if (firstPin == null || currentPin != firstPin) {
+          _pinController.clear();
+          ref.read(_firstPinProvider.notifier).state = null;
+          ref.read(_isConfirmStepProvider.notifier).state = false;
+          _showPinMessage(AppStrings.pinMismatch);
+          return;
+        }
+
+        await ref.read(authControllerProvider.notifier).setupPin(currentPin);
+        if (widget.offerBiometricAfterSetup) {
+          await _offerBiometric();
+        }
+        await _finishUnlocked();
+        return;
+      }
+
       final valid = await ref
           .read(authControllerProvider.notifier)
-          .checkPin(currentPin);
+          .verifyPin(currentPin);
       if (!valid) {
         await _onWrongPin();
         return;
       }
+      _failures = 0;
       await _finishUnlocked();
-      return;
+    } finally {
+      _isSubmitting = false;
     }
-
-    if (widget.isSetup) {
-      if (!ref.read(_isConfirmStepProvider)) {
-        ref.read(_firstPinProvider.notifier).state = currentPin;
-        // Clear the controller so the user can re-enter for confirmation
-        _pinController.clear();
-        ref.read(_isConfirmStepProvider.notifier).state = true;
-        return;
-      }
-
-      final firstPin = ref.read(_firstPinProvider);
-      if (firstPin == null || currentPin != firstPin) {
-        ref.read(_errorProvider.notifier).state = AppStrings.pinMismatch;
-        _pinController.clear();
-        ref.read(_firstPinProvider.notifier).state = null;
-        ref.read(_isConfirmStepProvider.notifier).state = false;
-        return;
-      }
-
-      await ref.read(authControllerProvider.notifier).setupPin(currentPin);
-      if (widget.offerBiometricAfterSetup) {
-        await _offerBiometric();
-      }
-      await _finishUnlocked();
-      return;
-    }
-
-    final valid = await ref
-        .read(authControllerProvider.notifier)
-        .verifyPin(currentPin);
-    if (!valid) {
-      await _onWrongPin();
-      return;
-    }
-    _failures = 0;
-    await _finishUnlocked();
   }
 
   Future<void> _onWrongPin() async {
     HapticFeedback.mediumImpact();
     _failures += 1;
+    _pinController.clear();
     ref.read(_pinProvider.notifier).state = '';
     if (_failures >= 5) {
       _cooldownUntil = DateTime.now().add(const Duration(seconds: 30));
-      ref.read(_errorProvider.notifier).state = AppStrings.pinCooldown;
       if (mounted) setState(() {});
+      _showPinMessage(AppStrings.pinCooldown);
       return;
     }
-    ref.read(_errorProvider.notifier).state = AppStrings.wrongPin;
+    _showPinMessage(AppStrings.wrongPin);
+  }
+
+  void _showPinMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+      );
   }
 
   void _onDigit(String digit) {
     if (_inCooldown()) {
-      ref.read(_errorProvider.notifier).state = AppStrings.pinCooldown;
+      _showPinMessage(AppStrings.pinCooldown);
       if (mounted) setState(() {});
       return;
     }
@@ -261,13 +306,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     _pinController.selection = TextSelection.fromPosition(
       TextPosition(offset: _pinController.text.length),
     );
-    ref.read(_errorProvider.notifier).state = null; // clear error
   }
 
   @override
   Widget build(BuildContext context) {
     final pin = ref.watch(_pinProvider);
-    final error = ref.watch(_errorProvider);
     final isConfirmStep = ref.watch(_isConfirmStepProvider);
     final biometricAsync = ref.watch(biometricEnabledProvider);
     final coolingDown = _inCooldown();
@@ -285,330 +328,323 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             final maxH = constraints.maxHeight;
             const keypadRowHeight = 72.0;
             const keypadSpacing = 12.0;
-            final keypadHeight = (maxH * 0.45).clamp(
+            final keypadHeight = (maxH * 0.4).clamp(
               keypadRowHeight * 4 + keypadSpacing * 3,
-              520.0,
+              440.0,
             );
             return SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: maxH),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
-                      // Header with gradient and lock icon
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 36,
-                          horizontal: 24,
+                child: Column(
+                  children: [
+                    // Header with gradient and lock icon
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 36,
+                        horizontal: 24,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primaryEmerald.withOpacity(0.12),
+                            Theme.of(context).colorScheme.background,
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
                         ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.primaryEmerald.withOpacity(0.12),
-                              Theme.of(context).colorScheme.background,
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 96,
-                              height: 96,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).cardColor,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.lock,
-                                  size: 44,
-                                  color: AppColors.primaryEmerald,
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
                                 ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Icon(
+                                _isUnlock && _biometricMode
+                                    ? _biometricIcon
+                                    : Icons.lock,
+                                size: 44,
+                                color: AppColors.primaryEmerald,
                               ),
                             ),
-                            const SizedBox(height: 20),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            _isUnlock && _biometricMode
+                                ? _biometricTitle
+                                : _title(isConfirmStep),
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (_isUnlock && _biometricMode) ...[
+                            const SizedBox(height: 8),
                             Text(
-                              _title(isConfirmStep),
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(fontWeight: FontWeight.w600),
+                              AppStrings.unlockWithBiometric,
+                              style: Theme.of(context).textTheme.bodyMedium,
                               textAlign: TextAlign.center,
                             ),
-                            if (_isUnlock) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                AppStrings.unlockSubtitle,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                              onPressed: _usePin,
+                              child: const Text(AppStrings.usePin),
+                            ),
+                          ] else if (_isUnlock) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              AppStrings.unlockSubtitle,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
                           ],
-                        ),
+                        ],
                       ),
+                    ),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Pin dots and error in an Expanded area so keypad stays visible
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            children: [
-                              // Tappable area to open system numeric keyboard
-                              GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onTap: () => FocusScope.of(
-                                  context,
-                                ).requestFocus(_pinFocusNode),
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 250),
-                                  child: Row(
-                                    key: ValueKey(pin),
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: List.generate(4, (i) {
-                                      final filled = i < pin.length;
-                                      final focused = i == pin.length;
-                                      return AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 200,
-                                        ),
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                        ),
-                                        width: 64,
+                    // Keep this section non-flexible because it is inside a
+                    // scroll view and must adapt to short device displays.
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: [
+                          // Tappable area to open system numeric keyboard
+                          GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTap: () => FocusScope.of(
+                              context,
+                            ).requestFocus(_pinFocusNode),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              child: Row(
+                                key: ValueKey(pin),
+                                children: List.generate(4, (i) {
+                                  final filled = i < pin.length;
+                                  final focused = i == pin.length;
+                                  return Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                        left: i == 0 ? 0 : 4,
+                                        right: i == 3 ? 0 : 4,
+                                      ),
+                                      child: SizedBox(
                                         height: 56,
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).cardColor,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 200,
                                           ),
-                                          border: Border.all(
-                                            color: filled
-                                                ? AppColors.primaryEmerald
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context).cardColor,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: filled
+                                                  ? AppColors.primaryEmerald
+                                                  : focused
+                                                  ? AppColors.primaryEmerald
+                                                        .withOpacity(0.28)
+                                                  : AppColors.gray200,
+                                              width: filled ? 2 : 1.2,
+                                            ),
+                                            boxShadow: filled
+                                                ? [
+                                                    BoxShadow(
+                                                      color: AppColors
+                                                          .primaryEmerald
+                                                          .withOpacity(0.12),
+                                                      blurRadius: 10,
+                                                      offset: const Offset(
+                                                        0,
+                                                        6,
+                                                      ),
+                                                    ),
+                                                  ]
+                                                : null,
+                                          ),
+                                          child: Center(
+                                            child: filled
+                                                ? FractionallySizedBox(
+                                                    widthFactor: 0.22,
+                                                    child: AspectRatio(
+                                                      aspectRatio: 1,
+                                                      child: DecoratedBox(
+                                                        decoration:
+                                                            const BoxDecoration(
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                              color: AppColors
+                                                                  .primaryEmerald,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  )
                                                 : focused
-                                                ? AppColors.primaryEmerald
-                                                      .withOpacity(0.28)
-                                                : AppColors.gray200,
-                                            width: filled ? 2 : 1.2,
-                                          ),
-                                          boxShadow: filled
-                                              ? [
-                                                  BoxShadow(
-                                                    color: AppColors
-                                                        .primaryEmerald
-                                                        .withOpacity(0.12),
-                                                    blurRadius: 10,
-                                                    offset: const Offset(0, 6),
-                                                  ),
-                                                ]
-                                              : null,
-                                        ),
-                                        child: Center(
-                                          child: filled
-                                              ? Container(
-                                                  width: 14,
-                                                  height: 14,
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                        shape: BoxShape.circle,
+                                                ? FractionallySizedBox(
+                                                    heightFactor: 0.43,
+                                                    child: Container(
+                                                      width: 2,
+                                                      decoration: BoxDecoration(
                                                         color: AppColors
                                                             .primaryEmerald,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              2,
+                                                            ),
                                                       ),
-                                                )
-                                              : focused
-                                              ? Container(
-                                                  width: 2,
-                                                  height: 24,
-                                                  decoration: BoxDecoration(
-                                                    color: AppColors
-                                                        .primaryEmerald,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          2,
-                                                        ),
-                                                  ),
-                                                )
-                                              : const SizedBox.shrink(),
-                                        ),
-                                      );
-                                    }),
-                                  ),
-                                ),
-                              ),
-
-                              // invisible TextField to receive numeric input from system keyboard
-                              Opacity(
-                                opacity: 0,
-                                child: SizedBox(
-                                  height: 1,
-                                  width: 1,
-                                  child: TextField(
-                                    controller: _pinController,
-                                    focusNode: _pinFocusNode,
-                                    keyboardType: TextInputType.phone,
-                                    textInputAction: TextInputAction.done,
-                                    obscureText: true,
-                                    enableSuggestions: false,
-                                    autocorrect: false,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                      LengthLimitingTextInputFormatter(4),
-                                    ],
-                                    onSubmitted: (_) {
-                                      if (_pinController.text.length == 4)
-                                        _handleComplete();
-                                    },
-                                    decoration: const InputDecoration.collapsed(
-                                      hintText: '',
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              if (error != null)
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                    horizontal: 16,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.expenseRed.withOpacity(
-                                      0.08,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: AppColors.expenseRed.withOpacity(
-                                        0.12,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    error,
-                                    style: const TextStyle(
-                                      color: AppColors.expenseRed,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              const Spacer(),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Keypad fixed height area with bottom safe padding
-                      Builder(
-                        builder: (ctx) {
-                          final bottomPad = MediaQuery.of(
-                            ctx,
-                          ).viewPadding.bottom;
-                          return Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              24,
-                              0,
-                              24,
-                              bottomPad + 36,
-                            ),
-                            child: SizedBox(
-                              height: keypadHeight,
-                              child: GridView.custom(
-                                physics: const NeverScrollableScrollPhysics(),
-                                shrinkWrap: true,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      mainAxisSpacing: keypadSpacing,
-                                      crossAxisSpacing: keypadSpacing,
-                                      mainAxisExtent: keypadRowHeight,
-                                    ),
-                                childrenDelegate: SliverChildListDelegate.fixed([
-                                  for (final d in [
-                                    '1',
-                                    '2',
-                                    '3',
-                                    '4',
-                                    '5',
-                                    '6',
-                                    '7',
-                                    '8',
-                                    '9',
-                                  ])
-                                    Center(
-                                      child: PinPadButton(
-                                        label: d,
-                                        onTap: coolingDown
-                                            ? () {}
-                                            : () => _onDigit(d),
-                                      ),
-                                    ),
-                                  Center(
-                                    child: _isUnlock
-                                        ? biometricAsync.when(
-                                            data: (enabled) => enabled
-                                                ? PinPadButton(
-                                                    label: '',
-                                                    icon: Icons.fingerprint,
-                                                    onTap: () async {
-                                                      final success = await ref
-                                                          .read(
-                                                            authControllerProvider
-                                                                .notifier,
-                                                          )
-                                                          .authenticateWithBiometric();
-                                                      if (success)
-                                                        await _finishUnlocked();
-                                                    },
+                                                    ),
                                                   )
-                                                : const SizedBox(
-                                                    width: 72,
-                                                    height: 72,
-                                                  ),
-                                            loading: () => const SizedBox(
-                                              width: 72,
-                                              height: 72,
-                                            ),
-                                            error: (_, __) => const SizedBox(
-                                              width: 72,
-                                              height: 72,
-                                            ),
-                                          )
-                                        : const SizedBox(width: 72, height: 72),
+                                                : const SizedBox.shrink(),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                          ),
+
+                          // invisible TextField to receive numeric input from system keyboard
+                          Opacity(
+                            opacity: 0,
+                            child: SizedBox(
+                              height: 1,
+                              width: 1,
+                              child: TextField(
+                                controller: _pinController,
+                                focusNode: _pinFocusNode,
+                                keyboardType: TextInputType.phone,
+                                textInputAction: TextInputAction.done,
+                                obscureText: true,
+                                enableSuggestions: false,
+                                autocorrect: false,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(4),
+                                ],
+                                onSubmitted: (_) {
+                                  if (_pinController.text.length == 4)
+                                    _handleComplete();
+                                },
+                                decoration: const InputDecoration.collapsed(
+                                  hintText: '',
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+
+                    // Keypad fixed height area with bottom safe padding
+                    Builder(
+                      builder: (ctx) {
+                        final bottomPad = MediaQuery.of(ctx).viewPadding.bottom;
+                        return Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            24,
+                            0,
+                            24,
+                            bottomPad + 36,
+                          ),
+                          child: SizedBox(
+                            height: keypadHeight,
+                            child: GridView.custom(
+                              physics: const NeverScrollableScrollPhysics(),
+                              shrinkWrap: true,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 3,
+                                    mainAxisSpacing: keypadSpacing,
+                                    crossAxisSpacing: keypadSpacing,
+                                    mainAxisExtent: keypadRowHeight,
                                   ),
+                              childrenDelegate: SliverChildListDelegate.fixed([
+                                for (final d in [
+                                  '1',
+                                  '2',
+                                  '3',
+                                  '4',
+                                  '5',
+                                  '6',
+                                  '7',
+                                  '8',
+                                  '9',
+                                ])
                                   Center(
                                     child: PinPadButton(
-                                      label: '0',
+                                      label: d,
                                       onTap: coolingDown
                                           ? () {}
-                                          : () => _onDigit('0'),
+                                          : () => _onDigit(d),
                                     ),
                                   ),
-                                  Center(
-                                    child: PinPadButton(
-                                      label: '',
-                                      icon: Icons.backspace_outlined,
-                                      onTap: _onBackspace,
-                                    ),
+                                Center(
+                                  child: _isUnlock
+                                      ? biometricAsync.when(
+                                          data: (enabled) =>
+                                              enabled && _biometricType != null
+                                              ? PinPadButton(
+                                                  label: '',
+                                                  icon: _biometricIcon,
+                                                  onTap: () async {
+                                                    await _promptBiometric();
+                                                  },
+                                                )
+                                              : const SizedBox(
+                                                  width: 72,
+                                                  height: 72,
+                                                ),
+                                          loading: () => const SizedBox(
+                                            width: 72,
+                                            height: 72,
+                                          ),
+                                          error: (_, __) => const SizedBox(
+                                            width: 72,
+                                            height: 72,
+                                          ),
+                                        )
+                                      : const SizedBox(width: 72, height: 72),
+                                ),
+                                Center(
+                                  child: PinPadButton(
+                                    label: '0',
+                                    onTap: coolingDown
+                                        ? () {}
+                                        : () => _onDigit('0'),
                                   ),
-                                ]),
-                              ),
+                                ),
+                                Center(
+                                  child: PinPadButton(
+                                    label: '',
+                                    icon: Icons.backspace_outlined,
+                                    onTap: _onBackspace,
+                                  ),
+                                ),
+                              ]),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
+                    ),
 
-                      const SizedBox(height: 12),
-                    ],
-                  ),
+                    const SizedBox(height: 12),
+                  ],
                 ),
               ),
             );

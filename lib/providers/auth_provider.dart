@@ -15,6 +15,7 @@ class AuthController extends _$AuthController {
   DateTime? _backgroundedAt;
 
   @override
+
   Future<AuthStatus> build() async {
     final storage = ref.read(secureStorageProvider);
     final hasPin = await storage.hasPin();
@@ -98,32 +99,42 @@ class AuthController extends _$AuthController {
   Future<void> logout() => lock();
 
   Future<bool> isBiometricAvailable() async {
+    return (await preferredBiometric()) != null;
+  }
+
+  Future<BiometricType?> preferredBiometric() async {
     final auth = LocalAuthentication();
     try {
       final supported = await auth.isDeviceSupported();
       final canCheck = await auth.canCheckBiometrics;
-      // Also check there is at least one enrolled biometric
       final biometrics = await auth.getAvailableBiometrics();
-      return supported && canCheck && biometrics.isNotEmpty;
+      if (!supported || !canCheck) return null;
+      if (biometrics.contains(BiometricType.face)) return BiometricType.face;
+      if (biometrics.contains(BiometricType.fingerprint)) {
+        return BiometricType.fingerprint;
+      }
+      // Android exposes enrolled sensors as weak/strong classifications,
+      // rather than identifying fingerprint or face directly.
+      if (biometrics.contains(BiometricType.strong))
+        return BiometricType.strong;
+      if (biometrics.contains(BiometricType.weak)) return BiometricType.weak;
+      return null;
     } catch (_) {
-      return false;
+      return null;
     }
   }
 
-  /// Prompts the OS biometric (or device credential) prompt.
-  /// By default, biometricOnly is false to allow fallback to device credentials when appropriate.
+  /// Prompts only an enrolled face or fingerprint biometric.
   Future<bool> promptBiometric({
     String reason = 'Unlock Expense Tracker',
-    bool biometricOnly = false,
   }) async {
-    if (!await isBiometricAvailable()) return false;
+    if (await preferredBiometric() == null) return false;
 
     final auth = LocalAuthentication();
     try {
-      // Use platform parameters; allow device credential fallback by default
       return await auth.authenticate(
         localizedReason: reason,
-        biometricOnly: biometricOnly,
+        biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
     } catch (_) {
@@ -136,8 +147,7 @@ class AuthController extends _$AuthController {
     final enabled = await storage.isBiometricEnabled();
     if (!enabled) return false;
 
-    // Allow device credential fallback when unlocking for reliability
-    final success = await promptBiometric(biometricOnly: false, reason: 'Unlock Expense Tracker');
+    final success = await promptBiometric(reason: 'Unlock Expense Tracker');
     if (success) {
       state = const AsyncData(AuthStatus.authenticated);
     }
