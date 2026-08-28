@@ -10,6 +10,7 @@ import 'analytics/analytics_screen.dart';
 import 'budgets/budgets_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'settings/settings_screen.dart';
+import 'notes/notes_screen.dart';
 import 'transactions/transactions_screen.dart';
 import '../../providers/database_provider.dart';
 import 'package:expensetracker/views/app_shell_drawer_item.dart';
@@ -189,6 +190,19 @@ class _AppShellState extends ConsumerState<AppShell> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: [
+                    DrawerItem(
+                      icon: Icons.note_alt_outlined,
+                      label: AppStrings.notes,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const NotesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 6),
                     DrawerItem(
                       icon: Icons.settings_outlined,
                       label: AppStrings.settings,

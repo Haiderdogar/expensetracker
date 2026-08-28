@@ -4,8 +4,9 @@ abstract final class DatabaseTables {
   static const String transactions = 'transactions';
   static const String budgets = 'budgets';
   static const String settings = 'settings';
+  static const String notes = 'notes';
 
-  static const int dbVersion = 1;
+  static const int dbVersion = 2;
 
   static const String createCategories = '''
     CREATE TABLE $categories (
@@ -54,6 +55,16 @@ abstract final class DatabaseTables {
     CREATE TABLE $settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    )
+  ''';
+
+  static const String createNotes = '''
+    CREATE TABLE $notes (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     )
   ''';
 

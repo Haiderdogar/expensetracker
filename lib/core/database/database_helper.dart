@@ -30,6 +30,7 @@ class DatabaseHelper {
           await db.execute('PRAGMA foreign_keys = ON');
         },
         onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
       );
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -43,6 +44,7 @@ class DatabaseHelper {
       await db.execute(DatabaseTables.createTransactions);
       await db.execute(DatabaseTables.createBudgets);
       await db.execute(DatabaseTables.createSettings);
+      await db.execute(DatabaseTables.createNotes);
       await db.insert(DatabaseTables.settings, {
         'key': 'account_created_at',
         'value': DateTime.now().toUtc().toIso8601String(),
@@ -50,6 +52,12 @@ class DatabaseHelper {
       await _seedDefaultCategories(db);
     } catch (e) {
       throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(DatabaseTables.createNotes);
     }
   }
 
