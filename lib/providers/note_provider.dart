@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -56,6 +55,7 @@ class Notes extends _$Notes {
           whereArgs: [id],
         );
       }
+      state = const AsyncData([]);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -66,6 +66,7 @@ class Notes extends _$Notes {
     try {
       final db = await ref.read(databaseProvider.future);
       await db.delete(DatabaseTables.notes, where: 'id = ?', whereArgs: [id]);
+      state = const AsyncData([]);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);

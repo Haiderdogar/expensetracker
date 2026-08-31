@@ -14,10 +14,10 @@ class NotesScreen extends ConsumerWidget {
     WidgetRef ref, {
     NoteModel? note,
   }) async {
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => NoteEditorSheet(note: note),
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => NoteEditorScreen(note: note),
+      ),
     );
     if (saved == true && context.mounted) {
       ScaffoldMessenger.of(
@@ -397,20 +397,37 @@ String _noteDate(DateTime date) {
   return 'Updated ${months[local.month - 1]} ${local.day}, ${local.year}';
 }
 
-class NoteEditorSheet extends ConsumerStatefulWidget {
-  const NoteEditorSheet({super.key, this.note});
+class _NoteCategory {
+  const _NoteCategory({required this.name, required this.color});
+
+  final String name;
+  final Color color;
+}
+
+class NoteEditorScreen extends ConsumerStatefulWidget {
+  const NoteEditorScreen({super.key, this.note});
 
   final NoteModel? note;
 
   @override
-  ConsumerState<NoteEditorSheet> createState() => _NoteEditorSheetState();
+  ConsumerState<NoteEditorScreen> createState() => _NoteEditorScreenState();
 }
 
-class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
+class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
+
+  final List<_NoteCategory> _categories = const [
+    _NoteCategory(name: 'Ideas', color: Color(0xFF6CC9A1)),
+    _NoteCategory(name: 'Work', color: Color(0xFF4BA3FF)),
+    _NoteCategory(name: 'Personal', color: Color(0xFF9A7AF7)),
+    _NoteCategory(name: 'Life', color: Color(0xFFFF9F43)),
+  ];
+  String _selectedCategory = 'Ideas';
+
+  bool get _isEditing => widget.note != null;
 
   @override
   void initState() {
@@ -428,6 +445,177 @@ class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
     super.dispose();
   }
 
+  Future<void> _deleteNote() async {
+    if (widget.note == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete note?'),
+        content: Text('Delete "${widget.note!.title}" permanently?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(AppStrings.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(AppStrings.delete),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await ref.read(notesProvider.notifier).delete(widget.note!.id);
+    if (!mounted) return;
+    ref.invalidate(notesProvider);
+    Navigator.of(context).pop(true);
+  }
+
+  Future<void> _showAddCategoryDialog() async {
+    final controller = TextEditingController();
+    Color selectedColor = const Color(0xFF4BA3FF);
+    final colors = const [
+      Color(0xFF4BA3FF),
+      Color(0xFF8B5CF6),
+      Color(0xFFF59E0B),
+      Color(0xFF10B981),
+      Color(0xFFEF4444),
+    ];
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              title: const Text('Add New Category'),
+              content: SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Category Name',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: controller,
+                      decoration: InputDecoration(
+                        hintText: 'Enter name...',
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                            color: AppColors.primaryEmerald,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Select Color',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 12,
+                      children: colors.map((color) {
+                        final isSelected = selectedColor == color;
+                        return GestureDetector(
+                          onTap: () => setDialogState(() => selectedColor = color),
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFF111827)
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            child: isSelected
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: Colors.white,
+                                  )
+                                : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primaryEmerald,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Add Category'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    final name = controller.text.trim();
+    if (name.isEmpty) return;
+
+    if (!_categories.any((item) => item.name.toLowerCase() == name.toLowerCase())) {
+      setState(() {
+        _categories.add(_NoteCategory(name: name, color: selectedColor));
+        _selectedCategory = name;
+      });
+    }
+  }
+
   Future<void> _save() async {
     if (_saving || !_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -440,6 +628,7 @@ class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
             content: _contentController.text.trim(),
           );
       if (!mounted) return;
+      ref.invalidate(notesProvider);
       setState(() => _saving = false);
       Navigator.of(context).pop(true);
     } finally {
@@ -449,55 +638,225 @@ class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
+    final theme = Theme.of(context);
+    final buttonStyle = FilledButton.styleFrom(
+      backgroundColor: AppColors.primaryEmerald,
+      foregroundColor: Colors.white,
+      minimumSize: const Size.fromHeight(52),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Note' : 'Create New Note'),
+        actions: _isEditing
+            ? [
+                IconButton(
+                  tooltip: 'Delete note',
+                  onPressed: _deleteNote,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              ]
+            : null,
       ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                widget.note == null ? 'New note' : 'Edit note',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              children: [
+                TextFormField(
+                  controller: _titleController,
+                  style: const TextStyle(
+                    color: Color(0xFF1F2937),
+                    fontSize: 16,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Note Title',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF9CA3AF),
+                      fontSize: 20,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 18,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFCBD5E1),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFCBD5E1),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.primaryEmerald,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter a title'
+                      : null,
                 ),
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Enter a title'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _contentController,
-                minLines: 5,
-                maxLines: 10,
-                decoration: const InputDecoration(
-                  labelText: 'Note',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _contentController,
+                  minLines: 8,
+                  maxLines: 12,
+                  style: const TextStyle(
+                    color: Color(0xFF374151),
+                    fontSize: 16,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Start typing your note here...',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF9CA3AF),
+                      fontSize: 16,
+                    ),
+                    alignLabelWithHint: true,
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.all(16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFCBD5E1),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFCBD5E1),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.primaryEmerald,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter some text'
+                      : null,
                 ),
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Enter some text'
-                    : null,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _saving ? null : _save,
-                child: Text(_saving ? 'Saving...' : 'Save note'),
-              ),
-            ],
+                const SizedBox(height: 20),
+                Text(
+                  'Add to Category:',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF374151),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 42,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          padding: EdgeInsets.zero,
+                          itemCount: _categories.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final category = _categories[index];
+                            final selected = _selectedCategory == category.name;
+
+                            return ChoiceChip(
+                              label: Text(category.name),
+                              selected: selected,
+                              onSelected: (_) =>
+                                  setState(() => _selectedCategory = category.name),
+                              selectedColor: category.color.withValues(alpha: 0.18),
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              labelStyle: TextStyle(
+                                color: selected ? category.color : const Color(0xFF475569),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: selected
+                                      ? category.color
+                                      : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              showCheckmark: false,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    RawMaterialButton(
+                      onPressed: _showAddCategoryDialog,
+                      fillColor: const Color(0xFFF1F5F9),
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      shape: const CircleBorder(),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        color: Color(0xFF475569),
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 26),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF475569),
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _saving ? null : _save,
+                        style: buttonStyle,
+                        child: Text(
+                          _saving ? 'Saving...' : AppStrings.save,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
