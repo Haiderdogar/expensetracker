@@ -6,8 +6,35 @@ import '../../core/constants/app_strings.dart';
 import '../../models/note_model.dart';
 import '../../providers/note_provider.dart';
 
-class NotesScreen extends ConsumerWidget {
+class NotesScreen extends ConsumerStatefulWidget {
   const NotesScreen({super.key});
+
+  @override
+  ConsumerState<NotesScreen> createState() => _NotesScreenState();
+}
+
+class _NotesScreenState extends ConsumerState<NotesScreen> {
+  late final TextEditingController _searchController;
+
+  void _handleSearchChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _searchController.addListener(_handleSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_handleSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<void> _editNote(
     BuildContext context,
@@ -26,36 +53,10 @@ class NotesScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _deleteNote(
-    BuildContext context,
-    WidgetRef ref,
-    NoteModel note,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete note?'),
-        content: Text('Delete "${note.title}" permanently?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text(AppStrings.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text(AppStrings.delete),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await ref.read(notesProvider.notifier).delete(note.id);
-    }
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final notesAsync = ref.watch(notesProvider);
+
     return Scaffold(
       appBar: AppBar(
         leading: Navigator.canPop(context)
@@ -90,58 +91,79 @@ class NotesScreen extends ConsumerWidget {
             label: const Text('Try again'),
           ),
         ),
-        data: (notes) => RefreshIndicator(
-          onRefresh: () => ref.read(notesProvider.notifier).refresh(),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 112),
-            children: [
-              _NotesHeader(
-                count: notes.length,
-                onCreate: () => _editNote(context, ref),
-              ),
-              const SizedBox(height: 24),
-              if (notes.isEmpty)
-                const _NotesMessage(
-                  icon: Icons.auto_awesome_rounded,
-                  title: 'Your thoughts belong here',
-                  message:
-                      'Save ideas, reminders, and important details in one calm space.',
-                )
-              else ...[
-                Row(
-                  children: [
-                    Text(
-                      'Recent notes',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+        data: (notes) {
+          final query = _searchController.text.trim().toLowerCase();
+          final filteredNotes = notes.where((note) {
+            if (query.isEmpty) return true;
+            return note.title.toLowerCase().contains(query);
+          }).toList();
+
+          return RefreshIndicator(
+            onRefresh: () => ref.read(notesProvider.notifier).refresh(),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 112),
+              children: [
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search notes',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
                     ),
-                    const Spacer(),
-                    Text(
-                      '${notes.length} ${notes.length == 1 ? 'note' : 'notes'}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ...notes.asMap().entries.map(
-                  (entry) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _NoteCard(
-                      note: entry.value,
-                      accent: _noteAccents[entry.key % _noteAccents.length],
-                      onTap: () => _editNote(context, ref, note: entry.value),
-                      onDelete: () => _deleteNote(context, ref, entry.value),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
+                if (filteredNotes.isEmpty)
+                  const _NotesMessage(
+                    icon: Icons.auto_awesome_rounded,
+                    title: 'No matching notes',
+                    message:
+                        'Try a different title to find the note you are looking for.',
+                  )
+                else ...[
+                  Row(
+                    children: [
+                      Text(
+                        'Recent notes',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${filteredNotes.length} ${filteredNotes.length == 1 ? 'note' : 'notes'}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...filteredNotes.asMap().entries.map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _NoteCard(
+                        note: entry.value,
+                        accent: _noteAccents[entry.key % _noteAccents.length],
+                        onTap: () => _editNote(context, ref, note: entry.value),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -154,113 +176,16 @@ const _noteAccents = [
   Color(0xFFEC4899),
 ];
 
-class _NotesHeader extends StatelessWidget {
-  const _NotesHeader({required this.count, required this.onCreate});
-
-  final int count;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.deepForest, Color(0xFF0B8060)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.deepForest.withValues(alpha: 0.24),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -18,
-            top: -28,
-            child: Icon(
-              Icons.sticky_note_2_rounded,
-              size: 132,
-              color: Colors.white.withValues(alpha: 0.08),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.lightbulb_rounded,
-                    color: AppColors.mintAccent,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'A space for what matters',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.82),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'Keep your\nthoughts close.',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  height: 1.05,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Text(
-                    '$count ${count == 1 ? 'note' : 'notes'} saved',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  OutlinedButton.icon(
-                    onPressed: onCreate,
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Create'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _NoteCard extends StatelessWidget {
   const _NoteCard({
     required this.note,
     required this.accent,
     required this.onTap,
-    required this.onDelete,
   });
 
   final NoteModel note;
   final Color accent;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +229,7 @@ class _NoteCard extends StatelessWidget {
                     const SizedBox(height: 7),
                     Text(
                       note.content,
-                      maxLines: 2,
+                      maxLines: 5,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -321,11 +246,6 @@ class _NoteCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              IconButton(
-                tooltip: 'Delete note',
-                icon: const Icon(Icons.delete_outline_rounded),
-                onPressed: onDelete,
               ),
             ],
           ),
@@ -397,13 +317,6 @@ String _noteDate(DateTime date) {
   return 'Updated ${months[local.month - 1]} ${local.day}, ${local.year}';
 }
 
-class _NoteCategory {
-  const _NoteCategory({required this.name, required this.color});
-
-  final String name;
-  final Color color;
-}
-
 class NoteEditorScreen extends ConsumerStatefulWidget {
   const NoteEditorScreen({super.key, this.note});
 
@@ -418,14 +331,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   late final TextEditingController _contentController;
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
-
-  final List<_NoteCategory> _categories = const [
-    _NoteCategory(name: 'Ideas', color: Color(0xFF6CC9A1)),
-    _NoteCategory(name: 'Work', color: Color(0xFF4BA3FF)),
-    _NoteCategory(name: 'Personal', color: Color(0xFF9A7AF7)),
-    _NoteCategory(name: 'Life', color: Color(0xFFFF9F43)),
-  ];
-  String _selectedCategory = 'Ideas';
 
   bool get _isEditing => widget.note != null;
 
@@ -474,148 +379,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     Navigator.of(context).pop(true);
   }
 
-  Future<void> _showAddCategoryDialog() async {
-    final controller = TextEditingController();
-    Color selectedColor = const Color(0xFF4BA3FF);
-    final colors = const [
-      Color(0xFF4BA3FF),
-      Color(0xFF8B5CF6),
-      Color(0xFFF59E0B),
-      Color(0xFF10B981),
-      Color(0xFFEF4444),
-    ];
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-              title: const Text('Add New Category'),
-              content: SizedBox(
-                width: 300,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Category Name',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF374151),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: controller,
-                      decoration: InputDecoration(
-                        hintText: 'Enter name...',
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE2E8F0),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE2E8F0),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            color: AppColors.primaryEmerald,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'Select Color',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF374151),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 12,
-                      children: colors.map((color) {
-                        final isSelected = selectedColor == color;
-                        return GestureDetector(
-                          onTap: () => setDialogState(() => selectedColor = color),
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? const Color(0xFF111827)
-                                    : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                            child: isSelected
-                                ? const Icon(
-                                    Icons.check,
-                                    size: 16,
-                                    color: Colors.white,
-                                  )
-                                : null,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(true),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primaryEmerald,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Add Category'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (confirmed != true) return;
-
-    final name = controller.text.trim();
-    if (name.isEmpty) return;
-
-    if (!_categories.any((item) => item.name.toLowerCase() == name.toLowerCase())) {
-      setState(() {
-        _categories.add(_NoteCategory(name: name, color: selectedColor));
-        _selectedCategory = name;
-      });
-    }
-  }
-
   Future<void> _save() async {
     if (_saving || !_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -638,17 +401,26 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final buttonStyle = FilledButton.styleFrom(
       backgroundColor: AppColors.primaryEmerald,
       foregroundColor: Colors.white,
       minimumSize: const Size.fromHeight(52),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     );
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F3),
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Note' : 'Create New Note'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          _isEditing ? 'Edit Note' : 'Create New Note',
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF111827)),
         actions: _isEditing
             ? [
                 IconButton(
@@ -661,173 +433,131 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  style: const TextStyle(
-                    color: Color(0xFF1F2937),
-                    fontSize: 16,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Note Title',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFF9CA3AF),
-                      fontSize: 20,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 18,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFCBD5E1),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFCBD5E1),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppColors.primaryEmerald,
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Enter a title'
-                      : null,
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _contentController,
-                  minLines: 8,
-                  maxLines: 12,
-                  style: const TextStyle(
-                    color: Color(0xFF374151),
-                    fontSize: 16,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Start typing your note here...',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFF9CA3AF),
-                      fontSize: 16,
-                    ),
-                    alignLabelWithHint: true,
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.all(16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFCBD5E1),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFCBD5E1),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppColors.primaryEmerald,
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Enter some text'
-                      : null,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Add to Category:',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF374151),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 42,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: EdgeInsets.zero,
-                          itemCount: _categories.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 8),
-                          itemBuilder: (context, index) {
-                            final category = _categories[index];
-                            final selected = _selectedCategory == category.name;
-
-                            return ChoiceChip(
-                              label: Text(category.name),
-                              selected: selected,
-                              onSelected: (_) =>
-                                  setState(() => _selectedCategory = category.name),
-                              selectedColor: category.color.withValues(alpha: 0.18),
-                              backgroundColor: const Color(0xFFF1F5F9),
-                              labelStyle: TextStyle(
-                                color: selected ? category.color : const Color(0xFF475569),
-                                fontWeight: FontWeight.w600,
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+          child: Column(
+            children: [
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      const SizedBox(height: 8),
+                      Scrollbar(
+                        thumbVisibility: true,
+                        thickness: 6,
+                        radius: const Radius.circular(999),
+                        child: TextFormField(
+                          controller: _titleController,
+                          minLines: 1,
+                          maxLines: null,
+                          keyboardType: TextInputType.multiline,
+                          style: const TextStyle(
+                            color: Color(0xFF111827),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Title',
+                            hintStyle: const TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 18,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 18,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E7EB),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: selected
-                                      ? category.color
-                                      : const Color(0xFFE2E8F0),
-                                ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE5E7EB),
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(
+                                color: AppColors.primaryEmerald,
+                                width: 1.5,
                               ),
-                              showCheckmark: false,
-                            );
-                          },
+                            ),
+                          ),
+                          validator: (value) => value == null || value.trim().isEmpty
+                              ? 'Enter a title'
+                              : null,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    RawMaterialButton(
-                      onPressed: _showAddCategoryDialog,
-                      fillColor: const Color(0xFFF1F5F9),
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                      shape: const CircleBorder(),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: Color(0xFF475569),
-                        size: 20,
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _contentController,
+                        minLines: 10,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: const TextStyle(
+                          color: Color(0xFF374151),
+                          fontSize: 16,
+                          height: 1.5,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Write your note here...',
+                          hintStyle: const TextStyle(
+                            color: Color(0xFF9CA3AF),
+                            fontSize: 16,
+                          ),
+                          alignLabelWithHint: true,
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.all(16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE5E7EB),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE5E7EB),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: AppColors.primaryEmerald,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        validator: (value) => value == null || value.trim().isEmpty
+                            ? 'Enter some text'
+                            : null,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 26),
-                Row(
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(
                   children: [
                     Expanded(
-                      child: TextButton(
+                      child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        style: TextButton.styleFrom(
+                        style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF475569),
-                          minimumSize: const Size.fromHeight(48),
+                          minimumSize: const Size.fromHeight(52),
+                          side: const BorderSide(color: Color(0xFFD1D5DB)),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                         child: const Text(
@@ -855,8 +585,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
