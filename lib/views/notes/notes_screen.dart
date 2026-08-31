@@ -329,6 +329,7 @@ class NoteEditorScreen extends ConsumerStatefulWidget {
 class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
+  late final ScrollController _contentScrollController;
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
 
@@ -341,12 +342,14 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     _contentController = TextEditingController(
       text: widget.note?.content ?? '',
     );
+    _contentScrollController = ScrollController();
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _contentScrollController.dispose();
     super.dispose();
   }
 
@@ -443,79 +446,28 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     padding: EdgeInsets.zero,
                     children: [
                       const SizedBox(height: 8),
-                      Scrollbar(
-                        thumbVisibility: true,
-                        thickness: 6,
-                        radius: const Radius.circular(999),
-                        child: TextFormField(
-                          controller: _titleController,
-                          minLines: 1,
-                          maxLines: null,
-                          keyboardType: TextInputType.multiline,
-                          style: const TextStyle(
-                            color: Color(0xFF111827),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Title',
-                            hintStyle: const TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontSize: 18,
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 18,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE5E7EB),
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE5E7EB),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(
-                                color: AppColors.primaryEmerald,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                          validator: (value) => value == null || value.trim().isEmpty
-                              ? 'Enter a title'
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                       TextFormField(
-                        controller: _contentController,
-                        minLines: 10,
+                        controller: _titleController,
+                        minLines: 1,
                         maxLines: null,
                         keyboardType: TextInputType.multiline,
-                        textAlignVertical: TextAlignVertical.top,
                         style: const TextStyle(
-                          color: Color(0xFF374151),
-                          fontSize: 16,
-                          height: 1.5,
+                          color: Color(0xFF111827),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Write your note here...',
+                          hintText: 'Title',
                           hintStyle: const TextStyle(
                             color: Color(0xFF9CA3AF),
-                            fontSize: 16,
+                            fontSize: 18,
                           ),
-                          alignLabelWithHint: true,
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.all(16),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: const BorderSide(
@@ -537,8 +489,80 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                           ),
                         ),
                         validator: (value) => value == null || value.trim().isEmpty
-                            ? 'Enter some text'
+                            ? 'Enter a title'
                             : null,
+                      ),
+                      const SizedBox(height: 16),
+                      Scrollbar(
+                        controller: _contentScrollController,
+                        thumbVisibility: true,
+                        thickness: 6,
+                        radius: const Radius.circular(999),
+                        child: SingleChildScrollView(
+                          controller: _contentScrollController,
+                          padding: EdgeInsets.zero,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Container(
+                                width: 4,
+                                margin: const EdgeInsets.only(top: 8, bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryEmerald,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _contentController,
+                                  minLines: 5,
+                                  maxLines: null,
+                                  keyboardType: TextInputType.multiline,
+                                  textAlignVertical: TextAlignVertical.top,
+                                  style: const TextStyle(
+                                    color: Color(0xFF374151),
+                                    fontSize: 16,
+                                    height: 1.5,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Write your note here...',
+                                    hintStyle: const TextStyle(
+                                      color: Color(0xFF9CA3AF),
+                                      fontSize: 16,
+                                    ),
+                                    alignLabelWithHint: true,
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.all(16),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(
+                                        color: Color(0xFFE5E7EB),
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(
+                                        color: Color(0xFFE5E7EB),
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(
+                                        color: AppColors.primaryEmerald,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (value) => value == null || value.trim().isEmpty
+                                      ? 'Enter some text'
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
