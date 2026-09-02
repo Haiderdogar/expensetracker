@@ -37,10 +37,13 @@ class RecentTransactionsList extends ConsumerWidget {
 
         return Column(
           children: transactions.map((t) {
-            final category = categories.cast<CategoryModel?>().firstWhere(
-                  (c) => c!.id == t.categoryId,
-                  orElse: () => null,
-                );
+            CategoryModel? category;
+            for (final item in categories) {
+              if (item.id == t.categoryId) {
+                category = item;
+                break;
+              }
+            }
             final color = category != null
                 ? categoryColorFromHex(category.color)
                 : Colors.grey;

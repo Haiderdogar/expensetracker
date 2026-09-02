@@ -14,9 +14,6 @@ import '../../widgets/custom_text_field.dart';
 import '../../models/transaction_model.dart';
 import '../../core/utils/error_handler.dart';
 
-final _titleProvider = StateProvider.autoDispose<String>((ref) => '');
-final _amountProvider = StateProvider.autoDispose<String>((ref) => '');
-final _noteProvider = StateProvider.autoDispose<String>((ref) => '');
 final _typeProvider = StateProvider.autoDispose<String>((ref) => 'expense');
 final _categoryIdProvider = StateProvider.autoDispose<String?>((ref) => null);
 final _dateProvider = StateProvider.autoDispose<DateTime>(
@@ -37,6 +34,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   late TextEditingController _titleController;
   late TextEditingController _amountController;
   late TextEditingController _noteController;
+  bool _editDataInitialized = false;
 
   bool get _isEditing => widget.transaction != null;
 
@@ -60,18 +58,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        // Initialize controllers once when editing
-        if (_isEditing && _titleController.text.isEmpty) {
+        // Initialize form values once when editing.
+        if (_isEditing && !_editDataInitialized) {
+          _editDataInitialized = true;
           final t = widget.transaction!;
+          final parsedDate = DateTime.tryParse(t.date) ?? DateTime.now();
+          final safeType = (t.type == 'income' || t.type == 'expense')
+              ? t.type
+              : 'expense';
+
           _titleController.text = t.title;
           _amountController.text = t.amount.toString();
           _noteController.text = t.note ?? '';
-          ref.read(_titleProvider.notifier).state = t.title;
-          ref.read(_amountProvider.notifier).state = t.amount.toString();
-          ref.read(_noteProvider.notifier).state = t.note ?? '';
-          ref.read(_typeProvider.notifier).state = t.type;
-          ref.read(_categoryIdProvider.notifier).state = t.categoryId;
-          ref.read(_dateProvider.notifier).state = DateTime.parse(t.date);
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ref.read(_typeProvider.notifier).state = safeType;
+            ref.read(_categoryIdProvider.notifier).state =
+                t.categoryId.isEmpty ? null : t.categoryId;
+            ref.read(_dateProvider.notifier).state = parsedDate;
+          });
         }
 
         final type = ref.watch(_typeProvider);
@@ -423,8 +429,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   controller: _titleController,
                   label: AppStrings.title,
                   hint: type == 'income'
-                      ? 'e.g., Salary payment'
-                      : 'e.g., Lunch at cafe',
+                      ? 'From where come'
+                      : 'Where you spend',
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
@@ -463,8 +469,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   controller: _noteController,
                   label: AppStrings.note,
                   hint: type == 'income'
-                      ? 'e.g., Bonus from client'
-                      : 'e.g., Bought apples and bread',
+                      ? 'Add details of your income'
+                      : 'Add details of your expense',
                   maxLines: 3,
                 ),
                 const SizedBox(height: 24),
