@@ -35,11 +35,7 @@ class DashboardSummaryCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primaryEmerald, AppColors.deepForest],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+       color: AppColors.primaryEmerald,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(

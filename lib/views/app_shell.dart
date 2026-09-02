@@ -112,14 +112,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.secondary,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(

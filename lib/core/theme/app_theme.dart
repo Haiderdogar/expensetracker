@@ -21,7 +21,7 @@ abstract final class AppTheme {
       appBarTheme: const AppBarTheme(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: AppColors.lightSurface,
+        backgroundColor: AppColors.lightBackground,
         foregroundColor: AppColors.gray900,
       ),
       cardTheme: CardThemeData(
@@ -43,7 +43,7 @@ abstract final class AppTheme {
         foregroundColor: Colors.white,
       ),
       chipTheme: ChipThemeData(
-        selectedColor: AppColors.primaryEmerald.withValues(alpha: 0.15),
+        selectedColor: AppColors.primaryEmerald.withValues(alpha: 0.12),
         labelStyle: const TextStyle(color: AppColors.gray800),
       ),
     );
@@ -67,7 +67,7 @@ abstract final class AppTheme {
       appBarTheme: const AppBarTheme(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: AppColors.darkSurface,
+        backgroundColor: AppColors.darkBackground,
         foregroundColor: Colors.white,
       ),
       cardTheme: CardThemeData(
@@ -77,7 +77,7 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.deepForest.withValues(alpha: 0.6),
+        fillColor: AppColors.deepForest,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -89,7 +89,7 @@ abstract final class AppTheme {
         foregroundColor: Colors.white,
       ),
       chipTheme: ChipThemeData(
-        selectedColor: AppColors.mintAccent.withValues(alpha: 0.2),
+        selectedColor: AppColors.primaryEmerald.withValues(alpha: 0.18),
         labelStyle: const TextStyle(color: Colors.white),
       ),
     );

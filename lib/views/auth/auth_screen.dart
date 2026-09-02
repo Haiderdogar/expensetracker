@@ -316,7 +316,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final coolingDown = _inCooldown();
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar:
           (widget.isSetup || widget.verifyOnly) &&
               Navigator.of(context).canPop()
@@ -345,14 +345,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         horizontal: 24,
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primaryEmerald.withOpacity(0.12),
-                            Theme.of(context).colorScheme.background,
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
+                        color: AppColors.primaryEmerald.withValues(alpha: 0.12),
                       ),
                       child: Column(
                         children: [
@@ -364,7 +357,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
+                                  color: Colors.black.withValues(alpha: 0.08),
                                   blurRadius: 12,
                                   offset: const Offset(0, 6),
                                 ),
@@ -456,7 +449,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                                   ? AppColors.primaryEmerald
                                                   : focused
                                                   ? AppColors.primaryEmerald
-                                                        .withOpacity(0.28)
+                                                        .withValues(alpha: 0.28)
                                                   : AppColors.gray200,
                                               width: filled ? 2 : 1.2,
                                             ),
@@ -465,7 +458,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                                     BoxShadow(
                                                       color: AppColors
                                                           .primaryEmerald
-                                                          .withOpacity(0.12),
+                                                          .withValues(alpha: 0.12),
                                                       blurRadius: 10,
                                                       offset: const Offset(
                                                         0,
@@ -537,8 +530,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   LengthLimitingTextInputFormatter(4),
                                 ],
                                 onSubmitted: (_) {
-                                  if (_pinController.text.length == 4)
+                                  if (_pinController.text.length == 4) {
                                     _handleComplete();
+                                  }
                                 },
                                 decoration: const InputDecoration.collapsed(
                                   hintText: '',
@@ -614,7 +608,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                             width: 72,
                                             height: 72,
                                           ),
-                                          error: (_, __) => const SizedBox(
+                                          error: (_, _) => const SizedBox(
                                             width: 72,
                                             height: 72,
                                           ),

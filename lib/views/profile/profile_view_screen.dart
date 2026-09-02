@@ -55,14 +55,7 @@ class _ProfileViewScreenState extends ConsumerState<ProfileViewScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    colorScheme.primary,
-                    colorScheme.primary.withValues(alpha: 0.7),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: colorScheme.primary,
               ),
               child: Column(
                 children: [
