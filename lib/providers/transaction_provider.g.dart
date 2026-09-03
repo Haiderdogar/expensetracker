@@ -181,7 +181,13 @@ final class FilteredTransactionsProvider
         $FutureProvider<List<TransactionModel>> {
   FilteredTransactionsProvider._({
     required FilteredTransactionsFamily super.from,
-    required ({String? type, String? search, List<String>? categories, DateTime? month}) super.argument,
+    required ({
+      String? type,
+      String? search,
+      List<String>? categories,
+      DateTime? month,
+    })
+    super.argument,
   }) : super(
          retry: null,
          name: r'filteredTransactionsProvider',
@@ -209,7 +215,13 @@ final class FilteredTransactionsProvider
   @override
   FutureOr<List<TransactionModel>> create(Ref ref) {
     final argument =
-        this.argument as ({String? type, String? search, List<String>? categories, DateTime? month});
+        this.argument
+            as ({
+              String? type,
+              String? search,
+              List<String>? categories,
+              DateTime? month,
+            });
     return filteredTransactions(
       ref,
       type: argument.type,
@@ -231,13 +243,18 @@ final class FilteredTransactionsProvider
 }
 
 String _$filteredTransactionsHash() =>
-    r'9a3125ee11127b9aa085aab935559d32a06b9b75';
+    r'c027f6a2f3c303688a44969a8b98867dc81c4cdd';
 
 final class FilteredTransactionsFamily extends $Family
     with
         $FunctionalFamilyOverride<
           FutureOr<List<TransactionModel>>,
-          ({String? type, String? search, List<String>? categories, DateTime? month})
+          ({
+            String? type,
+            String? search,
+            List<String>? categories,
+            DateTime? month,
+          })
         > {
   FilteredTransactionsFamily._()
     : super(
@@ -254,7 +271,12 @@ final class FilteredTransactionsFamily extends $Family
     List<String>? categories,
     DateTime? month,
   }) => FilteredTransactionsProvider._(
-    argument: (type: type, search: search, categories: categories, month: month),
+    argument: (
+      type: type,
+      search: search,
+      categories: categories,
+      month: month,
+    ),
     from: this,
   );
 

@@ -49,7 +49,7 @@ class DashboardSummaryCard extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            Formatters.currency(balance, symbol: symbol),
+            Formatters.currency(balance, symbol: '$symbol '),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

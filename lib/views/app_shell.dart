@@ -12,7 +12,10 @@ import 'dashboard/dashboard_screen.dart';
 import 'settings/settings_screen.dart';
 import 'notes/notes_screen.dart';
 import 'transactions/transactions_screen.dart';
+import 'profile/profile_view_screen.dart';
+import '../../models/wallet_model.dart';
 import '../../providers/database_provider.dart';
+import '../../providers/wallet_provider.dart';
 import 'package:expensetracker/views/app_shell_drawer_item.dart';
 
 final _navIndexProvider = StateProvider<int>((_) => 0);
@@ -98,6 +101,14 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     final name = _profileName;
     final email = _profileEmail;
+    final wallets = ref.watch(walletsProvider).value ?? const <WalletModel>[];
+    final selectedWalletId = ref.watch(selectedWalletIdProvider);
+    final selectedWallets = wallets
+        .where((wallet) => wallet.id == selectedWalletId)
+        .toList();
+    final walletName = selectedWallets.isNotEmpty
+        ? selectedWallets.first.name
+        : (wallets.isNotEmpty ? wallets.first.name : 'Wallet');
 
     return Scaffold(
       key: appShellScaffoldKey,
@@ -110,35 +121,26 @@ class _AppShellState extends ConsumerState<AppShell> {
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.2),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(
                   children: [
                     CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.white24,
+                      radius: 26,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       child: Text(
                         name.isNotEmpty ? name[0].toUpperCase() : 'U',
                         style: const TextStyle(
-                          fontSize: 26,
+                          fontSize: 22,
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,18 +150,46 @@ class _AppShellState extends ConsumerState<AppShell> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            email.isNotEmpty ? email : 'Add your details',
-                            maxLines: 2,
+                            email.isNotEmpty ? email : 'Add your email',
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: Colors.white70),
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.account_balance_wallet_outlined,
+                                size: 16,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  walletName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -183,6 +213,20 @@ class _AppShellState extends ConsumerState<AppShell> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: [
+                    DrawerItem(
+                      icon: Icons.person_outline_rounded,
+                      label: AppStrings.profile,
+                      onTap: () async {
+                        Navigator.of(context).pop();
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileViewScreen(),
+                          ),
+                        );
+                        _loadProfile();
+                      },
+                    ),
+                    const SizedBox(height: 6),
                     DrawerItem(
                       icon: Icons.note_alt_outlined,
                       label: AppStrings.notes,

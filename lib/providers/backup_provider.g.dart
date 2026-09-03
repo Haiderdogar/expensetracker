@@ -100,7 +100,7 @@ final class ExpenseByCategoryProvider
   }
 }
 
-String _$expenseByCategoryHash() => r'901eb6642e9fa7fadcd53f0938379b15f303349b';
+String _$expenseByCategoryHash() => r'8803cc933fce9056943190b59ec04740d2eb48d4';
 
 @ProviderFor(monthlySpendingTrend)
 final monthlySpendingTrendProvider = MonthlySpendingTrendProvider._();
@@ -142,4 +142,4 @@ final class MonthlySpendingTrendProvider
 }
 
 String _$monthlySpendingTrendHash() =>
-    r'9f3a6b4ed1f9aec2a2e754e0f5a5b91f3d471fcd';
+    r'643ecee2a462def549b5abf448a976ecc9b7f323';

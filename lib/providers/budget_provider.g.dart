@@ -95,4 +95,4 @@ final class CurrentMonthBudgetProgressProvider
 }
 
 String _$currentMonthBudgetProgressHash() =>
-    r'fadae3230d22db8151be7f97d9148eb6c9254f51';
+    r'76125c490d2a5b76b190c6e19008ac1b7772d868';

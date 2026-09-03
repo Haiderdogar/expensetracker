@@ -33,7 +33,7 @@ final class CategoriesProvider
   Categories create() => Categories();
 }
 
-String _$categoriesHash() => r'59bd8c38b35235ac286fc20b8c65ec3daeb65bc5';
+String _$categoriesHash() => r'3aaba8efda9160da67e41c1df78514856731333e';
 
 abstract class _$Categories extends $AsyncNotifier<List<CategoryModel>> {
   FutureOr<List<CategoryModel>> build();
