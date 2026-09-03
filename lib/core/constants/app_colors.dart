@@ -19,4 +19,6 @@ abstract final class AppColors {
   static const Color lightSurface = gray50;
   static const Color darkBackground = Colors.black;
   static const Color darkSurface = deepForest;
+
+    static const Color ali = Color.fromARGB(255, 113, 174, 248);
 }

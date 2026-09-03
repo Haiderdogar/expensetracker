@@ -88,8 +88,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final minDate = _accountCreatedAt ?? now;
     final maxDate = isStart
         ? (section == 'category'
-            ? (_categoryCustomEndDate ?? now)
-            : (_trendCustomEndDate ?? now))
+              ? (_categoryCustomEndDate ?? now)
+              : (_trendCustomEndDate ?? now))
         : now;
 
     final initialDate = isStart ? customStartDate : customEndDate;
@@ -167,10 +167,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       _trendTimeRange,
       _trendCustomStartDate,
     );
-    final trendRangeEnd = _rangeEndFor(
-      _trendTimeRange,
-      _trendCustomEndDate,
-    );
+    final trendRangeEnd = _rangeEndFor(_trendTimeRange, _trendCustomEndDate);
     final isCategoryCustomRange = _categoryTimeRange == 'custom';
     final isTrendCustomRange = _trendTimeRange == 'custom';
 
@@ -273,10 +270,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               children: [
                 Expanded(
                   child: InkWell(
-                    onTap: () => _pickCustomDate(
-                      isStart: true,
-                      section: 'category',
-                    ),
+                    onTap: () =>
+                        _pickCustomDate(isStart: true, section: 'category'),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -306,10 +301,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: InkWell(
-                    onTap: () => _pickCustomDate(
-                      isStart: false,
-                      section: 'category',
-                    ),
+                    onTap: () =>
+                        _pickCustomDate(isStart: false, section: 'category'),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -439,10 +432,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               children: [
                 Expanded(
                   child: InkWell(
-                    onTap: () => _pickCustomDate(
-                      isStart: true,
-                      section: 'trend',
-                    ),
+                    onTap: () =>
+                        _pickCustomDate(isStart: true, section: 'trend'),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -472,10 +463,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: InkWell(
-                    onTap: () => _pickCustomDate(
-                      isStart: false,
-                      section: 'trend',
-                    ),
+                    onTap: () =>
+                        _pickCustomDate(isStart: false, section: 'trend'),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -526,16 +515,27 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     required ValueChanged<String> onChanged,
   }) {
     return SegmentedButton<String>(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          final colorScheme = Theme.of(context).colorScheme;
+          return states.contains(WidgetState.selected)
+              ? colorScheme.primaryContainer
+              : colorScheme.surface;
+        }),
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          final colorScheme = Theme.of(context).colorScheme;
+          return states.contains(WidgetState.selected)
+              ? colorScheme.onPrimaryContainer
+              : colorScheme.onSurface;
+        }),
+        side: WidgetStatePropertyAll(
+          BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+      ),
       segments: const [
         ButtonSegment(value: 'all', label: Text(AppStrings.viewAll)),
-        ButtonSegment(
-          value: 'expense',
-          label: Text(AppStrings.onlyExpense),
-        ),
-        ButtonSegment(
-          value: 'income',
-          label: Text(AppStrings.onlyIncome),
-        ),
+        ButtonSegment(value: 'expense', label: Text(AppStrings.onlyExpense)),
+        ButtonSegment(value: 'income', label: Text(AppStrings.onlyIncome)),
       ],
       selected: {selected},
       onSelectionChanged: (selection) => onChanged(selection.first),
@@ -555,6 +555,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         label: Text(label),
         selected: selected,
         onSelected: (_) => onChanged(value),
+        selectedColor: Theme.of(context).colorScheme.primaryContainer,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        labelStyle: TextStyle(
+          color: selected
+              ? Theme.of(context).colorScheme.onPrimaryContainer
+              : Theme.of(context).colorScheme.onSurface,
+        ),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
     );
   }
