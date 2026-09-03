@@ -1,219 +1,344 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/database/database_tables.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/wallet_provider.dart';
 
-class ProfileViewScreen extends ConsumerStatefulWidget {
+class _ProfileDraft {
+  const _ProfileDraft({
+    this.name = '',
+    this.email = '',
+    this.walletName = '',
+    this.savedName = '',
+    this.savedEmail = '',
+    this.savedWalletName = '',
+    this.walletId,
+    this.isEditing = false,
+    this.isLoading = true,
+    this.isInitialized = false,
+  });
+
+  final String name;
+  final String email;
+  final String walletName;
+  final String savedName;
+  final String savedEmail;
+  final String savedWalletName;
+  final String? walletId;
+  final bool isEditing;
+  final bool isLoading;
+  final bool isInitialized;
+
+  bool get hasChanges =>
+      name.trim() != savedName ||
+      email.trim() != savedEmail ||
+      walletName.trim() != savedWalletName;
+
+  _ProfileDraft copyWith({
+    String? name,
+    String? email,
+    String? walletName,
+    String? savedName,
+    String? savedEmail,
+    String? savedWalletName,
+    String? walletId,
+    bool? isEditing,
+    bool? isLoading,
+    bool? isInitialized,
+  }) {
+    return _ProfileDraft(
+      name: name ?? this.name,
+      email: email ?? this.email,
+      walletName: walletName ?? this.walletName,
+      savedName: savedName ?? this.savedName,
+      savedEmail: savedEmail ?? this.savedEmail,
+      savedWalletName: savedWalletName ?? this.savedWalletName,
+      walletId: walletId ?? this.walletId,
+      isEditing: isEditing ?? this.isEditing,
+      isLoading: isLoading ?? this.isLoading,
+      isInitialized: isInitialized ?? this.isInitialized,
+    );
+  }
+}
+
+final _profileDraftProvider = StateProvider.autoDispose<_ProfileDraft>(
+  (ref) => const _ProfileDraft(),
+);
+
+class ProfileViewScreen extends StatelessWidget {
   const ProfileViewScreen({super.key});
 
   @override
-  ConsumerState<ProfileViewScreen> createState() => _ProfileViewScreenState();
-}
-
-class _ProfileViewScreenState extends ConsumerState<ProfileViewScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _walletController = TextEditingController();
-  String _savedName = '';
-  String _savedEmail = '';
-  String _savedWalletName = '';
-  String? _walletId;
-  bool _isEditing = false;
-  bool _isLoading = true;
-
-  bool get _hasChanges =>
-      _nameController.text.trim() != _savedName ||
-      _emailController.text.trim() != _savedEmail ||
-      _walletController.text.trim() != _savedWalletName;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController.addListener(_onFieldChanged);
-    _emailController.addListener(_onFieldChanged);
-    _walletController.addListener(_onFieldChanged);
-    _loadProfile();
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final draft = ref.watch(_profileDraftProvider);
+        if (!draft.isInitialized) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _loadProfile(ref);
+          });
+        }
+        return _ProfileContent(draft: draft);
+      },
+    );
   }
 
-  Future<void> _loadProfile() async {
+  static Future<void> _loadProfile(WidgetRef ref) async {
+    final notifier = ref.read(_profileDraftProvider.notifier);
+    final current = ref.read(_profileDraftProvider);
+    if (current.isInitialized) return;
+    notifier.state = current.copyWith(isInitialized: true);
+
     final db = ref.read(databaseHelperProvider);
     final values = await Future.wait<String?>([
       db.getSetting('profile_name'),
       db.getSetting('profile_email'),
     ]);
     final wallets = await ref.read(walletsProvider.future);
-    if (!mounted) return;
-    _savedName = values[0] ?? '';
-    _savedEmail = values[1] ?? '';
     final selectedId = ref.read(selectedWalletIdProvider);
-    final wallet = wallets.where((item) => item.id == selectedId).isNotEmpty
-        ? wallets.firstWhere((item) => item.id == selectedId)
+    final matching = wallets
+        .where((wallet) => wallet.id == selectedId)
+        .toList();
+    final wallet = matching.isNotEmpty
+        ? matching.first
         : (wallets.isNotEmpty ? wallets.first : null);
-    _walletId = wallet?.id;
-    _savedWalletName = wallet?.name ?? '';
-    _nameController.text = _savedName;
-    _emailController.text = _savedEmail;
-    _walletController.text = _savedWalletName;
-    setState(() => _isLoading = false);
+
+    notifier.state = _ProfileDraft(
+      name: values[0] ?? '',
+      email: values[1] ?? '',
+      walletName: wallet?.name ?? '',
+      savedName: values[0] ?? '',
+      savedEmail: values[1] ?? '',
+      savedWalletName: wallet?.name ?? '',
+      walletId: wallet?.id,
+      isInitialized: true,
+      isLoading: false,
+    );
   }
+}
 
-  void _onFieldChanged() {
-    if (mounted) setState(() {});
-  }
+class _ProfileContent extends ConsumerWidget {
+  const _ProfileContent({required this.draft});
 
-  void _startEditing() => setState(() => _isEditing = true);
+  final _ProfileDraft draft;
 
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _saveProfile(BuildContext context, WidgetRef ref) async {
+    final email = draft.email.trim();
+    if (email.isNotEmpty &&
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a valid email')));
+      return;
+    }
+
     final db = ref.read(databaseHelperProvider);
-    final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final walletName = _walletController.text.trim();
+    final name = draft.name.trim();
+    final walletName = draft.walletName.trim();
     await db.setSetting('profile_name', name);
     await db.setSetting('profile_email', email);
-    if (_walletId != null) {
+    if (draft.walletId != null) {
       final database = await ref.read(databaseProvider.future);
       await database.update(
         DatabaseTables.wallets,
         {'name': walletName},
         where: 'id = ?',
-        whereArgs: [_walletId],
+        whereArgs: [draft.walletId],
       );
       ref.invalidate(walletsProvider);
     }
-    if (!mounted) return;
-    setState(() {
-      _savedName = name;
-      _savedEmail = email;
-      _savedWalletName = walletName;
-      _isEditing = false;
-    });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Profile saved')));
+
+    ref.read(_profileDraftProvider.notifier).state = _ProfileDraft(
+      name: name,
+      email: email,
+      walletName: walletName,
+      savedName: name,
+      savedEmail: email,
+      savedWalletName: walletName,
+      walletId: draft.walletId,
+      isInitialized: true,
+      isLoading: false,
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile saved')));
+    }
   }
 
   @override
-  void dispose() {
-    _nameController
-      ..removeListener(_onFieldChanged)
-      ..dispose();
-    _emailController
-      ..removeListener(_onFieldChanged)
-      ..dispose();
-    _walletController
-      ..removeListener(_onFieldChanged)
-      ..dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final initial = _nameController.text.trim().isNotEmpty
-        ? _nameController.text.trim()[0].toUpperCase()
+    final initial = draft.name.trim().isNotEmpty
+        ? draft.name.trim()[0].toUpperCase()
         : 'U';
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.profile)),
-      body: _isLoading
+      backgroundColor: colorScheme.surface,
+      appBar: AppBar(
+        title: const Text(AppStrings.profile),
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      body: draft.isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 42,
-                      backgroundColor: colorScheme.primary,
-                      child: Text(
-                        initial,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 28,
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _nameController.text.trim().isEmpty
-                          ? 'Your profile'
-                          : _nameController.text.trim(),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 42,
+                          backgroundColor: colorScheme.primary,
+                          child: Text(
+                            initial,
+                            style: TextStyle(
+                              color: colorScheme.onPrimary,
+                              fontSize: 34,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          draft.name.trim().isEmpty
+                              ? 'Your profile'
+                              : draft.name.trim(),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          draft.walletName.trim().isEmpty
+                              ? 'Set up your wallet'
+                              : draft.walletName.trim(),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: colorScheme.onPrimaryContainer
+                                    .withValues(alpha: 0.72),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Personal details',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 28),
-                    TextFormField(
-                      controller: _nameController,
-                      enabled: _isEditing,
-                      decoration: const InputDecoration(
-                        labelText: 'Full name',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
-                      ),
-                      validator: (_) => null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _emailController,
-                      enabled: _isEditing,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email address',
-                        prefixIcon: Icon(Icons.email_outlined),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) return null;
-                        if (!RegExp(
-                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                        ).hasMatch(value.trim())) {
-                          return 'Enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _walletController,
-                      enabled: _isEditing && _walletId != null,
-                      decoration: const InputDecoration(
-                        labelText: 'Wallet name',
-                        prefixIcon: Icon(Icons.account_balance_wallet_outlined),
-                      ),
-                      validator: (_) => null,
-                    ),
-                    if (!_isEditing) ...[
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.tonalIcon(
-                          onPressed: _startEditing,
-                          icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Edit profile'),
+                  ),
+                  const SizedBox(height: 12),
+                  _field(
+                    context,
+                    label: 'Full name',
+                    value: draft.name,
+                    icon: Icons.person_outline_rounded,
+                    onChanged: (value) =>
+                        ref.read(_profileDraftProvider.notifier).state = draft
+                            .copyWith(name: value),
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    context,
+                    label: 'Email address',
+                    value: draft.email,
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    onChanged: (value) =>
+                        ref.read(_profileDraftProvider.notifier).state = draft
+                            .copyWith(email: value),
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    context,
+                    label: 'Wallet name',
+                    value: draft.walletName,
+                    icon: Icons.account_balance_wallet_outlined,
+                    enabled: draft.isEditing && draft.walletId != null,
+                    onChanged: (value) =>
+                        ref.read(_profileDraftProvider.notifier).state = draft
+                            .copyWith(walletName: value),
+                  ),
+                  if (!draft.isEditing) ...[
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () =>
+                            ref.read(_profileDraftProvider.notifier).state =
+                                draft.copyWith(isEditing: true),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Edit profile'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
-                    ],
-                    if (_isEditing && _hasChanges) ...[
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _saveProfile,
-                          icon: const Icon(Icons.check_rounded),
-                          label: const Text('Save changes'),
-                        ),
-                      ),
-                    ],
+                    ),
                   ],
-                ),
+                  if (draft.isEditing && draft.hasChanges) ...[
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _saveProfile(context, ref),
+                        icon: const Icon(Icons.check_rounded),
+                        label: const Text('Save changes'),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
+    );
+  }
+
+  Widget _field(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+    required ValueChanged<String> onChanged,
+    TextInputType? keyboardType,
+    bool enabled = false,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return TextFormField(
+      initialValue: value,
+      enabled: enabled,
+      keyboardType: keyboardType,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: colors.surfaceContainerHighest,
+      ),
     );
   }
 }

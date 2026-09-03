@@ -123,14 +123,32 @@ class _AppShellState extends ConsumerState<AppShell> {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.78),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.18),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
                     CircleAvatar(
                       radius: 26,
-                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      foregroundColor: Colors.white,
                       child: Text(
                         name.isNotEmpty ? name[0].toUpperCase() : 'U',
                         style: const TextStyle(
@@ -150,7 +168,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -159,9 +180,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
+                                  color: Colors.white.withValues(alpha: 0.78),
                                 ),
                           ),
                           const SizedBox(height: 5),
@@ -170,9 +189,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                               Icon(
                                 Icons.account_balance_wallet_outlined,
                                 size: 16,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                color: Colors.white.withValues(alpha: 0.78),
                               ),
                               const SizedBox(width: 5),
                               Expanded(
@@ -182,9 +199,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
+                                        color: Colors.white.withValues(alpha: 0.78),
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
