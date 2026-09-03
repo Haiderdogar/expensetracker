@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../models/note_model.dart';
 import '../../providers/note_provider.dart';
@@ -90,32 +89,33 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final buttonStyle = FilledButton.styleFrom(
-      backgroundColor: AppColors.primaryEmerald,
-      foregroundColor: Colors.white,
+      backgroundColor: colorScheme.primary,
+      foregroundColor: colorScheme.onPrimary,
       minimumSize: const Size.fromHeight(52),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F3),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         title: Text(
           _isEditing ? 'Edit Note' : 'Create New Note',
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF111827),
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF111827)),
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
         actions: _isEditing
             ? [
                 IconButton(
                   tooltip: 'Delete note',
                   onPressed: _deleteNote,
                   icon: const Icon(Icons.delete_outline_rounded),
+                  color: colorScheme.error,
                 ),
               ]
             : null,
@@ -137,39 +137,34 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                         minLines: 1,
                         maxLines: null,
                         keyboardType: TextInputType.multiline,
-                        style: const TextStyle(
-                          color: Color(0xFF111827),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                         decoration: InputDecoration(
                           hintText: 'Title',
-                          hintStyle: const TextStyle(
-                            color: Color(0xFF9CA3AF),
-                            fontSize: 18,
-                          ),
+                          hintStyle: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: colorScheme.surfaceContainerHighest,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 18,
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE5E7EB),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant,
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE5E7EB),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant,
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: AppColors.primaryEmerald,
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
                               width: 1.5,
                             ),
                           ),
@@ -186,37 +181,33 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                         maxLines: null,
                         keyboardType: TextInputType.multiline,
                         textAlignVertical: TextAlignVertical.top,
-                        style: const TextStyle(
-                          color: Color(0xFF374151),
-                          fontSize: 16,
-                          height: 1.5,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyLarge?.copyWith(height: 1.5),
                         decoration: InputDecoration(
                           hintText: 'Write your note here...',
-                          hintStyle: const TextStyle(
-                            color: Color(0xFF9CA3AF),
-                            fontSize: 16,
-                          ),
+                          hintStyle: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
                           alignLabelWithHint: true,
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: colorScheme.surfaceContainerHighest,
                           contentPadding: const EdgeInsets.all(16),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE5E7EB),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant,
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE5E7EB),
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant,
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: AppColors.primaryEmerald,
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
                               width: 1.5,
                             ),
                           ),
@@ -240,10 +231,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF475569),
+                          foregroundColor: colorScheme.onSurfaceVariant,
                           minimumSize: const Size.fromHeight(52),
                           padding: EdgeInsets.zero,
-                          side: const BorderSide(color: Color(0xFFD1D5DB)),
+                          side: BorderSide(color: colorScheme.outline),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),

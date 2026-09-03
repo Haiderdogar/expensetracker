@@ -61,7 +61,7 @@ class DashboardSummaryCard extends ConsumerWidget {
               _StatChip(
                 label: AppStrings.income,
                 value: Formatters.currency(income, symbol: symbol),
-                color: AppColors.mintAccent,
+                color: AppColors.incomeGreen,
               ),
               const SizedBox(width: 12),
               _StatChip(
