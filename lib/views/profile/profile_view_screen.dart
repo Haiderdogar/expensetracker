@@ -254,6 +254,7 @@ class _ProfileContent extends ConsumerWidget {
                     label: 'Full name',
                     value: draft.name,
                     icon: Icons.person_outline_rounded,
+                    enabled: draft.isEditing,
                     onChanged: (value) =>
                         ref.read(_profileDraftProvider.notifier).state = draft
                             .copyWith(name: value),
@@ -265,6 +266,7 @@ class _ProfileContent extends ConsumerWidget {
                     value: draft.email,
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
+                    enabled: draft.isEditing,
                     onChanged: (value) =>
                         ref.read(_profileDraftProvider.notifier).state = draft
                             .copyWith(email: value),
@@ -328,6 +330,11 @@ class _ProfileContent extends ConsumerWidget {
     bool enabled = false,
   }) {
     final colors = Theme.of(context).colorScheme;
+    final borderRadius = BorderRadius.circular(16);
+    final border = OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: colors.outlineVariant),
+    );
     return TextFormField(
       initialValue: value,
       enabled: enabled,
@@ -335,9 +342,37 @@ class _ProfileContent extends ConsumerWidget {
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon),
+        labelStyle: TextStyle(
+          color: enabled ? colors.onSurfaceVariant : colors.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+        ),
+        prefixIcon: Icon(
+          icon,
+          color: enabled ? colors.primary : colors.onSurfaceVariant,
+        ),
         filled: true,
-        fillColor: colors.surfaceContainerHighest,
+        fillColor: enabled
+            ? colors.surfaceContainerHighest
+            : colors.surfaceContainerHighest.withValues(alpha: 0.55),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        enabledBorder: border,
+        disabledBorder: border.copyWith(
+          borderSide: BorderSide(
+            color: colors.outlineVariant.withValues(alpha: 0.6),
+          ),
+        ),
+        focusedBorder: border.copyWith(
+          borderSide: BorderSide(color: colors.primary, width: 2),
+        ),
+        errorBorder: border.copyWith(
+          borderSide: BorderSide(color: colors.error),
+        ),
+        focusedErrorBorder: border.copyWith(
+          borderSide: BorderSide(color: colors.error, width: 2),
+        ),
       ),
     );
   }
