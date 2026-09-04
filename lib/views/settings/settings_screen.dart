@@ -112,11 +112,15 @@ class SettingsScreen extends ConsumerWidget {
       }
 
       // Use controller to enable so availability checks remain consistent.
-      final enabled = await ref.read(authControllerProvider.notifier).enableBiometricUnlock();
+      final enabled = await ref
+          .read(authControllerProvider.notifier)
+          .enableBiometricUnlock();
       if (!enabled) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to enable biometric authentication')),
+            const SnackBar(
+              content: Text('Failed to enable biometric authentication'),
+            ),
           );
         }
         return;
@@ -334,195 +338,6 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            _sectionHeader(context, 'Manage categories'),
-            _sectionCard(
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: colorScheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final nameController = TextEditingController();
-                          String type = 'expense';
-                          final result = await showDialog<bool>(
-                            context: context,
-                            builder: (dctx) => AlertDialog(
-                              title: const Text('Add category'),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TextField(
-                                    controller: nameController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Name',
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Radio<String>(
-                                        value: 'expense',
-                                        groupValue: type,
-                                        onChanged: (v) => type = v ?? 'expense',
-                                      ),
-                                      const Text('Expense'),
-                                      const SizedBox(width: 12),
-                                      Radio<String>(
-                                        value: 'income',
-                                        groupValue: type,
-                                        onChanged: (v) => type = v ?? 'income',
-                                      ),
-                                      const Text('Income'),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(dctx).pop(false),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.of(dctx).pop(true),
-                                  child: const Text('Save'),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (result != true) return;
-                          final name = nameController.text.trim();
-                          if (name.isEmpty) return;
-                          try {
-                            await ref
-                                .read(categoriesProvider.notifier)
-                                .create(
-                                  name: name,
-                                  type: type,
-                                  icon: type == 'income'
-                                      ? 'work'
-                                      : 'shopping_bag',
-                                  color: type == 'income'
-                                      ? '#2ECC71'
-                                      : '#FF6B6B',
-                                );
-                            ref.invalidate(categoriesProvider);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Category added')),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(e.toString())),
-                              );
-                            }
-                          }
-                        },
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Add category'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Consumer(
-                      builder: (cctx, cref, _) {
-                        final all = cref.watch(categoriesProvider);
-                        return all.when(
-                          loading: () => const LinearProgressIndicator(),
-                          error: (e, _) => Text(e.toString()),
-                          data: (cats) {
-                            if (cats.isEmpty) {
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  'No categories yet',
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
-                                ),
-                              );
-                            }
-                            return Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: cats.map((c) {
-                                return InputChip(
-                                  label: Text('${c.name} (${c.type})'),
-                                  onPressed: () {},
-                                  onDeleted: () async {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (dctx) => AlertDialog(
-                                        title: const Text('Delete category'),
-                                        content: Text(
-                                          'Delete "${c.name}"? This cannot be undone.',
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(dctx).pop(false),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(dctx).pop(true),
-                                            child: const Text('Delete'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                    if (confirm == true) {
-                                      try {
-                                        await cref
-                                            .read(categoriesProvider.notifier)
-                                            .delete(c.id);
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Category deleted'),
-                                            ),
-                                          );
-                                        }
-                                      } catch (e) {
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(e.toString()),
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    }
-                                  },
-                                );
-                              }).toList(),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                ),
               ),
             ),
             const SizedBox(height: 18),

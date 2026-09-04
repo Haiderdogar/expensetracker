@@ -72,8 +72,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             ref.read(_typeProvider.notifier).state = safeType;
-            ref.read(_categoryIdProvider.notifier).state =
-                t.categoryId.isEmpty ? null : t.categoryId;
+            ref.read(_categoryIdProvider.notifier).state = t.categoryId.isEmpty
+                ? null
+                : t.categoryId;
             ref.read(_subcategoryProvider.notifier).state =
                 t.subcategory.isEmpty ? null : t.subcategory;
             ref.read(_dateProvider.notifier).state = parsedDate;
@@ -302,60 +303,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        AppStrings.category,
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () async {
-                        final name = await showDialog<String>(
-                          context: context,
-                          builder: (dialogContext) {
-                            final controller = TextEditingController();
-                            return AlertDialog(
-                              title: const Text('Add category'),
-                              content: TextField(
-                                controller: controller,
-                                autofocus: true,
-                                decoration: const InputDecoration(
-                                  hintText: 'Category name',
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(dialogContext).pop(),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.of(
-                                    dialogContext,
-                                  ).pop(controller.text.trim()),
-                                  child: const Text('Save'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                        if (name == null || name.isEmpty) return;
-                        final added = await ref
-                            .read(categoriesProvider.notifier)
-                            .create(
-                              name: name,
-                              type: type,
-                              icon: type == 'income' ? 'work' : 'shopping_bag',
-                              color: type == 'income' ? '#2ECC71' : '#FF6B6B',
-                            );
-                        ref.read(_categoryIdProvider.notifier).state = added.id;
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add'),
-                    ),
-                  ],
+                Text(
+                  AppStrings.category,
+                  style: Theme.of(context).textTheme.labelLarge,
                 ),
                 const SizedBox(height: 8),
                 categoriesAsync.when(
@@ -365,84 +315,142 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     final visible = allCategories
                         .where((c) => c.type == type)
                         .toList();
-                    if (visible.isEmpty) {
-                      return const Text(
-                        'No categories available. Add one to continue.',
-                      );
-                    }
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: visible.map((c) {
-                        final selected = categoryId == c.id;
-                        return GestureDetector(
-                          onLongPress: () async {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (dctx) => AlertDialog(
-                                title: const Text('Delete category'),
-                                content: Text(
-                                  'Delete "${c.name}"? This cannot be undone.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(dctx).pop(false),
-                                    child: const Text('Cancel'),
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: visible.map((c) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ChoiceChip(
+                                    label: Text(c.name),
+                                    selected: c.id == categoryId,
+                                    onSelected: (_) {
+                                      ref
+                                          .read(_categoryIdProvider.notifier)
+                                          .state = c
+                                          .id;
+                                      ref
+                                              .read(
+                                                _subcategoryProvider.notifier,
+                                              )
+                                              .state =
+                                          null;
+                                    },
                                   ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(dctx).pop(true),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirm == true) {
-                              try {
-                                await ref
-                                    .read(categoriesProvider.notifier)
-                                    .delete(c.id);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Category deleted'),
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
-                                  );
-                                }
-                              }
-                            }
-                          },
-                          child: ChoiceChip(
-                            label: Text(c.name),
-                            selected: selected,
-                            onSelected: (_) {
-                                 ref.read(_categoryIdProvider.notifier).state = c.id;
-                                 ref.read(_subcategoryProvider.notifier).state = null;
-                            },
+                                );
+                              }).toList(),
+                            ),
                           ),
-                        );
-                      }).toList(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          tooltip: 'Add category',
+                          onPressed: () async {
+                            final name = await showDialog<String>(
+                              context: context,
+                              builder: (dialogContext) {
+                                final controller = TextEditingController();
+                                return AlertDialog(
+                                  title: const Text('Add category'),
+                                  content: TextField(
+                                    controller: controller,
+                                    autofocus: true,
+                                    decoration: const InputDecoration(
+                                      hintText: 'Category name',
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(
+                                        dialogContext,
+                                      ).pop(controller.text.trim()),
+                                      child: const Text('Save'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            if (name == null || name.isEmpty) return;
+                            final added = await ref
+                                .read(categoriesProvider.notifier)
+                                .create(
+                                  name: name,
+                                  type: type,
+                                  icon: type == 'income'
+                                      ? 'work'
+                                      : 'shopping_bag',
+                                  color: type == 'income'
+                                      ? '#2ECC71'
+                                      : '#FF6B6B',
+                                );
+                            ref.read(_categoryIdProvider.notifier).state =
+                                added.id;
+                          },
+                          icon: const Icon(Icons.add),
+                        ),
+                      ],
                     );
                   },
                 ),
                 const SizedBox(height: 12),
                 if (categoryId != null) ...[
+                  Text(
+                    'Subcategory',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          'Subcategory',
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
+                        child: ref
+                            .watch(subcategoriesProvider(categoryId))
+                            .when(
+                              loading: () => const LinearProgressIndicator(),
+                              error: (e, _) => Text(e.toString()),
+                              data: (subcategories) {
+                                if (subcategories.isEmpty) {
+                                  return const Text(
+                                    'No subcategories yet. Add one to continue.',
+                                  );
+                                }
+                                return SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: subcategories.map((s) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 8,
+                                        ),
+                                        child: ChoiceChip(
+                                          label: Text(s.name),
+                                          selected: s.name == subcategory,
+                                          onSelected: (_) =>
+                                              ref
+                                                      .read(
+                                                        _subcategoryProvider
+                                                            .notifier,
+                                                      )
+                                                      .state =
+                                                  s.name,
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                );
+                              },
+                            ),
                       ),
-                      TextButton.icon(
+                      const SizedBox(width: 8),
+                      IconButton.filledTonal(
+                        tooltip: 'Add subcategory',
                         onPressed: () async {
                           final name = await showDialog<String>(
                             context: context,
@@ -459,27 +467,30 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.of(dialogContext).pop(),
+                                    onPressed: () =>
+                                        Navigator.of(dialogContext).pop(),
                                     child: const Text('Cancel'),
                                   ),
                                   TextButton(
-                                    onPressed: () => Navigator.of(dialogContext).pop(
-                                      controller.text.trim(),
-                                    ),
+                                    onPressed: () => Navigator.of(
+                                      dialogContext,
+                                    ).pop(controller.text.trim()),
                                     child: const Text('Save'),
                                   ),
                                 ],
                               );
                             },
                           );
-                          if (name == null || name.isEmpty || !context.mounted) return;
+                          if (name == null || name.isEmpty || !context.mounted)
+                            return;
                           try {
                             final added = await addSubcategory(
                               ref,
                               categoryId: categoryId,
                               name: name,
                             );
-                            ref.read(_subcategoryProvider.notifier).state = added.name;
+                            ref.read(_subcategoryProvider.notifier).state =
+                                added.name;
                           } catch (e) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -489,32 +500,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           }
                         },
                         icon: const Icon(Icons.add),
-                        label: const Text('Add'),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  ref.watch(subcategoriesProvider(categoryId)).when(
-                    loading: () => const LinearProgressIndicator(),
-                    error: (e, _) => Text(e.toString()),
-                    data: (subcategories) {
-                      if (subcategories.isEmpty) {
-                        return const Text('No subcategories yet. Add one to continue.');
-                      }
-                      return Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: subcategories.map((s) {
-                          return ChoiceChip(
-                            label: Text(s.name),
-                            selected: subcategory == s.name,
-                            onSelected: (_) => ref
-                                .read(_subcategoryProvider.notifier)
-                                .state = s.name,
-                          );
-                        }).toList(),
-                      );
-                    },
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -541,15 +528,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text('${AppStrings.date} & Time'),
-                  subtitle: Text(Formatters.dateTime(date)),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: pickDateTime,
-                ),
-                const SizedBox(height: 16),
                 CustomTextField(
                   controller: _noteController,
                   label: AppStrings.note,
@@ -557,6 +535,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       ? 'Add details of your income'
                       : 'Add details of your expense',
                   maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('${AppStrings.date} & Time'),
+                  subtitle: Text(Formatters.dateTime(date)),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: pickDateTime,
                 ),
                 const SizedBox(height: 24),
                 CustomButton(

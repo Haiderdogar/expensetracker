@@ -67,6 +67,7 @@ class AppBootstrap extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final onboardingAsync = ref.watch(onboardingCompleteProvider);
+    final authAsync = ref.watch(authControllerProvider);
     final lockPromptAsync = ref.watch(lockPromptCompletedProvider);
 
     return onboardingAsync.when(
@@ -76,6 +77,9 @@ class AppBootstrap extends ConsumerWidget {
       error: (e, _) => Scaffold(body: Center(child: Text(e.toString()))),
       data: (complete) {
         if (!complete) return const OnboardingScreen();
+        if (authAsync.value == AuthStatus.unauthenticated) {
+          return const AuthGate();
+        }
         return lockPromptAsync.when(
           loading: () => Scaffold(
             body: Container(color: Theme.of(context).scaffoldBackgroundColor),

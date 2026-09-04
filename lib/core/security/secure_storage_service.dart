@@ -118,6 +118,14 @@ class SecureStorageService {
     }
   }
 
+  Future<void> clearAll() async {
+    try {
+      await _storage.deleteAll();
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
   String _hashPin(String pin) {
     final bytes = utf8.encode(pin);
     return sha256.convert(bytes).toString();

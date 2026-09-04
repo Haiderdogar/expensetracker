@@ -27,7 +27,8 @@ abstract final class AppStrings {
   static const String usePin = 'Use PIN';
   static const String unlockWithFingerprint = 'Unlock with fingerprint';
   static const String unlockWithFace = 'Unlock with Face';
-  static const String pinCooldown = 'Too many attempts. Try again in 30 seconds.';
+  static const String pinCooldown =
+      'Too many attempts. Try again in 30 seconds.';
   static const String protectAppTitle = 'Protect your app';
   static const String protectAppBody =
       'Lock Expense Tracker with a PIN. You can also unlock with biometrics. You can skip and enable this later in Settings.';
@@ -66,6 +67,8 @@ abstract final class AppStrings {
   static const String changePin = 'Change PIN';
   static const String enableBiometric = 'Enable biometrics';
   static const String logout = 'Log out';
+  static const String logoutConfirmation =
+      'Are you sure you want to logout? Any unsaved offline data will be lost since data is not synced online.';
   static const String exportData = 'Export data';
   static const String importData = 'Import data';
   static const String backupSuccess = 'Backup exported successfully';

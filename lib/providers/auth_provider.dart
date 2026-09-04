@@ -15,7 +15,6 @@ class AuthController extends _$AuthController {
   DateTime? _backgroundedAt;
 
   @override
-
   Future<AuthStatus> build() async {
     final storage = ref.read(secureStorageProvider);
     final hasPin = await storage.hasPin();
@@ -96,7 +95,13 @@ class AuthController extends _$AuthController {
     await lock();
   }
 
-  Future<void> logout() => lock();
+  Future<void> logout() async {
+    await ref.read(secureStorageProvider).clearAll();
+    ref.invalidate(pinEnabledProvider);
+    ref.invalidate(biometricEnabledProvider);
+    ref.invalidate(lockPromptCompletedProvider);
+    state = const AsyncData(AuthStatus.unauthenticated);
+  }
 
   Future<bool> isBiometricAvailable() async {
     return (await preferredBiometric()) != null;
@@ -169,7 +174,8 @@ final lockPromptCompletedProvider = FutureProvider<bool>((ref) async {
 
 @riverpod
 Future<bool> pinEnabled(Ref ref) async {
-  return ref.read(secureStorageProvider).isPinEnabled();
+  final storage = ref.read(secureStorageProvider);
+  return await storage.isPinEnabled() && await storage.hasPin();
 }
 
 @riverpod

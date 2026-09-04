@@ -5,7 +5,12 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/global_keys.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/budget_provider.dart';
+import '../../providers/category_provider.dart';
+import '../../providers/note_provider.dart';
+import '../../providers/transaction_provider.dart';
 import '../../widgets/glass_navbar.dart';
+import 'auth/auth_screen.dart';
 import 'analytics/analytics_screen.dart';
 import 'budgets/budgets_screen.dart';
 import 'dashboard/dashboard_screen.dart';
@@ -82,16 +87,149 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   Future<void> _logout() async {
-    final pinOn = await ref.read(pinEnabledProvider.future);
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    if (!pinOn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enable PIN lock to log out')),
-      );
-      return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final colors = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          title: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: colors.errorContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.logout_rounded, color: colors.error),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  AppStrings.logout,
+                  style: Theme.of(
+                    dialogContext,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          content: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHighest.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 20,
+                  color: colors.onSurfaceVariant,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    AppStrings.logoutConfirmation,
+                    style: Theme.of(dialogContext).textTheme.bodyMedium
+                        ?.copyWith(color: colors.onSurfaceVariant, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(AppStrings.cancel),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.error,
+                      foregroundColor: colors.onError,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(AppStrings.logout),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final pinOn = await ref.read(pinEnabledProvider.future);
+      final biometricOn = await ref.read(biometricEnabledProvider.future);
+
+      if (pinOn || biometricOn) {
+        var authenticated = false;
+        if (biometricOn) {
+          authenticated = await ref
+              .read(authControllerProvider.notifier)
+              .promptBiometric(reason: AppStrings.logout);
+        }
+
+        if (!authenticated && pinOn && mounted) {
+          authenticated =
+              await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => const AuthScreen(verifyOnly: true),
+                ),
+              ) ==
+              true;
+        }
+
+        if (!authenticated || !mounted) return;
+      }
+
+      if (appShellScaffoldKey.currentState?.isDrawerOpen ?? false) {
+        Navigator.of(context).pop();
+      }
+
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+
+      ref.invalidate(transactionsProvider);
+      ref.invalidate(categoriesProvider);
+      ref.invalidate(walletsProvider);
+      ref.invalidate(budgetsProvider);
+      ref.invalidate(notesProvider);
+      ref.invalidate(selectedWalletIdProvider);
+      await ref.read(authControllerProvider.notifier).logout();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     }
-    await ref.read(authControllerProvider.notifier).logout();
   }
 
   @override
@@ -126,7 +264,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                   gradient: LinearGradient(
                     colors: [
                       Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.78),
+                      Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.78),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -134,10 +274,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.18),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.18),
                       blurRadius: 14,
                       offset: const Offset(0, 6),
                     ),
@@ -199,7 +338,9 @@ class _AppShellState extends ConsumerState<AppShell> {
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                        color: Colors.white.withValues(alpha: 0.78),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.78,
+                                        ),
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
