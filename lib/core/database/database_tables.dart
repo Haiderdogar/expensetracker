@@ -2,11 +2,12 @@ abstract final class DatabaseTables {
   static const String categories = 'categories';
   static const String wallets = 'wallets';
   static const String transactions = 'transactions';
+  static const String subcategories = 'subcategories';
   static const String budgets = 'budgets';
   static const String settings = 'settings';
   static const String notes = 'notes';
 
-  static const int dbVersion = 2;
+  static const int dbVersion = 4;
 
   static const String createCategories = '''
     CREATE TABLE $categories (
@@ -30,6 +31,7 @@ abstract final class DatabaseTables {
     CREATE TABLE $transactions (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
+      subcategory TEXT NOT NULL DEFAULT '',
       amount REAL NOT NULL,
       type TEXT NOT NULL,
       category_id TEXT NOT NULL,
@@ -38,6 +40,16 @@ abstract final class DatabaseTables {
       note TEXT,
       FOREIGN KEY (category_id) REFERENCES $categories(id),
       FOREIGN KEY (wallet_id) REFERENCES $wallets(id)
+    )
+  ''';
+
+  static const String createSubcategories = '''
+    CREATE TABLE $subcategories (
+      id TEXT PRIMARY KEY,
+      category_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      UNIQUE(category_id, name),
+      FOREIGN KEY (category_id) REFERENCES $categories(id) ON DELETE CASCADE
     )
   ''';
 
@@ -78,4 +90,15 @@ abstract final class DatabaseTables {
     {'name': 'Entertainment', 'type': 'expense', 'icon': 'movie', 'color': '#EC4899'},
     {'name': 'Health', 'type': 'expense', 'icon': 'favorite', 'color': '#14B8A6'},
   ];
+
+  static const Map<String, List<String>> defaultSubcategories = {
+    'Salary': ['Monthly salary', 'Bonus'],
+    'Freelance': ['Client work', 'Project payment'],
+    'Food': ['Breakfast', 'Lunch', 'Dinner', 'Party with friends'],
+    'Transport': ['Fuel', 'Public transport', 'Taxi'],
+    'Shopping': ['Clothing', 'Groceries', 'Electronics'],
+    'Bills': ['Electricity bill', 'Gas bill', 'Water bill'],
+    'Entertainment': ['Movies', 'Games', 'Subscriptions'],
+    'Health': ['Medicine', 'Doctor visit', 'Fitness'],
+  };
 }

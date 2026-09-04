@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/formatters.dart';
 import '../../providers/category_provider.dart';
+import '../../providers/subcategory_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/database_provider.dart';
@@ -16,6 +17,7 @@ import '../../core/utils/error_handler.dart';
 
 final _typeProvider = StateProvider.autoDispose<String>((ref) => 'expense');
 final _categoryIdProvider = StateProvider.autoDispose<String?>((ref) => null);
+final _subcategoryProvider = StateProvider.autoDispose<String?>((ref) => null);
 final _dateProvider = StateProvider.autoDispose<DateTime>(
   (ref) => DateTime.now(),
 );
@@ -31,7 +33,6 @@ class AddTransactionScreen extends StatefulWidget {
 }
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
-  late TextEditingController _titleController;
   late TextEditingController _amountController;
   late TextEditingController _noteController;
   bool _editDataInitialized = false;
@@ -41,14 +42,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController();
     _amountController = TextEditingController();
     _noteController = TextEditingController();
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
     _amountController.dispose();
     _noteController.dispose();
     super.dispose();
@@ -67,7 +66,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ? t.type
               : 'expense';
 
-          _titleController.text = t.title;
           _amountController.text = t.amount.toString();
           _noteController.text = t.note ?? '';
 
@@ -76,12 +74,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ref.read(_typeProvider.notifier).state = safeType;
             ref.read(_categoryIdProvider.notifier).state =
                 t.categoryId.isEmpty ? null : t.categoryId;
+            ref.read(_subcategoryProvider.notifier).state =
+                t.subcategory.isEmpty ? null : t.subcategory;
             ref.read(_dateProvider.notifier).state = parsedDate;
           });
         }
 
         final type = ref.watch(_typeProvider);
         final categoryId = ref.watch(_categoryIdProvider);
+        final subcategory = ref.watch(_subcategoryProvider);
         final date = ref.watch(_dateProvider);
         final loading = ref.watch(_loadingProvider);
 
@@ -130,10 +131,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ).showSnackBar(const SnackBar(content: Text('Select category')));
             return;
           }
+          if (subcategory == null || subcategory.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Select or add a subcategory')),
+            );
+            return;
+          }
 
           ref.read(_loadingProvider.notifier).state = true;
           try {
-            final title = _titleController.text;
             final amount = _amountController.text;
             final note = _noteController.text;
 
@@ -161,7 +167,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             if (_isEditing) {
               await notifier.updateTransaction(
                 widget.transaction!.copyWith(
-                  title: title.trim(),
+                  subcategory: subcategory.trim(),
                   amount: parsedAmount,
                   type: type,
                   categoryId: categoryId,
@@ -171,7 +177,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               );
             } else {
               await notifier.create(
-                title: title.trim(),
+                subcategory: subcategory.trim(),
                 amount: parsedAmount,
                 type: type,
                 categoryId: categoryId,
@@ -288,6 +294,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         // previously selected category doesn't match the newly selected type
                         // clear it so the user is prompted to pick an appropriate category
                         ref.read(_categoryIdProvider.notifier).state = null;
+                        ref.read(_subcategoryProvider.notifier).state = null;
                       }
                     } catch (_) {
                       // On any unexpected error, don't change the selection.
@@ -415,9 +422,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           child: ChoiceChip(
                             label: Text(c.name),
                             selected: selected,
-                            onSelected: (_) =>
-                                ref.read(_categoryIdProvider.notifier).state =
-                                    c.id,
+                            onSelected: (_) {
+                                 ref.read(_categoryIdProvider.notifier).state = c.id;
+                                 ref.read(_subcategoryProvider.notifier).state = null;
+                            },
                           ),
                         );
                       }).toList(),
@@ -425,14 +433,91 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                CustomTextField(
-                  controller: _titleController,
-                  label: AppStrings.title,
-                  hint: type == 'income'
-                      ? 'From where come'
-                      : 'Where you spend',
-                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                ),
+                if (categoryId != null) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Subcategory',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final name = await showDialog<String>(
+                            context: context,
+                            builder: (dialogContext) {
+                              final controller = TextEditingController();
+                              return AlertDialog(
+                                title: const Text('Add subcategory'),
+                                content: TextField(
+                                  controller: controller,
+                                  autofocus: true,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Subcategory name',
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(dialogContext).pop(),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(dialogContext).pop(
+                                      controller.text.trim(),
+                                    ),
+                                    child: const Text('Save'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                          if (name == null || name.isEmpty || !context.mounted) return;
+                          try {
+                            final added = await addSubcategory(
+                              ref,
+                              categoryId: categoryId,
+                              name: name,
+                            );
+                            ref.read(_subcategoryProvider.notifier).state = added.name;
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(e.toString())),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ref.watch(subcategoriesProvider(categoryId)).when(
+                    loading: () => const LinearProgressIndicator(),
+                    error: (e, _) => Text(e.toString()),
+                    data: (subcategories) {
+                      if (subcategories.isEmpty) {
+                        return const Text('No subcategories yet. Add one to continue.');
+                      }
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: subcategories.map((s) {
+                          return ChoiceChip(
+                            label: Text(s.name),
+                            selected: subcategory == s.name,
+                            onSelected: (_) => ref
+                                .read(_subcategoryProvider.notifier)
+                                .state = s.name,
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 const SizedBox(height: 16),
                 CustomTextField(
                   controller: _amountController,

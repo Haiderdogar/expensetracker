@@ -24,8 +24,10 @@ class BackupService extends _$BackupService {
 
       for (final table in [
         DatabaseTables.categories,
+        DatabaseTables.subcategories,
         DatabaseTables.wallets,
         DatabaseTables.transactions,
+        DatabaseTables.subcategories,
         DatabaseTables.budgets,
         DatabaseTables.settings,
       ]) {
@@ -65,6 +67,7 @@ class BackupService extends _$BackupService {
 
         for (final table in [
           DatabaseTables.categories,
+          DatabaseTables.subcategories,
           DatabaseTables.wallets,
           DatabaseTables.transactions,
           DatabaseTables.budgets,
@@ -105,9 +108,7 @@ Future<Map<String, double>> expenseByCategory(Ref ref) async {
 }
 
 @riverpod
-Future<List<MapEntry<String, double>>> monthlySpendingTrend(
-  Ref ref,
-) async {
+Future<List<MapEntry<String, double>>> monthlySpendingTrend(Ref ref) async {
   // Depend on transactions so chart refreshes automatically on changes
   await ref.watch(transactionsProvider.future);
 
@@ -122,6 +123,8 @@ Future<List<MapEntry<String, double>>> monthlySpendingTrend(
   ''');
 
   return rows
-      .map((r) => MapEntry(r['month'] as String, (r['total'] as num).toDouble()))
+      .map(
+        (r) => MapEntry(r['month'] as String, (r['total'] as num).toDouble()),
+      )
       .toList();
 }

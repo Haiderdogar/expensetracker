@@ -108,7 +108,7 @@ class Transactions extends _$Transactions {
   }
 
   Future<TransactionModel> create({
-    required String title,
+    required String subcategory,
     required double amount,
     required String type,
     required String categoryId,
@@ -119,7 +119,7 @@ class Transactions extends _$Transactions {
     const uuid = Uuid();
     final transaction = TransactionModel(
       id: uuid.v4(),
-      title: title,
+      subcategory: subcategory,
       amount: amount,
       type: type,
       categoryId: categoryId,
@@ -164,7 +164,7 @@ Future<List<TransactionModel>> filteredTransactions(
     if (type != null && t.type != type) return false;
     if (catSet != null && catSet.isNotEmpty && !catSet.contains(t.categoryId)) return false;
     if (search != null && search.isNotEmpty) {
-      if (!t.title.toLowerCase().contains(search.toLowerCase())) return false;
+      if (!t.subcategory.toLowerCase().contains(search.toLowerCase())) return false;
     }
     if (month != null) {
       final d = DateTime.parse(t.date);

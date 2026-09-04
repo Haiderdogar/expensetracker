@@ -43,7 +43,7 @@ class TransactionTile extends ConsumerWidget {
         backgroundColor: color.withValues(alpha: 0.15),
         child: Icon(icon, color: color, size: 20),
       ),
-      title: Text(transaction.title),
+      title: Text(transaction.subcategory),
       subtitle: Text(
         '${category?.name ?? 'Unknown'} · ${Formatters.date(DateTime.parse(transaction.date))}',
       ),

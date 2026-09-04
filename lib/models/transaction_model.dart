@@ -1,7 +1,7 @@
 class TransactionModel {
   const TransactionModel({
     required this.id,
-    required this.title,
+    required this.subcategory,
     required this.amount,
     required this.type,
     required this.categoryId,
@@ -11,7 +11,7 @@ class TransactionModel {
   });
 
   final String id;
-  final String title;
+  final String subcategory;
   final double amount;
   final String type;
   final String categoryId;
@@ -24,7 +24,7 @@ class TransactionModel {
 
   TransactionModel copyWith({
     String? id,
-    String? title,
+    String? subcategory,
     double? amount,
     String? type,
     String? categoryId,
@@ -34,7 +34,7 @@ class TransactionModel {
   }) {
     return TransactionModel(
       id: id ?? this.id,
-      title: title ?? this.title,
+      subcategory: subcategory ?? this.subcategory,
       amount: amount ?? this.amount,
       type: type ?? this.type,
       categoryId: categoryId ?? this.categoryId,
@@ -46,7 +46,9 @@ class TransactionModel {
 
   Map<String, dynamic> toMap() => {
         'id': id,
-        'title': title,
+        // Keep the legacy column populated for databases upgraded from v2.
+        'title': subcategory,
+        'subcategory': subcategory,
         'amount': amount,
         'type': type,
         'category_id': categoryId,
@@ -58,7 +60,9 @@ class TransactionModel {
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
     return TransactionModel(
       id: map['id'] as String,
-      title: map['title'] as String,
+      subcategory: (map['subcategory'] as String?)?.trim().isNotEmpty == true
+          ? map['subcategory'] as String
+          : (map['title'] as String?) ?? '',
       amount: (map['amount'] as num).toDouble(),
       type: map['type'] as String,
       categoryId: map['category_id'] as String,

@@ -74,7 +74,7 @@ class RecentTransactionsList extends ConsumerWidget {
                 backgroundColor: color.withValues(alpha: 0.15),
                 child: Icon(icon, color: color, size: 20),
               ),
-              title: Text(t.title),
+              title: Text(t.subcategory),
               subtitle: Text(Formatters.date(DateTime.parse(t.date))),
               trailing: Text(
                 '${t.isIncome ? '+' : '-'}${Formatters.currency(t.amount, symbol: symbol)}',

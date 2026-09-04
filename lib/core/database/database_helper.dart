@@ -42,6 +42,7 @@ class DatabaseHelper {
       await db.execute(DatabaseTables.createCategories);
       await db.execute(DatabaseTables.createWallets);
       await db.execute(DatabaseTables.createTransactions);
+      await db.execute(DatabaseTables.createSubcategories);
       await db.execute(DatabaseTables.createBudgets);
       await db.execute(DatabaseTables.createSettings);
       await db.execute(DatabaseTables.createNotes);
@@ -59,18 +60,48 @@ class DatabaseHelper {
     if (oldVersion < 2) {
       await db.execute(DatabaseTables.createNotes);
     }
+    if (oldVersion < 3) {
+      await db.execute(DatabaseTables.createSubcategories);
+      await db.execute(
+        'ALTER TABLE ${DatabaseTables.transactions} ADD COLUMN subcategory TEXT NOT NULL DEFAULT \'\'',
+      );
+      await db.execute(
+        'UPDATE ${DatabaseTables.transactions} SET subcategory = title WHERE subcategory = \'\'',
+      );
+    }
+    if (oldVersion < 4) {
+      await _seedSubcategoriesForExistingCategories(db);
+    }
   }
 
   Future<void> _seedDefaultCategories(Database db) async {
     const uuid = Uuid();
     for (final category in DatabaseTables.defaultCategories) {
+      final categoryId = uuid.v4();
       await db.insert(DatabaseTables.categories, {
-        'id': uuid.v4(),
+        'id': categoryId,
         'name': category['name'],
         'type': category['type'],
         'icon': category['icon'],
         'color': category['color'],
       });
+    }
+    await _seedSubcategoriesForExistingCategories(db);
+  }
+
+  Future<void> _seedSubcategoriesForExistingCategories(Database db) async {
+    const uuid = Uuid();
+    final categories = await db.query(DatabaseTables.categories);
+    for (final category in categories) {
+      final names = DatabaseTables.defaultSubcategories[category['name']];
+      if (names == null) continue;
+      for (final name in names) {
+        await db.insert(
+          DatabaseTables.subcategories,
+          {'id': uuid.v4(), 'category_id': category['id'], 'name': name},
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
     }
   }
 
