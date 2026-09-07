@@ -2,6 +2,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../security/secure_storage_service.dart';
 import '../utils/error_handler.dart';
 import 'database_tables.dart';
 
@@ -10,12 +11,44 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   static const _dbName = 'expense_tracker.db';
+  static const _installationIdKey = 'installation_id';
   Database? _database;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
+  }
+
+  Future<void> initializeInstallationIdentity(
+    SecureStorageService storage,
+  ) async {
+    await database;
+    final databaseId = await getSetting(_installationIdKey);
+    if (databaseId == null || databaseId.isEmpty) {
+      // A missing marker is an incomplete or new database. Do not let old
+      // Keychain/Keystore credentials unlock it.
+      await storage.clearAuthentication();
+      final installationId = const Uuid().v4();
+      await setSetting(_installationIdKey, installationId);
+      await storage.saveInstallationId(installationId);
+      return;
+    }
+
+    final secureId = await storage.readInstallationId();
+    if (secureId == null || secureId.isEmpty) {
+      // Existing installations gain the secure marker without losing their
+      // already-configured lock credentials.
+      await storage.saveInstallationId(databaseId);
+      return;
+    }
+
+    if (secureId != databaseId) {
+      // Keychain/Keystore data can survive an uninstall while SQLite data
+      // does not. Its credentials must not unlock the new installation.
+      await storage.clearAuthentication();
+      await storage.saveInstallationId(databaseId);
+    }
   }
 
   Future<Database> _initDatabase() async {
@@ -50,6 +83,10 @@ class DatabaseHelper {
         'key': 'account_created_at',
         'value': DateTime.now().toUtc().toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.insert(DatabaseTables.settings, {
+        'key': _installationIdKey,
+        'value': const Uuid().v4(),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
       await _seedDefaultCategories(db);
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -71,6 +108,12 @@ class DatabaseHelper {
     }
     if (oldVersion < 4) {
       await _seedSubcategoriesForExistingCategories(db);
+    }
+    if (oldVersion < 5) {
+      await db.insert(DatabaseTables.settings, {
+        'key': _installationIdKey,
+        'value': const Uuid().v4(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 

@@ -66,6 +66,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   final Set<int> _visited = {0};
   String _profileName = '';
   String _profileEmail = '';
+  bool _isLoggingOut = false;
 
   @override
   void initState() {
@@ -87,109 +88,116 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   Future<void> _logout() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        final colors = Theme.of(dialogContext).colorScheme;
-        return AlertDialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-          contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-          actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          title: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: colors.errorContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.logout_rounded, color: colors.error),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  AppStrings.logout,
-                  style: Theme.of(
-                    dialogContext,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ),
-          content: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: colors.surfaceContainerHighest.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(14),
+    if (_isLoggingOut) return;
+    _isLoggingOut = true;
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          final colors = Theme.of(dialogContext).colorScheme;
+          return AlertDialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            title: Row(
               children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 20,
-                  color: colors.onSurfaceVariant,
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: colors.errorContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.logout_rounded, color: colors.error),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    AppStrings.logoutConfirmation,
-                    style: Theme.of(dialogContext).textTheme.bodyMedium
-                        ?.copyWith(color: colors.onSurfaceVariant, height: 1.4),
+                    AppStrings.logout,
+                    style: Theme.of(dialogContext).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
             ),
-          ),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(false),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(AppStrings.cancel),
+            content: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHighest.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 20,
+                    color: colors.onSurfaceVariant,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(true),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.error,
-                      foregroundColor: colors.onError,
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      AppStrings.logoutConfirmation,
+                      style: Theme.of(dialogContext).textTheme.bodyMedium
+                          ?.copyWith(
+                            color: colors.onSurfaceVariant,
+                            height: 1.4,
+                          ),
                     ),
-                    child: const Text(AppStrings.logout),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ],
-        );
-      },
-    );
-    if (confirmed != true || !mounted) return;
+            actions: [
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(AppStrings.cancel),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colors.error,
+                        foregroundColor: colors.onError,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(AppStrings.logout),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      );
+      if (confirmed != true || !mounted) return;
 
-    try {
-      final pinOn = await ref.read(pinEnabledProvider.future);
-      final biometricOn = await ref.read(biometricEnabledProvider.future);
+      final storage = ref.read(secureStorageProvider);
+      final pinOn = await storage.hasConfiguredPinLock();
+      final biometricOn = await storage.hasConfiguredBiometricLock();
+      if (!mounted) return;
 
+      var authenticated = false;
       if (pinOn || biometricOn) {
-        var authenticated = false;
+        // Prefer biometrics, then fall back to PIN when both are enabled.
         if (biometricOn) {
           authenticated = await ref
               .read(authControllerProvider.notifier)
@@ -205,9 +213,12 @@ class _AppShellState extends ConsumerState<AppShell> {
               ) ==
               true;
         }
-
-        if (!authenticated || !mounted) return;
+      } else {
+        // No lock is configured, so confirmation is the only required check.
+        authenticated = true;
       }
+
+      if (!authenticated || !mounted) return;
 
       if (appShellScaffoldKey.currentState?.isDrawerOpen ?? false) {
         Navigator.of(context).pop();
@@ -222,6 +233,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       ref.invalidate(budgetsProvider);
       ref.invalidate(notesProvider);
       ref.invalidate(selectedWalletIdProvider);
+      ref.read(_navIndexProvider.notifier).state = 0;
       await ref.read(authControllerProvider.notifier).logout();
     } catch (error) {
       if (mounted) {
@@ -229,6 +241,8 @@ class _AppShellState extends ConsumerState<AppShell> {
           context,
         ).showSnackBar(SnackBar(content: Text(error.toString())));
       }
+    } finally {
+      _isLoggingOut = false;
     }
   }
 

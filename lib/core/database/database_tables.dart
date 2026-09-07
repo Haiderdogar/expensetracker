@@ -7,7 +7,7 @@ abstract final class DatabaseTables {
   static const String settings = 'settings';
   static const String notes = 'notes';
 
-  static const int dbVersion = 4;
+  static const int dbVersion = 5;
 
   static const String createCategories = '''
     CREATE TABLE $categories (

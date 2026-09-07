@@ -68,7 +68,7 @@ abstract final class AppStrings {
   static const String enableBiometric = 'Enable biometrics';
   static const String logout = 'Log out';
   static const String logoutConfirmation =
-      'Are you sure you want to logout? Any unsaved offline data will be lost since data is not synced online.';
+      'The app will lock and require your PIN or biometrics to unlock. Your offline data will remain on this device.';
   static const String exportData = 'Export data';
   static const String importData = 'Import data';
   static const String backupSuccess = 'Backup exported successfully';

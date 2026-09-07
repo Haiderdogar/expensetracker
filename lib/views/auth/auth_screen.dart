@@ -9,9 +9,9 @@ import '../../core/constants/app_strings.dart';
 import '../../providers/auth_provider.dart';
 import 'widgets/pin_pad_button.dart';
 
-final _pinProvider = StateProvider<String>((ref) => '');
-final _firstPinProvider = StateProvider<String?>((ref) => null);
-final _isConfirmStepProvider = StateProvider<bool>((ref) => false);
+final _pinProvider = StateProvider.autoDispose<String>((ref) => '');
+final _firstPinProvider = StateProvider.autoDispose<String?>((ref) => null);
+final _isConfirmStepProvider = StateProvider.autoDispose<bool>((ref) => false);
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({

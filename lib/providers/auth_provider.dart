@@ -17,14 +17,16 @@ class AuthController extends _$AuthController {
   @override
   Future<AuthStatus> build() async {
     final storage = ref.read(secureStorageProvider);
-    final hasPin = await storage.hasPin();
-    final pinEnabled = await storage.isPinEnabled();
-    if (hasPin && pinEnabled) return AuthStatus.unauthenticated;
+    if (await storage.hasConfiguredPinLock()) {
+      return AuthStatus.unauthenticated;
+    }
     return AuthStatus.authenticated;
   }
 
   Future<bool> checkPin(String pin) async {
-    return ref.read(secureStorageProvider).verifyPin(pin);
+    final storage = ref.read(secureStorageProvider);
+    if (!await storage.hasConfiguredPinLock()) return false;
+    return storage.verifyPin(pin);
   }
 
   Future<bool> verifyPin(String pin) async {
@@ -73,10 +75,8 @@ class AuthController extends _$AuthController {
 
   Future<void> lock() async {
     final storage = ref.read(secureStorageProvider);
-    final hasPin = await storage.hasPin();
-    final pinEnabled = await storage.isPinEnabled();
     state = AsyncData(
-      hasPin && pinEnabled
+      await storage.hasConfiguredPinLock()
           ? AuthStatus.unauthenticated
           : AuthStatus.authenticated,
     );
@@ -96,11 +96,10 @@ class AuthController extends _$AuthController {
   }
 
   Future<void> logout() async {
-    await ref.read(secureStorageProvider).clearAll();
-    ref.invalidate(pinEnabledProvider);
-    ref.invalidate(biometricEnabledProvider);
-    ref.invalidate(lockPromptCompletedProvider);
-    state = const AsyncData(AuthStatus.unauthenticated);
+    // Without a configured lock there is no credential screen to return to.
+    // Keep the local-only app usable after the user confirms logout.
+    _backgroundedAt = null;
+    await lock();
   }
 
   Future<bool> isBiometricAvailable() async {
@@ -120,9 +119,12 @@ class AuthController extends _$AuthController {
       }
       // Android exposes enrolled sensors as weak/strong classifications,
       // rather than identifying fingerprint or face directly.
-      if (biometrics.contains(BiometricType.strong))
+      if (biometrics.contains(BiometricType.strong)) {
         return BiometricType.strong;
-      if (biometrics.contains(BiometricType.weak)) return BiometricType.weak;
+      }
+      if (biometrics.contains(BiometricType.weak)) {
+        return BiometricType.weak;
+      }
       return null;
     } catch (_) {
       return null;
@@ -149,8 +151,7 @@ class AuthController extends _$AuthController {
 
   Future<bool> authenticateWithBiometric() async {
     final storage = ref.read(secureStorageProvider);
-    final enabled = await storage.isBiometricEnabled();
-    if (!enabled) return false;
+    if (!await storage.hasConfiguredBiometricLock()) return false;
 
     final success = await promptBiometric(reason: 'Unlock Expense Tracker');
     if (success) {
@@ -160,9 +161,11 @@ class AuthController extends _$AuthController {
   }
 
   Future<bool> enableBiometricUnlock() async {
+    final storage = ref.read(secureStorageProvider);
+    if (!await storage.hasConfiguredPinLock()) return false;
     final available = await isBiometricAvailable();
     if (!available) return false;
-    await ref.read(secureStorageProvider).setBiometricEnabled(true);
+    await storage.setBiometricEnabled(true);
     ref.invalidate(biometricEnabledProvider);
     return true;
   }
@@ -174,13 +177,12 @@ final lockPromptCompletedProvider = FutureProvider<bool>((ref) async {
 
 @riverpod
 Future<bool> pinEnabled(Ref ref) async {
-  final storage = ref.read(secureStorageProvider);
-  return await storage.isPinEnabled() && await storage.hasPin();
+  return ref.read(secureStorageProvider).hasConfiguredPinLock();
 }
 
 @riverpod
 Future<bool> biometricEnabled(Ref ref) async {
-  return ref.read(secureStorageProvider).isBiometricEnabled();
+  return ref.read(secureStorageProvider).hasConfiguredBiometricLock();
 }
 
 @riverpod

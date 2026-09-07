@@ -15,6 +15,34 @@ class SecureStorageService {
   static const String pinEnabledKey = 'pin_enabled';
   static const String biometricKey = 'biometric_enabled';
   static const String lockPromptKey = 'lock_prompt_completed';
+  static const String installationIdKey = 'installation_id';
+
+  Future<String?> readInstallationId() async {
+    try {
+      return await _storage.read(key: installationIdKey);
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<void> saveInstallationId(String installationId) async {
+    try {
+      await _storage.write(key: installationIdKey, value: installationId);
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<void> clearAuthentication() async {
+    try {
+      await _storage.delete(key: pinKey);
+      await _storage.delete(key: pinEnabledKey);
+      await _storage.delete(key: biometricKey);
+      await _storage.delete(key: lockPromptKey);
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
 
   Future<String?> readPinHash() async {
     try {
@@ -46,6 +74,16 @@ class SecureStorageService {
   Future<bool> hasPin() async {
     final hash = await readPinHash();
     return hash != null && hash.isNotEmpty;
+  }
+
+  /// A PIN lock is usable only when both its setting and credential exist.
+  Future<bool> hasConfiguredPinLock() async {
+    return await isPinEnabled() && await hasPin();
+  }
+
+  /// Biometric unlock always falls back to the configured PIN credential.
+  Future<bool> hasConfiguredBiometricLock() async {
+    return await isBiometricEnabled() && await hasConfiguredPinLock();
   }
 
   Future<void> deletePin() async {
