@@ -16,6 +16,23 @@ class SecureStorageService {
   static const String biometricKey = 'biometric_enabled';
   static const String lockPromptKey = 'lock_prompt_completed';
   static const String installationIdKey = 'installation_id';
+  static const String introOnboardingSeenKey = 'intro_onboarding_seen';
+
+  Future<bool> hasSeenIntroOnboarding() async {
+    try {
+      return await _storage.read(key: introOnboardingSeenKey) == 'true';
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<void> setIntroOnboardingSeen() async {
+    try {
+      await _storage.write(key: introOnboardingSeenKey, value: 'true');
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
 
   Future<String?> readInstallationId() async {
     try {

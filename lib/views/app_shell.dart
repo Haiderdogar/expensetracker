@@ -231,9 +231,11 @@ class _AppShellState extends ConsumerState<AppShell> {
       if (!mounted) return;
 
       final databaseHelper = ref.read(databaseHelperProvider);
+      final hasSeenIntro = await storage.hasSeenIntroOnboarding();
       await databaseHelper.resetDatabase();
       await storage.clearAll();
       await databaseHelper.initializeInstallationIdentity(storage);
+      if (hasSeenIntro) await storage.setIntroOnboardingSeen();
 
       // Dispose cached account data before the welcome flow reads the newly
       // created database. Screen-scoped providers dispose with their screens.
@@ -248,6 +250,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       ref.invalidate(pinEnabledProvider);
       ref.invalidate(biometricEnabledProvider);
       ref.invalidate(lockPromptCompletedProvider);
+      ref.invalidate(introOnboardingSeenProvider);
       ref.invalidate(onboardingCompleteProvider);
       ref.invalidate(currencySymbolProvider);
       ref.invalidate(currencyCodeProvider);

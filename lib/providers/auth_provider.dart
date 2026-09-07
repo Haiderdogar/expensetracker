@@ -175,6 +175,10 @@ final lockPromptCompletedProvider = FutureProvider<bool>((ref) async {
   return ref.read(secureStorageProvider).isLockPromptCompleted();
 });
 
+final introOnboardingSeenProvider = FutureProvider<bool>((ref) async {
+  return ref.read(secureStorageProvider).hasSeenIntroOnboarding();
+});
+
 @riverpod
 Future<bool> pinEnabled(Ref ref) async {
   return ref.read(secureStorageProvider).hasConfiguredPinLock();

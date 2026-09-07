@@ -8,6 +8,7 @@ import 'providers/auth_provider.dart';
 import 'views/app_shell.dart';
 import 'views/auth/auth_screen.dart';
 import 'views/auth/lock_setup_screen.dart';
+import 'views/onboarding/intro_onboarding_screen.dart';
 import 'views/onboarding/onboarding_screen.dart';
 
 class ExpenseTrackerApp extends ConsumerStatefulWidget {
@@ -67,27 +68,38 @@ class AppBootstrap extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final onboardingAsync = ref.watch(onboardingCompleteProvider);
+    final introSeenAsync = ref.watch(introOnboardingSeenProvider);
     final authAsync = ref.watch(authControllerProvider);
     final lockPromptAsync = ref.watch(lockPromptCompletedProvider);
 
-    return onboardingAsync.when(
+    return introSeenAsync.when(
       loading: () => Scaffold(
         body: Container(color: Theme.of(context).scaffoldBackgroundColor),
       ),
       error: (e, _) => Scaffold(body: Center(child: Text(e.toString()))),
-      data: (complete) {
-        if (!complete) return const OnboardingScreen();
-        if (authAsync.value == AuthStatus.unauthenticated) {
-          return const AuthGate();
-        }
-        return lockPromptAsync.when(
+      data: (hasSeenIntro) {
+        if (!hasSeenIntro) return const IntroOnboardingScreen();
+        return onboardingAsync.when(
           loading: () => Scaffold(
             body: Container(color: Theme.of(context).scaffoldBackgroundColor),
           ),
           error: (e, _) => Scaffold(body: Center(child: Text(e.toString()))),
-          data: (prompted) {
-            if (!prompted) return const LockSetupScreen();
-            return const AuthGate();
+          data: (complete) {
+            if (!complete) return const OnboardingScreen();
+            if (authAsync.value == AuthStatus.unauthenticated) {
+              return const AuthGate();
+            }
+            return lockPromptAsync.when(
+              loading: () => Scaffold(
+                body: Container(color: Theme.of(context).scaffoldBackgroundColor),
+              ),
+              error: (e, _) =>
+                  Scaffold(body: Center(child: Text(e.toString()))),
+              data: (prompted) {
+                if (!prompted) return const LockSetupScreen();
+                return const AuthGate();
+              },
+            );
           },
         );
       },
