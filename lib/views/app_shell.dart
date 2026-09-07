@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../../core/constants/app_strings.dart';
+import '../../core/theme/theme_provider.dart';
 import '../../core/utils/global_keys.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/backup_provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/category_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../widgets/glass_navbar.dart';
@@ -23,7 +26,7 @@ import '../../providers/database_provider.dart';
 import '../../providers/wallet_provider.dart';
 import 'package:expensetracker/views/app_shell_drawer_item.dart';
 
-final _navIndexProvider = StateProvider<int>((_) => 0);
+final _navIndexProvider = StateProvider.autoDispose<int>((_) => 0);
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -227,12 +230,28 @@ class _AppShellState extends ConsumerState<AppShell> {
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
 
+      final databaseHelper = ref.read(databaseHelperProvider);
+      await databaseHelper.resetDatabase();
+      await storage.clearAll();
+      await databaseHelper.initializeInstallationIdentity(storage);
+
+      // Dispose cached account data before the welcome flow reads the newly
+      // created database. Screen-scoped providers dispose with their screens.
+      ref.invalidate(databaseProvider);
       ref.invalidate(transactionsProvider);
       ref.invalidate(categoriesProvider);
       ref.invalidate(walletsProvider);
       ref.invalidate(budgetsProvider);
       ref.invalidate(notesProvider);
+      ref.invalidate(backupServiceProvider);
       ref.invalidate(selectedWalletIdProvider);
+      ref.invalidate(pinEnabledProvider);
+      ref.invalidate(biometricEnabledProvider);
+      ref.invalidate(lockPromptCompletedProvider);
+      ref.invalidate(onboardingCompleteProvider);
+      ref.invalidate(currencySymbolProvider);
+      ref.invalidate(currencyCodeProvider);
+      ref.invalidate(themeModeControllerProvider);
       ref.read(_navIndexProvider.notifier).state = 0;
       await ref.read(authControllerProvider.notifier).logout();
     } catch (error) {

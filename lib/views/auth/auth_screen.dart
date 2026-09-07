@@ -10,7 +10,6 @@ import '../../providers/auth_provider.dart';
 import 'widgets/pin_pad_button.dart';
 
 final _pinProvider = StateProvider.autoDispose<String>((ref) => '');
-final _firstPinProvider = StateProvider.autoDispose<String?>((ref) => null);
 final _isConfirmStepProvider = StateProvider.autoDispose<bool>((ref) => false);
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -36,6 +35,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _isSubmitting = false;
   int _failures = 0;
   DateTime? _cooldownUntil;
+  String? _firstPin;
 
   // Controller & focus node to use the platform numeric keyboard (phone keyboard)
   final TextEditingController _pinController = TextEditingController();
@@ -224,22 +224,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
       if (widget.isSetup) {
         if (!ref.read(_isConfirmStepProvider)) {
-          ref.read(_firstPinProvider.notifier).state = currentPin;
-          _pinController.clear();
+          _firstPin = currentPin;
+          _clearPinEntry();
           ref.read(_isConfirmStepProvider.notifier).state = true;
           return;
         }
 
-        final firstPin = ref.read(_firstPinProvider);
+        final firstPin = _firstPin;
         if (firstPin == null || currentPin != firstPin) {
-          _pinController.clear();
-          ref.read(_firstPinProvider.notifier).state = null;
-          ref.read(_isConfirmStepProvider.notifier).state = false;
+          _resetPinSetup();
           _showPinMessage(AppStrings.pinMismatch);
           return;
         }
 
         await ref.read(authControllerProvider.notifier).setupPin(currentPin);
+        _resetPinSetup();
         if (widget.offerBiometricAfterSetup) {
           await _offerBiometric();
         }
@@ -264,8 +263,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Future<void> _onWrongPin() async {
     HapticFeedback.mediumImpact();
     _failures += 1;
-    _pinController.clear();
-    ref.read(_pinProvider.notifier).state = '';
+    _clearPinEntry();
     if (_failures >= 5) {
       _cooldownUntil = DateTime.now().add(const Duration(seconds: 30));
       if (mounted) setState(() {});
@@ -282,6 +280,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       ..showSnackBar(
         SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
       );
+  }
+
+  void _clearPinEntry() {
+    _pinController.clear();
+    ref.read(_pinProvider.notifier).state = '';
+  }
+
+  void _resetPinSetup() {
+    _firstPin = null;
+    _clearPinEntry();
+    ref.read(_isConfirmStepProvider.notifier).state = false;
   }
 
   void _onDigit(String digit) {

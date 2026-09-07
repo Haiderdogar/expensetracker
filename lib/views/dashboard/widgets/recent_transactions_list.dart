@@ -22,7 +22,8 @@ const recentTransactionFilterOptions = <String>[
   'All',
 ];
 
-final recentTransactionFilterProvider = StateProvider<String>((ref) => 'All');
+final recentTransactionFilterProvider =
+    StateProvider.autoDispose<String>((ref) => 'All');
 
 class RecentTransactionsList extends ConsumerWidget {
   const RecentTransactionsList({super.key});

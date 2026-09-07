@@ -11,9 +11,11 @@ import 'add_transaction_screen.dart';
 import 'widgets/transaction_filter.dart';
 import 'widgets/transaction_tile.dart';
 
-final _searchProvider = StateProvider<String>((ref) => '');
-final _typeFilterProvider = StateProvider<String?>((ref) => null);
-final _categoryFilterProvider = StateProvider<List<String>?>((ref) => null);
+final _searchProvider = StateProvider.autoDispose<String>((ref) => '');
+final _typeFilterProvider = StateProvider.autoDispose<String?>((ref) => null);
+final _categoryFilterProvider = StateProvider.autoDispose<List<String>?>(
+  (ref) => null,
+);
 
 class TransactionsScreen extends StatelessWidget {
   const TransactionsScreen({super.key});

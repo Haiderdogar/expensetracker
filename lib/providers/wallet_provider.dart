@@ -9,7 +9,8 @@ import 'database_provider.dart';
 
 part 'wallet_provider.g.dart';
 
-final selectedWalletIdProvider = StateProvider<String?>((ref) => null);
+final selectedWalletIdProvider =
+    StateProvider.autoDispose<String?>((ref) => null);
 
 @riverpod
 String activeWalletName(Ref ref) {

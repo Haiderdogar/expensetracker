@@ -20,6 +20,20 @@ class DatabaseHelper {
     return _database!;
   }
 
+  /// Permanently removes all locally stored account data.
+  Future<void> resetDatabase() async {
+    try {
+      final activeDatabase = _database;
+      _database = null;
+      if (activeDatabase != null) await activeDatabase.close();
+
+      final dbPath = await getDatabasesPath();
+      await deleteDatabase(join(dbPath, _dbName));
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
   Future<void> initializeInstallationIdentity(
     SecureStorageService storage,
   ) async {

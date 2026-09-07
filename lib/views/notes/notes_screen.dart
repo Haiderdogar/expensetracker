@@ -8,7 +8,8 @@ import '../../providers/note_provider.dart';
 import 'note_editor_screen.dart';
 import 'widgets/note_list_widgets.dart';
 
-final notesSearchQueryProvider = StateProvider<String>((ref) => '');
+final notesSearchQueryProvider =
+    StateProvider.autoDispose<String>((ref) => '');
 
 class NotesScreen extends StatelessWidget {
   const NotesScreen({super.key});
