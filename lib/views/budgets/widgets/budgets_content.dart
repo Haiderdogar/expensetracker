@@ -58,7 +58,11 @@ class BudgetsContent extends StatelessWidget {
 
   Future<void> _refresh(WidgetRef ref) async {
     ref.invalidate(currentMonthBudgetProgressProvider);
-    await ref.read(currentMonthBudgetProgressProvider.future).catchError((_) {});
+    try {
+      await ref.read(currentMonthBudgetProgressProvider.future);
+    } catch (_) {
+      // The screen's AsyncValue renders the refresh error state.
+    }
   }
 }
 
