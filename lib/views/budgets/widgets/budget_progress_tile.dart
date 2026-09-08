@@ -1,27 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/budget_provider.dart';
-import '../../../providers/category_provider.dart';
-import '../../../widgets/custom_button.dart';
+import 'budget_tile_menu.dart';
 
-class BudgetProgressTile extends ConsumerWidget {
+class BudgetProgressTile extends StatelessWidget {
   const BudgetProgressTile({super.key, required this.progress});
 
   final BudgetProgress progress;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
-    final pct = (progress.progress * 100).clamp(0, 100);
-    final overBudget = progress.spent > progress.budget.amount;
-    final barColor = overBudget ? AppColors.expenseRed : AppColors.mintAccent;
-
+  Widget build(BuildContext context) {
+    final percent = (progress.progress * 100).clamp(0, 100);
+    final isOverBudget = progress.spent > progress.budget.amount;
+    final barColor = isOverBudget ? AppColors.expenseRed : AppColors.mintAccent;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -31,79 +26,16 @@ class BudgetProgressTile extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    progress.categoryName,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                ),
+                Expanded(child: Text(progress.categoryName, style: Theme.of(context).textTheme.titleSmall)),
                 Text(
-                  '${pct.toStringAsFixed(0)}%',
+                  '${percent.toStringAsFixed(0)}%',
                   style: TextStyle(
-                    color: overBudget
-                        ? AppColors.expenseRed
-                        : AppColors.primaryEmerald,
+                    color: isOverBudget ? AppColors.expenseRed : AppColors.primaryEmerald,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(width: 8),
-                PopupMenuButton<String>(
-                  onSelected: (v) async {
-                    if (v == 'edit') {
-                      // simple inline edit dialog for amount
-                      final controller = TextEditingController(text: progress.budget.amount.toString());
-                      final result = await showDialog<String?>(
-                        context: context,
-                        builder: (dctx) => AlertDialog(
-                          title: const Text('Edit budget amount'),
-                          content: TextField(
-                            controller: controller,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(hintText: 'Amount'),
-                          ),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.of(dctx).pop(null), child: const Text('Cancel')),
-                            TextButton(onPressed: () => Navigator.of(dctx).pop(controller.text.trim()), child: const Text('Save')),
-                          ],
-                        ),
-                      );
-                      if (result != null && result.isNotEmpty) {
-                        try {
-                          final newAmt = double.parse(result);
-                          final updated = progress.budget.copyWith(amount: newAmt);
-                          await ref.read(budgetsProvider.notifier).upsert(updated);
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Budget updated')));
-                        } catch (e) {
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
-                        }
-                      }
-                    } else if (v == 'delete') {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (dctx) => AlertDialog(
-                          title: const Text('Delete budget'),
-                          content: Text('Delete budget for "${progress.categoryName}"?'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
-                            TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        try {
-                          await ref.read(budgetsProvider.notifier).delete(progress.budget.id);
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Budget deleted')));
-                        } catch (e) {
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
-                        }
-                      }
-                    }
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
-                  ],
-                ),
+                BudgetTileMenu(progress: progress),
               ],
             ),
             const SizedBox(height: 8),
@@ -117,17 +49,13 @@ class BudgetProgressTile extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              '${Formatters.currency(progress.spent, symbol: symbol)} / '
-              '${Formatters.currency(progress.budget.amount, symbol: symbol)}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            if (overBudget) ...[
+            _BudgetAmountLabel(progress: progress),
+            if (isOverBudget) ...[
               const SizedBox(height: 8),
-              Text('Over budget', style: TextStyle(color: AppColors.expenseRed, fontWeight: FontWeight.bold)),
+              const BudgetStatusLabel(label: 'Over budget', color: AppColors.expenseRed, weight: FontWeight.bold),
             ] else if (progress.remaining / progress.budget.amount <= 0.1) ...[
               const SizedBox(height: 8),
-              Text('Near budget limit', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600)),
+              const BudgetStatusLabel(label: 'Near budget limit', color: Colors.orange, weight: FontWeight.w600),
             ],
           ],
         ),
@@ -136,126 +64,34 @@ class BudgetProgressTile extends ConsumerWidget {
   }
 }
 
-final _addBudgetCategoryProvider = StateProvider.autoDispose<String?>(
-  (ref) => null,
-);
-final _addBudgetAmountProvider = StateProvider.autoDispose<String>((ref) => '');
-final _addBudgetLoadingProvider = StateProvider.autoDispose<bool>(
-  (ref) => false,
-);
+class _BudgetAmountLabel extends StatelessWidget {
+  const _BudgetAmountLabel({required this.progress});
 
-class AddBudgetSheet extends StatelessWidget {
-  const AddBudgetSheet({super.key});
+  final BudgetProgress progress;
 
   @override
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        final categories = ref.watch(expenseCategoriesProvider);
-        final selectedCategory = ref.watch(_addBudgetCategoryProvider);
-        final amount = ref.watch(_addBudgetAmountProvider);
-        final loading = ref.watch(_addBudgetLoadingProvider);
-
-        Future<void> save() async {
-          if (selectedCategory == null || amount.isEmpty) return;
-          ref.read(_addBudgetLoadingProvider.notifier).state = true;
-          try {
-            await ref
-                .read(budgetsProvider.notifier)
-                .create(
-                  categoryId: selectedCategory,
-                  amount: double.parse(amount),
-                );
-            if (context.mounted) Navigator.of(context).pop();
-          } finally {
-            if (context.mounted) {
-              ref.read(_addBudgetLoadingProvider.notifier).state = false;
-            }
-          }
-        }
-
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                AppStrings.addBudget,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
-              categories.when(
-                loading: () => const LinearProgressIndicator(),
-                error: (e, _) => Text(e.toString()),
-                data: (cats) {
-                  if (cats.isEmpty) {
-                    return const Text('No expense categories yet.');
-                  }
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: cats.map((c) {
-                      final selected = selectedCategory == c.id;
-                      return GestureDetector(
-                        onLongPress: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (dctx) => AlertDialog(
-                              title: const Text('Delete category'),
-                              content: Text('Delete "${c.name}"? This cannot be undone.'),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancel')),
-                                TextButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Delete')),
-                              ],
-                            ),
-                          );
-                          if (confirm == true) {
-                            try {
-                              await ref.read(categoriesProvider.notifier).delete(c.id);
-                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category deleted')));
-                            } catch (e) {
-                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                            }
-                          }
-                        },
-                        child: ChoiceChip(
-                          label: Text(c.name),
-                          selected: selected,
-                          onSelected: (_) => ref
-                                  .read(_addBudgetCategoryProvider.notifier)
-                                  .state =
-                              c.id,
-                        ),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(hintText: 'Budget amount'),
-                onChanged: (v) =>
-                    ref.read(_addBudgetAmountProvider.notifier).state = v,
-              ),
-              const SizedBox(height: 16),
-              CustomButton(
-                label: AppStrings.save,
-                isLoading: loading,
-                onPressed: save,
-              ),
-            ],
-          ),
+        final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
+        return Text(
+          '${Formatters.currency(progress.spent, symbol: symbol)} / ${Formatters.currency(progress.budget.amount, symbol: symbol)}',
+          style: Theme.of(context).textTheme.bodySmall,
         );
       },
     );
+  }
+}
+
+class BudgetStatusLabel extends StatelessWidget {
+  const BudgetStatusLabel({super.key, required this.label, required this.color, required this.weight});
+
+  final String label;
+  final Color color;
+  final FontWeight weight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(label, style: TextStyle(color: color, fontWeight: weight));
   }
 }
