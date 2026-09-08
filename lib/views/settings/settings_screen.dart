@@ -1,218 +1,18 @@
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_strings.dart';
-import '../../core/theme/theme_provider.dart';
 import '../../core/utils/global_keys.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/backup_provider.dart';
-import '../../providers/budget_provider.dart';
-import '../../providers/category_provider.dart';
-import '../../providers/database_provider.dart';
-import '../../providers/transaction_provider.dart';
-import '../../providers/wallet_provider.dart';
-import '../../core/utils/app_currency_picker.dart';
-import '../../providers/currency_provider.dart';
-import '../auth/auth_screen.dart';
-import 'widgets/settings_tile.dart';
+import 'widgets/settings_currency_section.dart';
+import 'widgets/settings_data_section.dart';
+import 'widgets/settings_security_section.dart';
+import 'widgets/settings_section.dart';
+import 'widgets/settings_theme_section.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  Future<void> _export(BuildContext context, WidgetRef ref) async {
-    try {
-      await ref.read(backupServiceProvider.notifier).shareExport();
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text(AppStrings.backupSuccess)));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    }
-  }
-
-  Future<void> _import(BuildContext context, WidgetRef ref) async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
-      if (result == null || result.files.single.path == null) return;
-
-      final json = await File(result.files.single.path!).readAsString();
-      await ref.read(backupServiceProvider.notifier).importFromJson(json);
-
-      ref.invalidate(transactionsProvider);
-      ref.invalidate(categoriesProvider);
-      ref.invalidate(walletsProvider);
-      ref.invalidate(budgetsProvider);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text(AppStrings.importSuccess)));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    }
-  }
-
-  Future<void> _toggleBiometric(
-    BuildContext context,
-    WidgetRef ref,
-    bool value,
-  ) async {
-    if (value) {
-      final pinOn = await ref.read(pinEnabledProvider.future);
-      if (!pinOn) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Enable PIN lock first')),
-          );
-        }
-        return;
-      }
-
-      final available = await ref
-          .read(authControllerProvider.notifier)
-          .isBiometricAvailable();
-      if (!available) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Biometrics are not available on this device'),
-            ),
-          );
-        }
-        return;
-      }
-
-      final confirmed = await ref
-          .read(authControllerProvider.notifier)
-          .promptBiometric(reason: 'Confirm biometrics for Expense Tracker');
-      if (!confirmed) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Biometric setup was cancelled')),
-          );
-        }
-        return;
-      }
-
-      // Use controller to enable so availability checks remain consistent.
-      final enabled = await ref
-          .read(authControllerProvider.notifier)
-          .enableBiometricUnlock();
-      if (!enabled) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to enable biometric authentication'),
-            ),
-          );
-        }
-        return;
-      }
-    } else {
-      await ref.read(secureStorageProvider).setBiometricEnabled(false);
-    }
-    ref.invalidate(biometricEnabledProvider);
-  }
-
-  Future<void> _togglePinLock(
-    BuildContext context,
-    WidgetRef ref,
-    bool value,
-  ) async {
-    if (value) {
-      if (context.mounted) {
-        await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) =>
-                const AuthScreen(isSetup: true, offerBiometricAfterSetup: true),
-          ),
-        );
-      }
-      ref.invalidate(pinEnabledProvider);
-      ref.invalidate(biometricEnabledProvider);
-      return;
-    }
-
-    final verified = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const AuthScreen(verifyOnly: true)),
-    );
-    if (verified == true) {
-      await ref.read(authControllerProvider.notifier).disablePin();
-    }
-  }
-
-  Future<void> _onPinTileTap(
-    BuildContext context,
-    WidgetRef ref,
-    bool enabled,
-  ) async {
-    if (!enabled) {
-      await _togglePinLock(context, ref, true);
-      return;
-    }
-
-    final verified = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const AuthScreen(verifyOnly: true)),
-    );
-    if (verified == true && context.mounted) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const AuthScreen(isSetup: true),
-        ),
-      );
-    }
-    ref.invalidate(pinEnabledProvider);
-  }
-
-  static Widget _sectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10, left: 4, top: 2),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w700,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-
-  static Widget _sectionCard({required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: child,
-    );
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeControllerProvider);
-    final biometricAsync = ref.watch(biometricEnabledProvider);
-    final pinEnabledAsync = ref.watch(pinEnabledProvider);
-    final colorScheme = Theme.of(context).colorScheme;
-
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: Navigator.canPop(context)
@@ -226,9 +26,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
         title: Text(
           AppStrings.settings,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -237,204 +35,24 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            _sectionHeader(context, AppStrings.theme),
-            _sectionCard(
-              child: Column(
-                children: [
-                  SettingsTile(
-                    icon: Icons.light_mode_outlined,
-                    title: AppStrings.lightMode,
-                    trailing: Radio<AppThemeMode>(
-                      value: AppThemeMode.light,
-                      groupValue: themeMode,
-                      onChanged: (v) {
-                        if (v != null) {
-                          ref
-                              .read(themeModeControllerProvider.notifier)
-                              .setMode(v);
-                        }
-                      },
-                    ),
-                    onTap: () => ref
-                        .read(themeModeControllerProvider.notifier)
-                        .setMode(AppThemeMode.light),
-                  ),
-                  SettingsTile(
-                    icon: Icons.dark_mode_outlined,
-                    title: AppStrings.darkMode,
-                    trailing: Radio<AppThemeMode>(
-                      value: AppThemeMode.dark,
-                      groupValue: themeMode,
-                      onChanged: (v) {
-                        if (v != null) {
-                          ref
-                              .read(themeModeControllerProvider.notifier)
-                              .setMode(v);
-                        }
-                      },
-                    ),
-                    onTap: () => ref
-                        .read(themeModeControllerProvider.notifier)
-                        .setMode(AppThemeMode.dark),
-                  ),
-                  SettingsTile(
-                    icon: Icons.brightness_auto_outlined,
-                    title: AppStrings.systemMode,
-                    trailing: Radio<AppThemeMode>(
-                      value: AppThemeMode.system,
-                      groupValue: themeMode,
-                      onChanged: (v) {
-                        if (v != null) {
-                          ref
-                              .read(themeModeControllerProvider.notifier)
-                              .setMode(v);
-                        }
-                      },
-                    ),
-                    onTap: () => ref
-                        .read(themeModeControllerProvider.notifier)
-                        .setMode(AppThemeMode.system),
-                  ),
-                ],
-              ),
+            const SettingsSection(
+              title: AppStrings.theme,
+              child: SettingsThemeSection(),
             ),
             const SizedBox(height: 18),
-            _sectionHeader(context, AppStrings.security),
-            _sectionCard(
-              child: Column(
-                children: [
-                  pinEnabledAsync.when(
-                    loading: () => const ListTile(
-                      leading: CircularProgressIndicator(),
-                      title: Text('PIN lock'),
-                    ),
-                    error: (e, _) => ListTile(title: Text(e.toString())),
-                    data: (enabled) => SettingsTile(
-                      icon: Icons.pin_outlined,
-                      title: enabled
-                          ? AppStrings.changePin
-                          : AppStrings.enablePinLock,
-                      trailing: Switch(
-                        value: enabled,
-                        onChanged: (v) => _togglePinLock(context, ref, v),
-                      ),
-                      onTap: () => _onPinTileTap(context, ref, enabled),
-                    ),
-                  ),
-                  biometricAsync.when(
-                    loading: () => const ListTile(
-                      leading: CircularProgressIndicator(),
-                      title: Text(AppStrings.enableBiometric),
-                    ),
-                    error: (e, _) => ListTile(title: Text(e.toString())),
-                    data: (enabled) => SettingsTile(
-                      icon: Icons.fingerprint_rounded,
-                      title: AppStrings.enableBiometric,
-                      trailing: Switch(
-                        value: enabled,
-                        onChanged: (v) => _toggleBiometric(context, ref, v),
-                      ),
-                      onTap: () => _toggleBiometric(context, ref, !enabled),
-                    ),
-                  ),
-                ],
-              ),
+            const SettingsSection(
+              title: AppStrings.security,
+              child: SettingsSecuritySection(),
             ),
             const SizedBox(height: 18),
-            _sectionHeader(context, 'Currency'),
-            _sectionCard(
-              child: Consumer(
-                builder: (cctx, cref, _) {
-                  final symbolAsync = cref.watch(currencySymbolProvider);
-                  final codeAsync = cref.watch(currencyCodeProvider);
-
-                  Widget buildPickerTrigger(String display) {
-                    return SettingsTile(
-                      icon: Icons.currency_exchange_rounded,
-                      title: 'Currency',
-                      subtitle: display,
-                      trailing: FilledButton.tonal(
-                        onPressed: () {
-                          showAppCurrencyPicker(
-                            context: context,
-                            onSelect: (currency) async {
-                              try {
-                                await ref
-                                    .read(databaseHelperProvider)
-                                    .setCurrencySymbol(currency.symbol);
-                                await ref
-                                    .read(databaseHelperProvider)
-                                    .setSetting('currency_code', currency.code);
-                                ref.invalidate(currencySymbolProvider);
-                                ref.invalidate(currencyCodeProvider);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Currency set to ${currency.code}',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
-                                  );
-                                }
-                              }
-                            },
-                          );
-                        },
-                        child: const Text('Change'),
-                      ),
-                    );
-                  }
-
-                  return symbolAsync.when(
-                    loading: () => const ListTile(
-                      leading: Icon(Icons.money_rounded),
-                      title: Text('Currency: ...'),
-                      trailing: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    error: (e, _) => ListTile(
-                      leading: const Icon(Icons.money_rounded),
-                      title: Text('Currency: error: $e'),
-                    ),
-                    data: (symbol) {
-                      return codeAsync.when(
-                        loading: () => buildPickerTrigger(symbol),
-                        error: (_, _) => buildPickerTrigger(symbol),
-                        data: (code) => buildPickerTrigger(code ?? symbol),
-                      );
-                    },
-                  );
-                },
-              ),
+            const SettingsSection(
+              title: 'Currency',
+              child: SettingsCurrencySection(),
             ),
             const SizedBox(height: 18),
-            _sectionHeader(context, 'Data'),
-            _sectionCard(
-              child: Column(
-                children: [
-                  SettingsTile(
-                    icon: Icons.upload_outlined,
-                    title: AppStrings.exportData,
-                    accentColor: colorScheme.primary.withValues(alpha: 0.10),
-                    onTap: () => _export(context, ref),
-                  ),
-                  SettingsTile(
-                    icon: Icons.download_outlined,
-                    title: AppStrings.importData,
-                    accentColor: colorScheme.secondaryContainer,
-                    onTap: () => _import(context, ref),
-                  ),
-                ],
-              ),
+            const SettingsSection(
+              title: 'Data',
+              child: SettingsDataSection(),
             ),
           ],
         ),
