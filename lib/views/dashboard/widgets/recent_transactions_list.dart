@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/constants/app_strings.dart';
-import '../../../core/utils/category_utils.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../core/utils/error_handler.dart';
 import '../../../models/category_model.dart';
 import '../../../models/transaction_model.dart';
 import '../../../providers/auth_provider.dart';
@@ -12,135 +10,103 @@ import '../../../providers/category_provider.dart';
 import '../../../providers/transaction_provider.dart';
 import '../../../widgets/shimmer_loader.dart';
 import '../../transactions/add_transaction_screen.dart';
-import '../../../core/utils/error_handler.dart';
+import '../dashboard_ui_providers.dart';
+import 'recent_transaction_tile.dart';
 
-const recentTransactionFilterOptions = <String>[
-  'Today',
-  '3 Days',
-  '1 Week',
-  '1 Month',
-  'All',
-];
-
-final recentTransactionFilterProvider =
-    StateProvider.autoDispose<String>((ref) => 'All');
-
-class RecentTransactionsList extends ConsumerWidget {
+class RecentTransactionsList extends StatelessWidget {
   const RecentTransactionsList({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selectedFilter = ref.watch(recentTransactionFilterProvider);
-    final transactionsAsync = ref.watch(transactionsProvider);
-    final categoriesAsync = ref.watch(categoriesProvider);
-    final symbolAsync = ref.watch(currencySymbolProvider);
+  Widget build(BuildContext context) => const _RecentTransactionsContent();
+}
 
-    return transactionsAsync.when(
-      loading: () => const ShimmerList(itemCount: 3, itemHeight: 64),
-      error: (e, _) => Text(e.toString()),
-      data: (transactions) {
-        final filteredTransactions = _filterTransactions(
-          transactions,
-          selectedFilter,
-        );
-        if (filteredTransactions.isEmpty) {
-          return Text(
-            AppStrings.noTransactions,
-            style: Theme.of(context).textTheme.bodyMedium,
-          );
-        }
+class _RecentTransactionsContent extends StatelessWidget {
+  const _RecentTransactionsContent();
 
-        final categories = categoriesAsync.value ?? [];
-        final symbol = symbolAsync.value ?? '\$';
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final filter = ref.watch(recentTransactionFilterProvider);
+        final transactions = ref.watch(transactionsProvider);
+        final categories = ref.watch(categoriesProvider).value ?? const <CategoryModel>[];
+        final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
 
-        return Column(
-          children: filteredTransactions.map((t) {
-            CategoryModel? category;
-            for (final item in categories) {
-              if (item.id == t.categoryId) {
-                category = item;
-                break;
-              }
+        return transactions.when(
+          loading: () => const ShimmerList(itemCount: 3, itemHeight: 64),
+          error: (error, _) => Text(error.toString()),
+          data: (items) {
+            final filteredTransactions = filterRecentTransactions(items, filter);
+            if (filteredTransactions.isEmpty) {
+              return Text(AppStrings.noTransactions, style: Theme.of(context).textTheme.bodyMedium);
             }
-            final color = category != null
-                ? categoryColorFromHex(category.color)
-                : Colors.grey;
-            final icon = category != null
-                ? categoryIconFromName(category.icon)
-                : Icons.receipt;
-
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                backgroundColor: color.withValues(alpha: 0.15),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              title: Text(t.subcategory),
-              subtitle: Text(Formatters.date(DateTime.parse(t.date))),
-              trailing: Text(
-                '${t.isIncome ? '+' : '-'}${Formatters.currency(t.amount, symbol: symbol)}',
-                style: TextStyle(
-                  color: t.isIncome ? Colors.green : Colors.red,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              onTap: () async {
-                try {
-                  final result = await Navigator.of(context).push<dynamic>(
-                    MaterialPageRoute<dynamic>(
-                      builder: (_) => AddTransactionScreen(transaction: t),
+            return Column(
+              children: filteredTransactions
+                  .map(
+                    (transaction) => RecentTransactionTile(
+                      transaction: transaction,
+                      category: _categoryFor(categories, transaction.categoryId),
+                      symbol: symbol,
+                      onTap: () => _openEditor(context, ref, transaction),
                     ),
-                  );
-                  if (result == 'saved' ||
-                      result == 'created' ||
-                      result == 'deleted') {
-                    await ref.read(transactionsProvider.notifier).refresh();
-                    if (context.mounted) {
-                      final msg = result == 'created'
-                          ? 'Transaction added'
-                          : (result == 'saved'
-                                ? 'Transaction updated'
-                                : 'Transaction deleted');
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(msg)));
-                    }
-                  }
-                } catch (e) {
-                  final msg = ErrorHandler.message(e);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(msg)));
-                  }
-                }
-              },
+                  )
+                  .toList(),
             );
-          }).toList(),
+          },
         );
       },
     );
   }
 
-  List<TransactionModel> _filterTransactions(
-    List<TransactionModel> transactions,
-    String filter,
-  ) {
-    if (filter == 'All') return transactions;
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final cutoff = switch (filter) {
-      'Today' => today,
-      '3 Days' => today.subtract(const Duration(days: 2)),
-      '1 Week' => today.subtract(const Duration(days: 6)),
-      '1 Month' => today.subtract(const Duration(days: 29)),
-      _ => today,
-    };
-
-    return transactions.where((transaction) {
-      final date = DateTime.tryParse(transaction.date);
-      return date != null && !date.isBefore(cutoff);
-    }).toList();
+  CategoryModel? _categoryFor(List<CategoryModel> categories, String categoryId) {
+    for (final category in categories) {
+      if (category.id == categoryId) return category;
+    }
+    return null;
   }
+
+  Future<void> _openEditor(BuildContext context, WidgetRef ref, TransactionModel transaction) async {
+    try {
+      final result = await Navigator.of(context).push<dynamic>(
+        MaterialPageRoute<dynamic>(builder: (_) => AddTransactionScreen(transaction: transaction)),
+      );
+      if (result != 'saved' && result != 'created' && result != 'deleted') return;
+
+      await ref.read(transactionsProvider.notifier).refresh();
+      if (!context.mounted) return;
+      final message = switch (result) {
+        'created' => 'Transaction added',
+        'saved' => 'Transaction updated',
+        _ => 'Transaction deleted',
+      };
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ErrorHandler.message(error))),
+        );
+      }
+    }
+  }
+}
+
+List<TransactionModel> filterRecentTransactions(
+  List<TransactionModel> transactions,
+  String filter,
+) {
+  if (filter == 'All') return transactions;
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final cutoff = switch (filter) {
+    'Today' => today,
+    '3 Days' => today.subtract(const Duration(days: 2)),
+    '1 Week' => today.subtract(const Duration(days: 6)),
+    '1 Month' => today.subtract(const Duration(days: 29)),
+    _ => today,
+  };
+  return transactions.where((transaction) {
+    final date = DateTime.tryParse(transaction.date);
+    return date != null && !date.isBefore(cutoff);
+  }).toList();
 }
