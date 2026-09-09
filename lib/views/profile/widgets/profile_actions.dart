@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database_tables.dart';
+import '../../../core/utils/app_snackbars.dart';
 import '../../../providers/database_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../profile_draft_provider.dart';
@@ -73,7 +74,7 @@ class ProfileActions extends StatelessWidget {
         isLoading: false,
       );
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved')));
+        showSuccessSnackBar(context, 'Profile updated successfully');
       }
     } catch (error) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));

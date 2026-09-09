@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/utils/app_snackbars.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../models/category_model.dart';
 import '../../../models/transaction_model.dart';
@@ -74,12 +75,14 @@ class _RecentTransactionsContent extends StatelessWidget {
 
       await ref.read(transactionsProvider.notifier).refresh();
       if (!context.mounted) return;
-      final message = switch (result) {
-        'created' => 'Transaction added',
-        'saved' => 'Transaction updated',
-        _ => 'Transaction deleted',
-      };
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      if (result == 'created' || result == 'saved') {
+        final message = result == 'created'
+            ? 'Transaction added successfully'
+            : 'Transaction updated successfully';
+        showSuccessSnackBar(context, message);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction deleted')));
+      }
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

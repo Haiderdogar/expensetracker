@@ -62,7 +62,7 @@ class NoteEditorSaveActions extends StatelessWidget {
     try {
       await ref.read(notesProvider.notifier).save(id: note?.id, title: draft.title.trim(), content: draft.content.trim());
       ref.invalidate(notesProvider);
-      if (context.mounted) Navigator.of(context).pop(true);
+      if (context.mounted) Navigator.of(context).pop(note == null ? 'created' : 'updated');
     } finally {
       if (context.mounted) {
         ref.read(noteEditorDraftProvider(note).notifier).state = draft.copyWith(isSaving: false);

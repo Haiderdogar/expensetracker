@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/utils/app_snackbars.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/transaction_model.dart';
 import '../../../providers/transaction_provider.dart';
@@ -79,10 +80,10 @@ class _TransactionGroups extends StatelessWidget {
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => AddTransactionScreen(transaction: transaction)),
     );
-    if (result != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result == 'deleted' ? 'Transaction deleted' : 'Transaction updated')),
-      );
+    if (result == 'saved' && context.mounted) {
+      showSuccessSnackBar(context, 'Transaction updated successfully');
+    } else if (result == 'deleted' && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction deleted')));
     }
   }
 }

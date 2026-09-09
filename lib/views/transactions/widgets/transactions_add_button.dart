@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/app_snackbars.dart';
 import '../add_transaction_screen.dart';
 
 class TransactionsAddButton extends StatelessWidget {
@@ -18,10 +19,8 @@ class TransactionsAddButton extends StatelessWidget {
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => const AddTransactionScreen()),
     );
-    if (result != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transaction added')),
-      );
+    if (result == 'created' && context.mounted) {
+      showSuccessSnackBar(context, 'Transaction added successfully');
     }
   }
 }

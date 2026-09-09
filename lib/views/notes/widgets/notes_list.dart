@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/app_snackbars.dart';
 import '../../../models/note_model.dart';
 import '../../../providers/note_provider.dart';
 import '../note_editor_screen.dart';
@@ -91,11 +92,11 @@ class _NotesContent extends StatelessWidget {
   }
 
   Future<void> _openEditor(BuildContext context, NoteModel note) async {
-    final saved = await Navigator.of(context).push<bool>(
+    final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => NoteEditorScreen(note: note)),
     );
-    if (saved == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note saved')));
+    if (result == 'updated' && context.mounted) {
+      showSuccessSnackBar(context, 'Note updated successfully');
     }
   }
 }

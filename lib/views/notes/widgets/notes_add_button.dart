@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/app_snackbars.dart';
 import '../note_editor_screen.dart';
 
 class NotesAddButton extends StatelessWidget {
@@ -15,9 +16,9 @@ class NotesAddButton extends StatelessWidget {
   }
 
   Future<void> _openEditor(BuildContext context) async {
-    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const NoteEditorScreen()));
-    if (saved == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note saved')));
+    final result = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const NoteEditorScreen()));
+    if (result == 'created' && context.mounted) {
+      showSuccessSnackBar(context, 'Note added successfully');
     }
   }
 }

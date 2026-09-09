@@ -37,6 +37,6 @@ class NoteEditorDeleteButton extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
     await ref.read(notesProvider.notifier).delete(note.id);
     ref.invalidate(notesProvider);
-    if (context.mounted) Navigator.of(context).pop(true);
+    if (context.mounted) Navigator.of(context).pop('deleted');
   }
 }

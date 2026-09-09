@@ -14,9 +14,16 @@ class AppShellDrawerPages extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Future<void> openProfile() async {
-      Navigator.of(context).pop();
-      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileViewScreen()));
-      ref.invalidate(appShellProfileProvider);
+      // Popping the drawer disposes this ConsumerWidget. Keep the application
+      // provider container before navigating so the profile can be refreshed
+      // safely when the profile route is closed.
+      final container = ProviderScope.containerOf(context);
+      final navigator = Navigator.of(context);
+      navigator.pop();
+      await navigator.push(MaterialPageRoute(builder: (_) => const ProfileViewScreen()));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        container.invalidate(appShellProfileProvider);
+      });
     }
     void openPage(Widget page) {
       Navigator.of(context).pop();
