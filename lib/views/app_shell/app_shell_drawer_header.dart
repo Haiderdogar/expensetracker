@@ -10,7 +10,7 @@ class AppShellDrawerHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(appShellProfileProvider).valueOrNull;
+    final profile = ref.watch(appShellProfileProvider).value;
     final wallets = ref.watch(walletsProvider).value ?? const <WalletModel>[];
     final selectedWalletId = ref.watch(selectedWalletIdProvider);
     final selected = wallets.where((wallet) => wallet.id == selectedWalletId);
