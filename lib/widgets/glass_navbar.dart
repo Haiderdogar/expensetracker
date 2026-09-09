@@ -38,9 +38,9 @@ class GlassNavbar extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
           child: Container(
-            height: 72,
+            height: 62,
             decoration: BoxDecoration(
               color: isDark
                   ? AppColors.deepForest.withValues(alpha: 0.75)
