@@ -41,7 +41,14 @@ class Categories extends _$Categories {
   Future<void> add(CategoryModel category) async {
     try {
       final db = await ref.read(databaseProvider.future);
-      await db.insert(DatabaseTables.categories, category.toMap());
+      await db.transaction((transaction) async {
+        await transaction.insert(DatabaseTables.categories, category.toMap());
+        await transaction.insert(DatabaseTables.subcategories, {
+          'id': const Uuid().v4(),
+          'category_id': category.id,
+          'name': 'General',
+        });
+      });
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -69,7 +76,73 @@ class Categories extends _$Categories {
   Future<void> delete(String id) async {
     try {
       final db = await ref.read(databaseProvider.future);
+      final transactions = await db.query(
+        DatabaseTables.transactions,
+        columns: ['id'],
+        where: 'category_id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      final budgets = await db.query(
+        DatabaseTables.budgets,
+        columns: ['id'],
+        where: 'category_id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (transactions.isNotEmpty || budgets.isNotEmpty) {
+        throw AppException(
+          'Categories used by transactions or budgets cannot be deleted.',
+        );
+      }
       await db.delete(DatabaseTables.categories, where: 'id = ?', whereArgs: [id]);
+      await refresh();
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<CategoryModel> createWithSubcategory({
+    required String name,
+    required String subcategoryName,
+    required String type,
+    required String icon,
+    required String color,
+  }) async {
+    try {
+      const uuid = Uuid();
+      final category = CategoryModel(
+        id: uuid.v4(),
+        name: name.trim(),
+        type: type,
+        icon: icon,
+        color: color,
+      );
+      final db = await ref.read(databaseProvider.future);
+      await db.transaction((transaction) async {
+        await transaction.insert(DatabaseTables.categories, category.toMap());
+        await transaction.insert(DatabaseTables.subcategories, {
+          'id': uuid.v4(),
+          'category_id': category.id,
+          'name': subcategoryName.trim(),
+        });
+      });
+      await refresh();
+      return category;
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<void> updateCategory(CategoryModel category) async {
+    try {
+      final db = await ref.read(databaseProvider.future);
+      await db.update(
+        DatabaseTables.categories,
+        category.toMap(),
+        where: 'id = ?',
+        whereArgs: [category.id],
+      );
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);

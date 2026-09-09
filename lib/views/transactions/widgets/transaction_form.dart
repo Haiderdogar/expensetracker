@@ -267,14 +267,15 @@ class _CategorySelector extends ConsumerWidget {
   Future<void> _addCategory(BuildContext context, WidgetRef ref) async {
     final name = await _askForName(context, 'Add category', 'Category name');
     if (name == null) return;
-    final category = await ref.read(categoriesProvider.notifier).create(
+    final category = await ref.read(categoriesProvider.notifier).createWithSubcategory(
       name: name,
+      subcategoryName: 'General',
       type: draft.type,
       icon: draft.type == 'income' ? 'work' : 'shopping_bag',
       color: draft.type == 'income' ? '#2ECC71' : '#FF6B6B',
     );
     ref.read(transactionFormProvider(transaction).notifier).state =
-        draft.selectCategory(category.id);
+        draft.selectCategory(category.id).copyWith(subcategory: 'General');
   }
 }
 

@@ -7,7 +7,7 @@ abstract final class DatabaseTables {
   static const String settings = 'settings';
   static const String notes = 'notes';
 
-  static const int dbVersion = 5;
+  static const int dbVersion = 6;
 
   static const String createCategories = '''
     CREATE TABLE $categories (
@@ -83,22 +83,38 @@ abstract final class DatabaseTables {
   static const List<Map<String, dynamic>> defaultCategories = [
     {'name': 'Salary', 'type': 'income', 'icon': 'work', 'color': '#10B981'},
     {'name': 'Freelance', 'type': 'income', 'icon': 'laptop', 'color': '#34D399'},
+    {'name': 'Investments', 'type': 'income', 'icon': 'trending_up', 'color': '#06B6D4'},
+    {'name': 'Rental income', 'type': 'income', 'icon': 'home', 'color': '#6366F1'},
+    {'name': 'Business', 'type': 'income', 'icon': 'store', 'color': '#8B5CF6'},
     {'name': 'Food', 'type': 'expense', 'icon': 'restaurant', 'color': '#EF4444'},
     {'name': 'Transport', 'type': 'expense', 'icon': 'directions_car', 'color': '#F59E0B'},
     {'name': 'Shopping', 'type': 'expense', 'icon': 'shopping_bag', 'color': '#8B5CF6'},
     {'name': 'Bills', 'type': 'expense', 'icon': 'receipt', 'color': '#3B82F6'},
     {'name': 'Entertainment', 'type': 'expense', 'icon': 'movie', 'color': '#EC4899'},
     {'name': 'Health', 'type': 'expense', 'icon': 'favorite', 'color': '#14B8A6'},
+    {'name': 'Housing', 'type': 'expense', 'icon': 'home', 'color': '#F97316'},
+    {'name': 'Education', 'type': 'expense', 'icon': 'school', 'color': '#0EA5E9'},
+    {'name': 'Insurance', 'type': 'expense', 'icon': 'shield', 'color': '#64748B'},
+    {'name': 'Travel', 'type': 'expense', 'icon': 'flight', 'color': '#A855F7'},
+    {'name': 'Personal care', 'type': 'expense', 'icon': 'spa', 'color': '#D946EF'},
   ];
 
   static const Map<String, List<String>> defaultSubcategories = {
     'Salary': ['Monthly salary', 'Bonus'],
     'Freelance': ['Client work', 'Project payment'],
+    'Investments': ['Dividends', 'Capital gains', 'Interest'],
+    'Rental income': ['Monthly rent', 'Parking income'],
+    'Business': ['Product sales', 'Service income'],
     'Food': ['Breakfast', 'Lunch', 'Dinner', 'Party with friends'],
     'Transport': ['Fuel', 'Public transport', 'Taxi'],
     'Shopping': ['Clothing', 'Groceries', 'Electronics'],
     'Bills': ['Electricity bill', 'Gas bill', 'Water bill'],
     'Entertainment': ['Movies', 'Games', 'Subscriptions'],
     'Health': ['Medicine', 'Doctor visit', 'Fitness'],
+    'Housing': ['Rent', 'Repairs', 'Home supplies'],
+    'Education': ['Tuition', 'Books', 'Courses'],
+    'Insurance': ['Health insurance', 'Vehicle insurance', 'Life insurance'],
+    'Travel': ['Flights', 'Accommodation', 'Local transport'],
+    'Personal care': ['Salon', 'Skincare', 'Gym'],
   };
 }

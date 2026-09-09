@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../app_shell_drawer_item.dart';
+import '../categories/category_management_screen.dart';
 import '../notes/notes_screen.dart';
 import '../profile/profile_view_screen.dart';
 import '../settings/settings_screen.dart';
@@ -31,6 +32,8 @@ class AppShellDrawerPages extends ConsumerWidget {
     }
     return ListView(padding: const EdgeInsets.symmetric(horizontal: 12), children: [
       DrawerItem(icon: Icons.person_outline_rounded, label: AppStrings.profile, onTap: openProfile),
+      const SizedBox(height: 6),
+      DrawerItem(icon: Icons.category_outlined, label: 'Categories', onTap: () => openPage(const CategoryManagementScreen())),
       const SizedBox(height: 6),
       DrawerItem(icon: Icons.note_alt_outlined, label: AppStrings.notes, onTap: () => openPage(const NotesScreen())),
       const SizedBox(height: 6),

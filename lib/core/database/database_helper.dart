@@ -129,6 +129,10 @@ class DatabaseHelper {
         'value': const Uuid().v4(),
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
+    if (oldVersion < 6) {
+      await _seedMissingDefaultCategories(db);
+      await _ensureEveryCategoryHasSubcategory(db);
+    }
   }
 
   Future<void> _seedDefaultCategories(Database db) async {
@@ -137,6 +141,28 @@ class DatabaseHelper {
       final categoryId = uuid.v4();
       await db.insert(DatabaseTables.categories, {
         'id': categoryId,
+        'name': category['name'],
+        'type': category['type'],
+        'icon': category['icon'],
+        'color': category['color'],
+      });
+    }
+    await _seedSubcategoriesForExistingCategories(db);
+  }
+
+  Future<void> _seedMissingDefaultCategories(Database db) async {
+    const uuid = Uuid();
+    for (final category in DatabaseTables.defaultCategories) {
+      final existing = await db.query(
+        DatabaseTables.categories,
+        columns: ['id'],
+        where: 'name = ? AND type = ?',
+        whereArgs: [category['name'], category['type']],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) continue;
+      await db.insert(DatabaseTables.categories, {
+        'id': uuid.v4(),
         'name': category['name'],
         'type': category['type'],
         'icon': category['icon'],
@@ -158,6 +184,27 @@ class DatabaseHelper {
           {'id': uuid.v4(), 'category_id': category['id'], 'name': name},
           conflictAlgorithm: ConflictAlgorithm.ignore,
         );
+      }
+    }
+  }
+
+  Future<void> _ensureEveryCategoryHasSubcategory(Database db) async {
+    const uuid = Uuid();
+    final categories = await db.query(DatabaseTables.categories);
+    for (final category in categories) {
+      final subcategories = await db.query(
+        DatabaseTables.subcategories,
+        columns: ['id'],
+        where: 'category_id = ?',
+        whereArgs: [category['id']],
+        limit: 1,
+      );
+      if (subcategories.isEmpty) {
+        await db.insert(DatabaseTables.subcategories, {
+          'id': uuid.v4(),
+          'category_id': category['id'],
+          'name': 'General',
+        });
       }
     }
   }
