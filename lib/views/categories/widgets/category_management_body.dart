@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/category_utils.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../providers/category_provider.dart';
+import '../../../providers/transaction_provider.dart';
 import 'category_section.dart';
 
 class CategoryManagementBody extends StatelessWidget {
@@ -12,23 +14,35 @@ class CategoryManagementBody extends StatelessWidget {
   Widget build(BuildContext context) => Consumer(
         builder: (context, ref, _) {
           final categories = ref.watch(categoriesProvider);
+          final transactions = ref.watch(transactionsProvider).value ?? const [];
           return categories.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => Center(child: Text(ErrorHandler.message(error))),
-            data: (items) => ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-              children: [
-                _Header(total: items.length),
-                const SizedBox(height: 24),
-                CategorySection(title: 'Income', icon: Icons.trending_up_rounded, categories: items.where((item) => item.isIncome).toList()),
-                const SizedBox(height: 24),
-                CategorySection(title: 'Expenses', icon: Icons.trending_down_rounded, categories: items.where((item) => item.isExpense).toList()),
-              ],
-            ),
+            data: (items) {
+              final incomeCategories = sortCategories(
+                items.where((item) => item.isIncome).toList(),
+                transactions,
+              );
+              final expenseCategories = sortCategories(
+                items.where((item) => item.isExpense).toList(),
+                transactions,
+              );
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                children: [
+                  _Header(total: items.length),
+                  const SizedBox(height: 24),
+                  CategorySection(title: 'Income', categories: incomeCategories),
+                  const SizedBox(height: 24),
+                  CategorySection(title: 'Expenses', categories: expenseCategories),
+                ],
+              );
+            },
           );
         },
       );
 }
+
 
 class _Header extends StatelessWidget {
   const _Header({required this.total});

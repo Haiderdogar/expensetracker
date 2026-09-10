@@ -6,20 +6,19 @@ InputDecoration noteEditorInputDecoration(
   bool isTitle = false,
 }) {
   final colors = Theme.of(context).colorScheme;
-  final border = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(14),
-    borderSide: BorderSide(color: colors.outlineVariant),
-  );
   return InputDecoration(
     hintText: hint,
-    hintStyle: (isTitle ? Theme.of(context).textTheme.titleMedium : Theme.of(context).textTheme.bodyLarge)
-        ?.copyWith(color: colors.onSurfaceVariant),
-    alignLabelWithHint: !isTitle,
-    filled: true,
-    fillColor: colors.surfaceContainerHighest,
-    contentPadding: isTitle ? const EdgeInsets.symmetric(horizontal: 16, vertical: 18) : const EdgeInsets.all(16),
-    border: border,
-    enabledBorder: border,
-    focusedBorder: border.copyWith(borderSide: BorderSide(color: colors.primary, width: 1.5)),
+    hintStyle: (isTitle ? Theme.of(context).textTheme.titleLarge : Theme.of(context).textTheme.bodyLarge)
+        ?.copyWith(
+          color: colors.onSurfaceVariant.withValues(alpha: 0.45),
+          fontWeight: isTitle ? FontWeight.w700 : FontWeight.w400,
+        ),
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+    errorBorder: InputBorder.none,
+    focusedErrorBorder: InputBorder.none,
+    contentPadding: EdgeInsets.zero,
+    isDense: true,
   );
 }

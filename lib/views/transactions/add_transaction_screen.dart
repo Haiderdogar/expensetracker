@@ -15,10 +15,17 @@ class AddTransactionScreen extends StatelessWidget {
     final isEditing = transaction != null;
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? AppStrings.editTransaction : AppStrings.addTransaction),
+        title: Text(
+          isEditing
+              ? 'Edit ${_capitalize(transaction!.type)}'
+              : AppStrings.addTransaction,
+        ),
         actions: isEditing ? [TransactionDeleteButton(transaction: transaction!)] : null,
       ),
       body: TransactionForm(transaction: transaction),
     );
   }
 }
+
+String _capitalize(String s) =>
+    s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';

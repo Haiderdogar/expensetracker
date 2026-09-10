@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/category_model.dart';
+import '../../../models/subcategory_model.dart';
 import '../../../models/transaction_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/category_provider.dart';
@@ -25,25 +26,30 @@ class TransactionForm extends StatelessWidget {
     return Consumer(
       builder: (context, ref, _) {
         final draft = ref.watch(transactionFormProvider(transaction));
-        final categories = ref.watch(categoriesProvider);
         return Form(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _TypeSelector(
-                draft: draft,
-                categories: categories.value,
-                onChanged: (type) => _changeType(ref, draft, categories.value, type),
-              ),
-              const SizedBox(height: 16),
+              // Only allow switching type when creating a new transaction.
+              // When editing, the type is locked to the original transaction type.
+              if (transaction == null) ...[ 
+                _TypeSelector(
+                  draft: draft,
+                  onChanged: (type) => _changeType(ref, draft, type),
+                ),
+                const SizedBox(height: 16),
+              ],
               _CategorySelector(transaction: transaction, draft: draft),
               if (draft.categoryId != null) ...[
                 const SizedBox(height: 12),
                 _SubcategorySelector(transaction: transaction, draft: draft),
               ],
               const SizedBox(height: 16),
+              // Key on amount ensures the field rebuilds with the correct
+              // per-tab initialValue whenever the user switches expense/income.
               CustomTextField(
+                key: ValueKey('amount_${draft.type}'),
                 initialValue: draft.amount,
                 label: AppStrings.amount,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -95,18 +101,11 @@ class TransactionForm extends StatelessWidget {
   void _changeType(
     WidgetRef ref,
     TransactionFormDraft draft,
-    List<CategoryModel>? categories,
     String type,
   ) {
-    var updated = draft.copyWith(type: type);
-    final matching = categories
-            ?.where((category) => category.id == draft.categoryId)
-            .toList() ??
-        const <CategoryModel>[];
-    if (matching.isNotEmpty && matching.first.type != type) {
-      updated = updated.clearCategory();
-    }
-    _updateDraft(ref, updated);
+    // switchType() swaps the active tab while preserving each tab's own
+    // categoryId, subcategory, and amount independently.
+    _updateDraft(ref, draft.switchType(type));
   }
 
   Future<void> _pickDateTime(
@@ -194,10 +193,9 @@ class TransactionForm extends StatelessWidget {
 }
 
 class _TypeSelector extends StatelessWidget {
-  const _TypeSelector({required this.draft, required this.categories, required this.onChanged});
+  const _TypeSelector({required this.draft, required this.onChanged});
 
   final TransactionFormDraft draft;
-  final List<CategoryModel>? categories;
   final ValueChanged<String> onChanged;
 
   @override
@@ -222,46 +220,118 @@ class _CategorySelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categories = ref.watch(categoriesProvider);
+    final transactions = ref.watch(transactionsProvider).value ?? const [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(AppStrings.category, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              AppStrings.category,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            TextButton.icon(
+              onPressed: () => _addCategory(context, ref),
+              icon: const Icon(Icons.add_rounded, size: 16),
+              label: const Text('Add Category'),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
         categories.when(
-          loading: () => const LinearProgressIndicator(),
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(),
+          ),
           error: (error, _) => Text(error.toString()),
           data: (items) {
             final visible = items.where((category) => category.type == draft.type).toList();
-            return Row(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: visible.map((category) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(category.name),
-                          selected: category.id == draft.categoryId,
-                          onSelected: (_) => ref.read(transactionFormProvider(transaction).notifier).state =
-                              draft.selectCategory(category.id),
-                        ),
-                      )).toList(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  tooltip: 'Add category',
-                  icon: const Icon(Icons.add),
-                  onPressed: () => _addCategory(context, ref),
-                ),
-              ],
+            final sorted = _sortCategories(visible, transactions);
+            final isSelectedValid = sorted.any((c) => c.id == draft.categoryId);
+
+            return DropdownMenu<String>(
+              key: ValueKey('${draft.type}_${draft.categoryId}'),
+              expandedInsets: EdgeInsets.zero,
+              requestFocusOnTap: false,
+              enableSearch: false,
+              hintText: 'Select category',
+              initialSelection: isSelectedValid ? draft.categoryId : null,
+              trailingIcon: const Icon(Icons.keyboard_arrow_down_rounded),
+              selectedTrailingIcon: const Icon(Icons.keyboard_arrow_up_rounded),
+              menuHeight: 280,
+              dropdownMenuEntries: sorted.map((category) {
+                return DropdownMenuEntry<String>(
+                  value: category.id,
+                  label: category.name,
+                );
+              }).toList(),
+              onSelected: (value) {
+                if (value != null) {
+                  ref.read(transactionFormProvider(transaction).notifier).state =
+                      draft.selectCategory(value);
+                }
+              },
             );
           },
         ),
       ],
     );
+  }
+
+  List<CategoryModel> _sortCategories(
+    List<CategoryModel> categories,
+    List<TransactionModel> transactions,
+  ) {
+    final usageCounts = <String, int>{};
+    for (final tx in transactions) {
+      usageCounts[tx.categoryId] = (usageCounts[tx.categoryId] ?? 0) + 1;
+    }
+
+    const priorityKeywords = [
+      'food',
+      'transport',
+      'transportation',
+      'bills',
+      'bill',
+      'housing',
+      'house',
+      'rent',
+      'shopping',
+      'groceries',
+      'grocery',
+      'dining',
+      'utilities',
+      'salary',
+      'entertainment',
+      'health',
+      'healthcare',
+      'education',
+      'general',
+    ];
+
+    int score(CategoryModel c) {
+      final count = usageCounts[c.id] ?? 0;
+      final name = c.name.toLowerCase().trim();
+      final idx = priorityKeywords.indexWhere((k) => name.contains(k));
+      int pts = count * 1000;
+      if (idx != -1) {
+        pts += (100 - idx);
+      }
+      return pts;
+    }
+
+    final sorted = List<CategoryModel>.from(categories);
+    sorted.sort((a, b) => score(b).compareTo(score(a)));
+    return sorted;
   }
 
   Future<void> _addCategory(BuildContext context, WidgetRef ref) async {
@@ -275,7 +345,7 @@ class _CategorySelector extends ConsumerWidget {
       color: draft.type == 'income' ? '#2ECC71' : '#FF6B6B',
     );
     ref.read(transactionFormProvider(transaction).notifier).state =
-        draft.selectCategory(category.id).copyWith(subcategory: 'General');
+        draft.selectCategory(category.id);
   }
 }
 
@@ -305,45 +375,127 @@ class _SubcategorySelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoryId = draft.categoryId!;
+    final transactions = ref.watch(transactionsProvider).value ?? const [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Subcategory', style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: ref.watch(subcategoriesProvider(categoryId)).when(
-                loading: () => const LinearProgressIndicator(),
-                error: (error, _) => Text(error.toString()),
-                data: (items) => items.isEmpty
-                    ? const Text('No subcategories yet. Add one to continue.')
-                    : SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: items.map((item) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(item.name),
-                              selected: item.name == draft.subcategory,
-                              onSelected: (_) => ref.read(transactionFormProvider(transaction).notifier).state =
-                                  draft.copyWith(subcategory: item.name),
-                            ),
-                          )).toList(),
-                        ),
-                      ),
-              ),
+            Text(
+              'Subcategory',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
-            const SizedBox(width: 8),
-            IconButton.filledTonal(
-              tooltip: 'Add subcategory',
-              icon: const Icon(Icons.add),
+            TextButton.icon(
               onPressed: () => _addSubcategory(context, ref, categoryId),
+              icon: const Icon(Icons.add_rounded, size: 16),
+              label: const Text('Add Subcategory'),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
             ),
           ],
         ),
+        const SizedBox(height: 6),
+        ref.watch(subcategoriesProvider(categoryId)).when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(),
+          ),
+          error: (error, _) => Text(error.toString()),
+          data: (items) {
+            final sorted = _sortSubcategories(items, categoryId, transactions);
+            final isSelectedValid = sorted.any((s) => s.name == draft.subcategory);
+
+            return DropdownMenu<String>(
+              key: ValueKey('${categoryId}_${draft.subcategory}'),
+              expandedInsets: EdgeInsets.zero,
+              requestFocusOnTap: false,
+              enableSearch: false,
+              hintText: 'Select subcategory',
+              initialSelection: isSelectedValid ? draft.subcategory : null,
+              trailingIcon: const Icon(Icons.keyboard_arrow_down_rounded),
+              selectedTrailingIcon: const Icon(Icons.keyboard_arrow_up_rounded),
+              menuHeight: 250,
+              dropdownMenuEntries: sorted.map((sub) {
+                return DropdownMenuEntry<String>(
+                  value: sub.name,
+                  label: sub.name,
+                );
+              }).toList(),
+              onSelected: (value) {
+                if (value != null) {
+                  ref.read(transactionFormProvider(transaction).notifier).state =
+                      draft.copyWith(subcategory: value);
+                }
+              },
+            );
+          },
+        ),
       ],
     );
+  }
+
+  List<SubcategoryModel> _sortSubcategories(
+    List<SubcategoryModel> subcategories,
+    String categoryId,
+    List<TransactionModel> transactions,
+  ) {
+    final usageCounts = <String, int>{};
+    for (final tx in transactions) {
+      if (tx.categoryId == categoryId && tx.subcategory.isNotEmpty) {
+        final key = tx.subcategory.toLowerCase().trim();
+        usageCounts[key] = (usageCounts[key] ?? 0) + 1;
+      }
+    }
+
+    const priorityKeywords = [
+      'general',
+      'groceries',
+      'grocery',
+      'restaurant',
+      'dining',
+      'food',
+      'fuel',
+      'gas',
+      'petrol',
+      'bus',
+      'metro',
+      'train',
+      'taxi',
+      'uber',
+      'electricity',
+      'water',
+      'internet',
+      'wifi',
+      'phone',
+      'rent',
+      'maintenance',
+      'clothing',
+      'clothes',
+      'coffee',
+      'snacks',
+    ];
+
+    int score(SubcategoryModel s) {
+      final name = s.name.toLowerCase().trim();
+      final count = usageCounts[name] ?? 0;
+      final idx = priorityKeywords.indexWhere((k) => name.contains(k));
+      int pts = count * 1000;
+      if (idx != -1) {
+        pts += (100 - idx);
+      }
+      return pts;
+    }
+
+    final sorted = List<SubcategoryModel>.from(subcategories);
+    sorted.sort((a, b) => score(b).compareTo(score(a)));
+    return sorted;
   }
 
   Future<void> _addSubcategory(BuildContext context, WidgetRef ref, String categoryId) async {

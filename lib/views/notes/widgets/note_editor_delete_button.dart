@@ -12,25 +12,37 @@ class NoteEditorDeleteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Consumer(
       builder: (context, ref, _) => IconButton(
         tooltip: 'Delete note',
         icon: const Icon(Icons.delete_outline_rounded),
-        color: Theme.of(context).colorScheme.error,
+        color: colors.error,
         onPressed: () => _delete(context, ref),
       ),
     );
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final colors = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete note?'),
-        content: Text('Delete "${note.title}" permanently?'),
+        title: const Text('Delete Note'),
+        content: Text('Permanently delete "${note.title}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text(AppStrings.cancel)),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text(AppStrings.delete)),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(AppStrings.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.error,
+              foregroundColor: colors.onError,
+            ),
+            child: const Text(AppStrings.delete),
+          ),
         ],
       ),
     );

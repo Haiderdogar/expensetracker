@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/global_keys.dart';
+import 'widgets/active_filter_chips.dart';
 import 'widgets/transaction_list.dart';
 import 'widgets/transactions_add_button.dart';
 import 'widgets/transactions_filter_panel.dart';
@@ -25,11 +26,14 @@ class TransactionsScreen extends StatelessWidget {
         child: TransactionsAddButton(),
       ),
       body: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: EdgeInsets.all(16),
             child: TransactionsFilterPanel(),
           ),
+          // Active filter chips — hidden automatically when no filters are set.
+          ActiveFilterChips(),
           Expanded(child: TransactionList()),
         ],
       ),

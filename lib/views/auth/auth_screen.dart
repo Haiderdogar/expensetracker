@@ -12,11 +12,15 @@ class AuthScreen extends StatelessWidget {
     this.isSetup = false,
     this.verifyOnly = false,
     this.offerBiometricAfterSetup = false,
+    /// When true the screen is shown as a logout confirmation step.
+    /// A clearly labelled AppBar with a cancel/back button is always shown.
+    this.isLogoutConfirmation = false,
   });
 
   final bool isSetup;
   final bool verifyOnly;
   final bool offerBiometricAfterSetup;
+  final bool isLogoutConfirmation;
 
   @override
   Widget build(BuildContext context) {
@@ -25,13 +29,41 @@ class AuthScreen extends StatelessWidget {
       verifyOnly: verifyOnly,
       offerBiometricAfterSetup: offerBiometricAfterSetup,
     );
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: (isSetup || verifyOnly) && Navigator.of(context).canPop()
-          ? AppBar(backgroundColor: Colors.transparent, elevation: 0)
-          : null,
-      body: SafeArea(
-        child: _AuthScreenBody(config: config),
+
+    AppBar? appBar;
+    if (isLogoutConfirmation) {
+      // Always show a prominent AppBar for logout confirmation so the user can
+      // clearly cancel and return to the previous screen.
+      appBar = AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          tooltip: 'Cancel logout',
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        title: const Text('Confirm Logout'),
+        centerTitle: true,
+      );
+    } else if ((isSetup || verifyOnly) && Navigator.of(context).canPop()) {
+      appBar = AppBar(backgroundColor: Colors.transparent, elevation: 0);
+    }
+
+    return PopScope(
+      // Allow back navigation — return `false` (cancelled) to the caller.
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        // If popped without a result (hardware back or AppBar back),
+        // ensure the caller receives `false` rather than `null`.
+        // We only do this for logout confirmation so the caller can distinguish
+        // "cancelled" from a successful verification.
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: appBar,
+        body: SafeArea(
+          child: _AuthScreenBody(config: config),
+        ),
       ),
     );
   }
@@ -46,7 +78,8 @@ class _AuthScreenBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final keypadHeight = (constraints.maxHeight * 0.4).clamp(324.0, 440.0).toDouble();
+        final keypadHeight =
+            (constraints.maxHeight * 0.4).clamp(324.0, 440.0).toDouble();
         return SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),

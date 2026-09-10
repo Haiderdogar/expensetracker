@@ -14,80 +14,157 @@ final transactionCategoryFilterProvider = StateProvider.autoDispose<List<String>
 final transactionCategoryFilterDraftProvider =
     StateProvider.autoDispose<List<String>>((ref) => []);
 
+/// Holds form state for a single transaction type (expense or income).
+class TypeDraft {
+  const TypeDraft({
+    this.categoryId,
+    this.subcategory,
+    this.amount = '',
+  });
+
+  final String? categoryId;
+  final String? subcategory;
+  final String amount;
+
+  TypeDraft copyWith({
+    String? categoryId,
+    String? subcategory,
+    String? amount,
+  }) {
+    return TypeDraft(
+      categoryId: categoryId ?? this.categoryId,
+      subcategory: subcategory ?? this.subcategory,
+      amount: amount ?? this.amount,
+    );
+  }
+
+  TypeDraft clearCategory() => TypeDraft(amount: amount);
+
+  TypeDraft selectCategory(String id) =>
+      TypeDraft(categoryId: id, amount: amount);
+}
+
 class TransactionFormDraft {
   const TransactionFormDraft({
     required this.type,
-    required this.categoryId,
-    required this.subcategory,
+    required this.expenseDraft,
+    required this.incomeDraft,
     required this.date,
-    required this.amount,
     required this.note,
     this.isSaving = false,
   });
 
   factory TransactionFormDraft.fromTransaction(TransactionModel? transaction) {
     final type = transaction?.type;
+    final activeType = type == 'income' || type == 'expense' ? type! : 'expense';
+    final catId = transaction?.categoryId.isNotEmpty == true
+        ? transaction!.categoryId
+        : null;
+    final sub = transaction?.subcategory.isNotEmpty == true
+        ? transaction!.subcategory
+        : null;
+    final amt = transaction?.amount.toString() ?? '';
+
+    final expenseDraft = activeType == 'expense'
+        ? TypeDraft(categoryId: catId, subcategory: sub, amount: amt)
+        : const TypeDraft();
+    final incomeDraft = activeType == 'income'
+        ? TypeDraft(categoryId: catId, subcategory: sub, amount: amt)
+        : const TypeDraft();
+
     return TransactionFormDraft(
-      type: type == 'income' || type == 'expense' ? type! : 'expense',
-      categoryId: transaction?.categoryId.isNotEmpty == true
-          ? transaction!.categoryId
-          : null,
-      subcategory: transaction?.subcategory.isNotEmpty == true
-          ? transaction!.subcategory
-          : null,
+      type: activeType,
+      expenseDraft: expenseDraft,
+      incomeDraft: incomeDraft,
       date: DateTime.tryParse(transaction?.date ?? '') ?? DateTime.now(),
-      amount: transaction?.amount.toString() ?? '',
       note: transaction?.note ?? '',
     );
   }
 
   final String type;
-  final String? categoryId;
-  final String? subcategory;
+  final TypeDraft expenseDraft;
+  final TypeDraft incomeDraft;
   final DateTime date;
-  final String amount;
   final String note;
   final bool isSaving;
+
+  // ── Convenience accessors for the currently active tab ────────────────────
+
+  TypeDraft get _active => type == 'income' ? incomeDraft : expenseDraft;
+
+  String? get categoryId => _active.categoryId;
+  String? get subcategory => _active.subcategory;
+  String get amount => _active.amount;
+
+  // ── Mutators ─────────────────────────────────────────────────────────────
+
+  TransactionFormDraft _withActive(TypeDraft updated) {
+    return TransactionFormDraft(
+      type: type,
+      expenseDraft: type == 'expense' ? updated : expenseDraft,
+      incomeDraft: type == 'income' ? updated : incomeDraft,
+      date: date,
+      note: note,
+      isSaving: isSaving,
+    );
+  }
+
+  /// Switch to a different type; preserves each tab's own state.
+  TransactionFormDraft switchType(String newType) {
+    return TransactionFormDraft(
+      type: newType,
+      expenseDraft: expenseDraft,
+      incomeDraft: incomeDraft,
+      date: date,
+      note: note,
+      isSaving: isSaving,
+    );
+  }
 
   TransactionFormDraft copyWith({
     String? type,
     String? categoryId,
     String? subcategory,
-    DateTime? date,
     String? amount,
+    DateTime? date,
+    String? note,
+    bool? isSaving,
+  }) {
+    var draft = this;
+    if (type != null && type != this.type) {
+      draft = draft.switchType(type);
+    }
+    var active = draft._active;
+    if (categoryId != null) active = active.copyWith(categoryId: categoryId);
+    if (subcategory != null) active = active.copyWith(subcategory: subcategory);
+    if (amount != null) active = active.copyWith(amount: amount);
+    return draft._withActive(active).copyWith2(
+      date: date,
+      note: note,
+      isSaving: isSaving,
+    );
+  }
+
+  /// Internal helper to update top-level fields without recursion.
+  TransactionFormDraft copyWith2({
+    DateTime? date,
     String? note,
     bool? isSaving,
   }) {
     return TransactionFormDraft(
-      type: type ?? this.type,
-      categoryId: categoryId ?? this.categoryId,
-      subcategory: subcategory ?? this.subcategory,
+      type: type,
+      expenseDraft: expenseDraft,
+      incomeDraft: incomeDraft,
       date: date ?? this.date,
-      amount: amount ?? this.amount,
       note: note ?? this.note,
       isSaving: isSaving ?? this.isSaving,
     );
   }
 
-  TransactionFormDraft clearCategory() => TransactionFormDraft(
-    type: type,
-    categoryId: null,
-    subcategory: null,
-    date: date,
-    amount: amount,
-    note: note,
-    isSaving: isSaving,
-  );
+  TransactionFormDraft clearCategory() => _withActive(_active.clearCategory());
 
-  TransactionFormDraft selectCategory(String categoryId) => TransactionFormDraft(
-    type: type,
-    categoryId: categoryId,
-    subcategory: null,
-    date: date,
-    amount: amount,
-    note: note,
-    isSaving: isSaving,
-  );
+  TransactionFormDraft selectCategory(String categoryId) =>
+      _withActive(_active.selectCategory(categoryId));
 }
 
 final transactionFormProvider = StateProvider.autoDispose

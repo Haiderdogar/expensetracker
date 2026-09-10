@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_strings.dart';
 import '../../../models/note_model.dart';
 import '../../../providers/note_provider.dart';
 import '../notes_ui_providers.dart';
@@ -18,37 +17,27 @@ class NoteEditorSaveActions extends StatelessWidget {
       builder: (context, ref, _) {
         final isSaving = ref.watch(noteEditorDraftProvider(note).select((draft) => draft.isSaving));
         final colors = Theme.of(context).colorScheme;
-        return Container(
-          padding: const EdgeInsets.only(top: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colors.onSurfaceVariant,
-                    minimumSize: const Size.fromHeight(52),
-                    side: BorderSide(color: colors.outline),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 3,
-                child: FilledButton(
-                  onPressed: isSaving ? null : () => _save(context, ref),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colors.primary,
-                    foregroundColor: colors.onPrimary,
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: Text(isSaving ? 'Saving...' : AppStrings.save, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                ),
-              ),
-            ],
+        return SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: FilledButton.icon(
+            onPressed: isSaving ? null : () => _save(context, ref),
+            icon: isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.check_rounded, size: 20),
+            label: Text(
+              isSaving ? 'Saving...' : (note == null ? 'Save Note' : 'Save Changes'),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.primary,
+              foregroundColor: colors.onPrimary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
           ),
         );
       },

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../models/note_model.dart';
 import '../notes_ui_providers.dart';
-import 'note_editor_input_decoration.dart';
 
 class NoteContentField extends StatelessWidget {
   const NoteContentField({super.key, this.note});
@@ -15,19 +14,35 @@ class NoteContentField extends StatelessWidget {
     return Consumer(
       builder: (context, ref, _) {
         final content = ref.watch(noteEditorDraftProvider(note).select((draft) => draft.content));
+        final colors = Theme.of(context).colorScheme;
         return TextFormField(
           initialValue: content,
-          minLines: 5,
+          expands: true,
           maxLines: null,
-          keyboardType: TextInputType.multiline,
+          minLines: null,
+          textCapitalization: TextCapitalization.sentences,
           textAlignVertical: TextAlignVertical.top,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5),
+          style: TextStyle(
+            fontSize: 15,
+            height: 1.5,
+            color: colors.onSurface,
+          ),
           onChanged: (value) {
             final draft = ref.read(noteEditorDraftProvider(note));
             ref.read(noteEditorDraftProvider(note).notifier).state = draft.copyWith(content: value);
           },
-          validator: (value) => value == null || value.trim().isEmpty ? 'Enter some text' : null,
-          decoration: noteEditorInputDecoration(context, hint: 'Write your note here...'),
+          validator: (value) => value == null || value.trim().isEmpty ? 'Please write some note content' : null,
+          decoration: InputDecoration(
+            hintText: 'Write your note here...',
+            hintStyle: TextStyle(
+              fontSize: 15,
+              height: 1.5,
+              color: colors.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 6),
+          ),
         );
       },
     );

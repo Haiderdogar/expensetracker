@@ -102,6 +102,15 @@ class AuthController extends _$AuthController {
     await lock();
   }
 
+  /// Called after a confirmed logout that wipes all user data.
+  /// Sets state to [AuthStatus.authenticated] so [AppBootstrap] routes through
+  /// its normal logic. Since all providers are invalidated and the DB is reset,
+  /// [onboardingCompleteProvider] returns false → [OnboardingScreen] is shown.
+  Future<void> logoutAndReset() async {
+    _backgroundedAt = null;
+    state = const AsyncData(AuthStatus.authenticated);
+  }
+
   Future<bool> isBiometricAvailable() async {
     return (await preferredBiometric()) != null;
   }

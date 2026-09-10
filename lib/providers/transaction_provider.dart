@@ -1,10 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
 import '../models/transaction_model.dart';
+import 'category_provider.dart';
 import 'database_provider.dart';
 import 'wallet_provider.dart';
 
@@ -159,10 +159,24 @@ Future<List<TransactionModel>> filteredTransactions(
   DateTime? month,
 }) async {
   final all = await ref.watch(transactionsProvider.future);
-  final catSet = categories?.toSet();
+  final allCategories = await ref.watch(categoriesProvider.future);
+
+  // If a specific type is selected ('income' or 'expense'), only apply category
+  // filters belonging to that type. In 'All' (type == null), all category filters apply.
+  final applicableCategories = categories?.where((catId) {
+    if (type == null) return true;
+    final cat = allCategories.where((c) => c.id == catId).firstOrNull;
+    return cat == null || cat.type == type;
+  }).toSet();
+
+  final hasCategoryFilter =
+      applicableCategories != null && applicableCategories.isNotEmpty;
+
   return all.where((t) {
     if (type != null && t.type != type) return false;
-    if (catSet != null && catSet.isNotEmpty && !catSet.contains(t.categoryId)) return false;
+    if (hasCategoryFilter && !applicableCategories.contains(t.categoryId)) {
+      return false;
+    }
     if (search != null && search.isNotEmpty) {
       if (!t.subcategory.toLowerCase().contains(search.toLowerCase())) return false;
     }
