@@ -11,14 +11,11 @@ class TransactionsFilterPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) => TransactionFilter(
-        selectedType: ref.watch(transactionTypeFilterProvider),
-        selectedCategories: ref.watch(transactionCategoryFilterProvider),
-        onTypeChanged: (value) =>
-            ref.read(transactionTypeFilterProvider.notifier).state = value,
+        selectedCategories: ref.watch(selectedCategoryFiltersProvider),
         onSearchChanged: (value) =>
             ref.read(transactionSearchProvider.notifier).state = value,
         onCategorySelected: (value) =>
-            ref.read(transactionCategoryFilterProvider.notifier).state = value,
+            ref.read(selectedCategoryFiltersProvider.notifier).state = value,
       ),
     );
   }

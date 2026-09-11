@@ -29,10 +29,9 @@ class TransactionsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: TransactionsFilterPanel(),
           ),
-          // Active filter chips — hidden automatically when no filters are set.
           ActiveFilterChips(),
           Expanded(child: TransactionList()),
         ],

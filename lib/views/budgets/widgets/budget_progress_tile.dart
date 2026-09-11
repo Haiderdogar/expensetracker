@@ -7,91 +7,137 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/budget_provider.dart';
 import 'budget_tile_menu.dart';
 
-class BudgetProgressTile extends StatelessWidget {
+class BudgetProgressTile extends ConsumerWidget {
   const BudgetProgressTile({super.key, required this.progress});
 
   final BudgetProgress progress;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final percent = (progress.progress * 100).clamp(0, 100);
-    final isOverBudget = progress.spent > progress.budget.amount;
-    final barColor = isOverBudget ? AppColors.expenseRed : AppColors.mintAccent;
+    final isOverBudget = progress.isOverBudget;
+    final isNearLimit = progress.isNearLimit;
+
+    final Color statusColor;
+    if (isOverBudget) {
+      statusColor = AppColors.expenseRed;
+    } else if (isNearLimit) {
+      statusColor = Colors.orange;
+    } else {
+      statusColor = AppColors.incomeGreen;
+    }
+
+    final categoryColor = progress.categoryColor;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header Row: Avatar, Name, Status Badge & Menu
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Text(progress.categoryName, style: Theme.of(context).textTheme.titleSmall)),
-                Text(
-                  '${percent.toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    color: isOverBudget ? AppColors.expenseRed : AppColors.primaryEmerald,
-                    fontWeight: FontWeight.w600,
+                // Category Icon Avatar
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: categoryColor.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    progress.categoryIcon,
+                    size: 18,
+                    color: categoryColor,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
+
+                // Name and Spent / Budget Subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        progress.categoryName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${Formatters.currency(progress.spent, symbol: symbol)} of ${Formatters.currency(progress.budget.amount, symbol: symbol)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isDark ? AppColors.gray400 : AppColors.gray600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Percentage and Status Badge
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${percent.toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isOverBudget
+                            ? '${Formatters.currency(progress.remaining.abs(), symbol: symbol)} over'
+                            : '${Formatters.currency(progress.remaining, symbol: symbol)} left',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 4),
+
                 BudgetTileMenu(progress: progress),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
+
+            // Progress Bar
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: progress.progress.clamp(0, 1),
-                minHeight: 8,
-                backgroundColor: AppColors.gray200,
-                color: barColor,
+                value: progress.progress.clamp(0.0, 1.0),
+                minHeight: 5,
+                backgroundColor: isDark ? Colors.white12 : AppColors.gray200,
+                valueColor: AlwaysStoppedAnimation<Color>(statusColor),
               ),
             ),
-            const SizedBox(height: 8),
-            _BudgetAmountLabel(progress: progress),
-            if (isOverBudget) ...[
-              const SizedBox(height: 8),
-              const BudgetStatusLabel(label: 'Over budget', color: AppColors.expenseRed, weight: FontWeight.bold),
-            ] else if (progress.remaining / progress.budget.amount <= 0.1) ...[
-              const SizedBox(height: 8),
-              const BudgetStatusLabel(label: 'Near budget limit', color: Colors.orange, weight: FontWeight.w600),
-            ],
           ],
         ),
       ),
     );
-  }
-}
-
-class _BudgetAmountLabel extends StatelessWidget {
-  const _BudgetAmountLabel({required this.progress});
-
-  final BudgetProgress progress;
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
-        return Text(
-          '${Formatters.currency(progress.spent, symbol: symbol)} / ${Formatters.currency(progress.budget.amount, symbol: symbol)}',
-          style: Theme.of(context).textTheme.bodySmall,
-        );
-      },
-    );
-  }
-}
-
-class BudgetStatusLabel extends StatelessWidget {
-  const BudgetStatusLabel({super.key, required this.label, required this.color, required this.weight});
-
-  final String label;
-  final Color color;
-  final FontWeight weight;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(label, style: TextStyle(color: color, fontWeight: weight));
   }
 }

@@ -1,12 +1,15 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/database/database_tables.dart';
-import '../models/category_model.dart';
+import '../core/utils/category_utils.dart';
 import '../core/utils/error_handler.dart';
 import '../core/utils/formatters.dart';
 import '../models/budget_model.dart';
+import '../models/category_model.dart';
 import 'category_provider.dart';
 import 'database_provider.dart';
 import 'transaction_provider.dart';
@@ -77,33 +80,73 @@ class Budgets extends _$Budgets {
     await upsert(budget);
     return budget;
   }
+
+  Future<int> copyFromPreviousMonth(DateTime targetMonth) async {
+    final prevMonth = DateTime(targetMonth.year, targetMonth.month - 1, 1);
+    final prevMonthKey = Formatters.monthYear(prevMonth);
+    final targetMonthKey = Formatters.monthYear(targetMonth);
+
+    final allBudgets = await ref.read(budgetsProvider.future);
+    final prevBudgets =
+        allBudgets.where((b) => b.monthYear == prevMonthKey).toList();
+    if (prevBudgets.isEmpty) return 0;
+
+    final existingTargetCategoryIds = allBudgets
+        .where((b) => b.monthYear == targetMonthKey)
+        .map((b) => b.categoryId)
+        .toSet();
+
+    int copied = 0;
+    for (final b in prevBudgets) {
+      if (!existingTargetCategoryIds.contains(b.categoryId)) {
+        await create(
+          categoryId: b.categoryId,
+          amount: b.amount,
+          month: targetMonth,
+        );
+        copied++;
+      }
+    }
+    return copied;
+  }
 }
 
 class BudgetProgress {
   const BudgetProgress({
     required this.budget,
     required this.spent,
-    required this.categoryName,
-  });
+    this.category,
+    String? categoryName,
+  }) : _fallbackCategoryName = categoryName ?? 'Unknown';
 
   final BudgetModel budget;
   final double spent;
-  final String categoryName;
+  final CategoryModel? category;
+  final String _fallbackCategoryName;
 
-  double get progress => budget.amount > 0 ? spent / budget.amount : 0;
+  String get categoryName => category?.name ?? _fallbackCategoryName;
+
+  Color get categoryColor => category != null
+      ? categoryColorFromHex(category!.color)
+      : const Color(0xFF94A3B8);
+  IconData get categoryIcon => category != null
+      ? categoryIconFromName(category!.icon)
+      : Icons.category_outlined;
+
+  double get progress => budget.amount > 0 ? spent / budget.amount : 0.0;
   double get remaining => budget.amount - spent;
+  bool get isOverBudget => spent > budget.amount;
+  bool get isNearLimit => !isOverBudget && (progress >= 0.80);
 }
 
-@riverpod
-Future<List<BudgetProgress>> currentMonthBudgetProgress(
-  Ref ref,
-) async {
-  final monthKey = Formatters.monthYear(DateTime.now());
+final monthBudgetProgressProvider =
+    FutureProvider.family<List<BudgetProgress>, DateTime>((ref, month) async {
+  final monthKey = Formatters.monthYear(month);
   final budgets = await ref.watch(budgetsProvider.future);
   final transactions = await ref.watch(transactionsProvider.future);
   final categories = await ref.watch(categoriesProvider.future);
 
-  final monthBudgets = budgets.where((b) => b.monthYear == monthKey);
+  final monthBudgets = budgets.where((b) => b.monthYear == monthKey).toList();
 
   return monthBudgets.map((budget) {
     final spent = transactions
@@ -113,18 +156,19 @@ Future<List<BudgetProgress>> currentMonthBudgetProgress(
             Formatters.monthYear(DateTime.parse(t.date)) == monthKey)
         .fold(0.0, (s, t) => s + t.amount);
 
-    // Resolve category name safely. If category has been deleted, fall back to 'Unknown'.
-    CategoryModel? category;
-    try {
-      category = categories.firstWhere((c) => c.id == budget.categoryId);
-    } catch (_) {
-      category = null;
-    }
+    final category =
+        categories.where((c) => c.id == budget.categoryId).firstOrNull;
 
     return BudgetProgress(
       budget: budget,
       spent: spent,
+      category: category,
       categoryName: category?.name ?? 'Unknown',
     );
   }).toList();
+});
+
+@riverpod
+Future<List<BudgetProgress>> currentMonthBudgetProgress(Ref ref) async {
+  return ref.watch(monthBudgetProgressProvider(DateTime.now()).future);
 }

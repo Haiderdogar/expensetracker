@@ -1,223 +1,208 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/category_utils.dart';
+import '../../../models/category_model.dart';
 import '../../../providers/category_provider.dart';
 import '../transactions_ui_providers.dart';
 
-/// Always-visible filter bar on the transactions screen.
-/// - Top row: All / Income / Expense section toggles.
-/// - Bottom row: Horizontally scrollable multi-select category filter chips
-///   corresponding to the active section (all categories in 'All', multiple expense
-///   categories in 'Expense', multiple income categories in 'Income').
-/// - When filters of the current section are active, a 'Clear' chip appears to quickly reset them.
+/// Renders applied category filter badges directly below the Search/Filter bar,
+/// separated independently into Expense Active Filters and Income Active Filters.
 class ActiveFilterChips extends ConsumerWidget {
   const ActiveFilterChips({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final type = ref.watch(transactionTypeFilterProvider);
-    final selectedCategories = ref.watch(transactionCategoryFilterProvider);
+    final selectedCategories = ref.watch(selectedCategoryFiltersProvider);
     final allCategories = ref.watch(categoriesProvider).value ?? const [];
 
-    // Categories relevant to the current section:
-    // - 'All' (type == null): all categories
-    // - 'Income' (type == 'income'): only income categories
-    // - 'Expense' (type == 'expense'): only expense categories
-    final sectionCategories = allCategories.where((c) {
-      if (type == null) return true;
-      return c.type == type;
-    }).toList();
+    if (selectedCategories == null || selectedCategories.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
-    // Selected category IDs that belong to the current section:
-    final selectedInCurrentSection = (selectedCategories ?? []).where((id) {
-      if (type == null) return true;
-      final cat = allCategories.where((c) => c.id == id).firstOrNull;
-      return cat?.type == type;
-    }).toList();
+    final expenseCategories = allCategories
+        .where((c) => c.type == 'expense')
+        .toList();
+    final incomeCategories = allCategories
+        .where((c) => c.type == 'income')
+        .toList();
 
-    final hasActiveFilters = selectedInCurrentSection.isNotEmpty;
-    final scheme = Theme.of(context).colorScheme;
+    final selectedExpenseCats = expenseCategories
+        .where((c) => selectedCategories.contains(c.id))
+        .toList();
+    final selectedIncomeCats = incomeCategories
+        .where((c) => selectedCategories.contains(c.id))
+        .toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Row 1: Section toggles (All / Income / Expense) ───────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              _TypeChip(
-                label: 'All',
-                selected: type == null,
-                color: scheme.primary,
-                onTap: () =>
-                    ref.read(transactionTypeFilterProvider.notifier).state = null,
-              ),
-              const SizedBox(width: 8),
-              _TypeChip(
-                label: 'Income',
-                selected: type == 'income',
-                color: Colors.green,
-                onTap: () => ref
-                    .read(transactionTypeFilterProvider.notifier)
-                    .state = type == 'income' ? null : 'income',
-              ),
-              const SizedBox(width: 8),
-              _TypeChip(
-                label: 'Expense',
-                selected: type == 'expense',
-                color: Colors.red,
-                onTap: () => ref
-                    .read(transactionTypeFilterProvider.notifier)
-                    .state = type == 'expense' ? null : 'expense',
-              ),
-            ],
-          ),
-        ),
+    final hasExpenseFilters = selectedExpenseCats.isNotEmpty;
+    final hasIncomeFilters = selectedIncomeCats.isNotEmpty;
 
-        // ── Row 2: Multi-select category chips for the active section ──────
-        if (sectionCategories.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount:
-                  (hasActiveFilters ? 1 : 0) + sectionCategories.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                // Clear chip when any category filter in this section is active
-                if (hasActiveFilters && index == 0) {
-                  return ActionChip(
-                    avatar: Icon(
-                      Icons.close_rounded,
-                      size: 14,
-                      color: scheme.error,
-                    ),
-                    label: Text(
-                      'Clear (${selectedInCurrentSection.length})',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.error,
-                      ),
-                    ),
-                    backgroundColor: scheme.error.withValues(alpha: 0.1),
-                    side: BorderSide(
-                      color: scheme.error.withValues(alpha: 0.35),
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    onPressed: () {
-                      final toRemove = selectedInCurrentSection.toSet();
-                      final updated = (selectedCategories ?? [])
-                          .where((id) => !toRemove.contains(id))
-                          .toList();
-                      ref
-                          .read(transactionCategoryFilterProvider.notifier)
-                          .state = updated.isEmpty ? null : updated;
-                    },
-                  );
-                }
+    if (!hasExpenseFilters && !hasIncomeFilters) {
+      return const SizedBox.shrink();
+    }
 
-                final catIndex = hasActiveFilters ? index - 1 : index;
-                final category = sectionCategories[catIndex];
-                final isSelected =
-                    selectedInCurrentSection.contains(category.id);
-                final chipColor =
-                    category.isIncome ? Colors.green : Colors.red;
+    final isAllExpenseSelected =
+        expenseCategories.isNotEmpty &&
+        selectedExpenseCats.length == expenseCategories.length;
+    final isAllIncomeSelected =
+        incomeCategories.isNotEmpty &&
+        selectedIncomeCats.length == incomeCategories.length;
 
-                return FilterChip(
-                  avatar: Icon(
-                    categoryIconFromName(category.icon),
-                    size: 14,
-                    color: isSelected ? Colors.white : chipColor,
-                  ),
-                  label: Text(category.name),
-                  selected: isSelected,
-                  showCheckmark: false,
-                  selectedColor: chipColor,
-                  backgroundColor: chipColor.withValues(alpha: 0.08),
-                  side: BorderSide(
-                    color: isSelected
-                        ? chipColor
-                        : chipColor.withValues(alpha: 0.3),
-                    width: isSelected ? 1.5 : 1,
-                  ),
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight:
-                        isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? Colors.white : chipColor,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  onSelected: (selected) {
-                    final current = selectedCategories ?? [];
-                    final updated = selected
-                        ? [...current, category.id]
-                        : current.where((id) => id != category.id).toList();
-                    ref
-                        .read(transactionCategoryFilterProvider.notifier)
-                        .state = updated.isEmpty ? null : updated;
-                  },
-                );
-              },
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Expense Active Filters ───────────────────────────────────────
+          if (hasExpenseFilters) ...[
+            _FilterBadgeRow(
+              isAllSelected: isAllExpenseSelected,
+              allSelectedLabel: 'All Expense Filters Applied',
+              clearAllLabel: 'Clear All Expense',
+              color: AppColors.expenseRed,
+              selectedCats: selectedExpenseCats,
+              onClearAll: () =>
+                  clearCategoryFiltersByType(ref, 'expense', allCategories),
+              onRemoveCat: (catId) => removeCategoryFilter(ref, catId),
             ),
-          ),
+          ],
+
+          if (hasExpenseFilters && hasIncomeFilters) const SizedBox(height: 6),
+
+          // ── Income Active Filters ────────────────────────────────────────
+          if (hasIncomeFilters) ...[
+            _FilterBadgeRow(
+              isAllSelected: isAllIncomeSelected,
+              allSelectedLabel: 'All Income Filters Applied',
+              clearAllLabel: 'Clear All Income',
+              color: AppColors.incomeGreen,
+              selectedCats: selectedIncomeCats,
+              onClearAll: () =>
+                  clearCategoryFiltersByType(ref, 'income', allCategories),
+              onRemoveCat: (catId) => removeCategoryFilter(ref, catId),
+            ),
+          ],
         ],
-        const SizedBox(height: 8),
-      ],
+      ),
     );
   }
 }
 
-// ── Type filter chip (selectable toggle) ──────────────────────────────────────
-
-class _TypeChip extends StatelessWidget {
-  const _TypeChip({
-    required this.label,
-    required this.selected,
+class _FilterBadgeRow extends StatelessWidget {
+  const _FilterBadgeRow({
+    required this.isAllSelected,
+    required this.allSelectedLabel,
+    required this.clearAllLabel,
     required this.color,
-    required this.onTap,
+    required this.selectedCats,
+    required this.onClearAll,
+    required this.onRemoveCat,
   });
 
-  final String label;
-  final bool selected;
+  final bool isAllSelected;
+  final String allSelectedLabel;
+  final String clearAllLabel;
   final Color color;
-  final VoidCallback onTap;
+  final List<CategoryModel> selectedCats;
+  final VoidCallback onClearAll;
+  final ValueChanged<String> onRemoveCat;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeInOut,
-      child: FilterChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onTap(),
-        showCheckmark: false,
-        selectedColor: color.withValues(alpha: 0.18),
-        side: BorderSide(
-          color: selected
-              ? color
-              : Theme.of(context).colorScheme.outlineVariant,
-          width: selected ? 1.5 : 1,
+    final scheme = Theme.of(context).colorScheme;
+
+    // ── Case 1: "Select All" active for a type ───────────────────────────
+    if (isAllSelected) {
+      return SizedBox(
+        height: 30,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          children: [
+            InputChip(
+              avatar: Icon(Icons.done_all_rounded, size: 13, color: color),
+              label: Text(allSelectedLabel),
+              deleteIcon: const Icon(Icons.close_rounded, size: 16),
+              deleteIconColor: color,
+              onDeleted: onClearAll,
+              onPressed: onClearAll,
+              backgroundColor: color.withValues(alpha: 0.1),
+              side: BorderSide(color: color.withValues(alpha: 0.4), width: 1),
+              labelStyle: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+              labelPadding: const EdgeInsets.only(left: 2, right: 0),
+              visualDensity: const VisualDensity(horizontal: -4, vertical: -3),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.only(left: 4, right: 2),
+            ),
+          ],
         ),
-        labelStyle: TextStyle(
-          fontSize: 13,
-          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          color: selected
-              ? color
-              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-        ),
-        visualDensity: VisualDensity.compact,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+      );
+    }
+
+    // ── Case 2: Partial or specific selection ────────────────────────────
+    final showClearAll = selectedCats.length > 1;
+
+    return SizedBox(
+      height: 30,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: selectedCats.length + (showClearAll ? 1 : 0),
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (context, index) {
+          // Show "Clear All [Type]" badge at the START when more than one category is selected
+          if (showClearAll && index == 0) {
+            return InputChip(
+              label: Text(clearAllLabel),
+              deleteIcon: const Icon(Icons.close_rounded, size: 16),
+              deleteIconColor: scheme.error,
+              onDeleted: onClearAll,
+              onPressed: onClearAll,
+              backgroundColor: scheme.error.withValues(alpha: 0.08),
+              side: BorderSide(color: scheme.error.withValues(alpha: 0.35)),
+              labelStyle: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: scheme.error,
+              ),
+              labelPadding: const EdgeInsets.only(left: 4, right: 0),
+              visualDensity: const VisualDensity(horizontal: -4, vertical: -3),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.only(left: 4, right: 2),
+            );
+          }
+
+          final catIndex = showClearAll ? index - 1 : index;
+          final category = selectedCats[catIndex];
+          return InputChip(
+            avatar: Icon(
+              categoryIconFromName(category.icon),
+              size: 13,
+              color: color,
+            ),
+            label: Text(category.name),
+            deleteIcon: const Icon(Icons.close_rounded, size: 16),
+            deleteIconColor: color,
+            onDeleted: () => onRemoveCat(category.id),
+            onPressed: () => onRemoveCat(category.id),
+            backgroundColor: color.withValues(alpha: 0.08),
+            side: BorderSide(color: color.withValues(alpha: 0.35)),
+            labelStyle: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+            labelPadding: const EdgeInsets.only(left: 2, right: 0),
+            visualDensity: const VisualDensity(horizontal: -4, vertical: -3),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.only(left: 4, right: 2),
+          );
+        },
       ),
     );
   }

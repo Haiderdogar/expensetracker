@@ -8,9 +8,61 @@ final transactionSearchProvider = StateProvider.autoDispose<String>((ref) => '')
 final transactionTypeFilterProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
-final transactionCategoryFilterProvider = StateProvider.autoDispose<List<String>?>(
+
+/// Unified category filter state across all transactions.
+final selectedCategoryFiltersProvider = StateProvider.autoDispose<List<String>?>(
   (ref) => null,
 );
+
+/// Backwards-compatible aliases
+final activeCategoryFilterProvider = selectedCategoryFiltersProvider;
+final transactionCategoryFilterProvider = selectedCategoryFiltersProvider;
+
+/// Remove a single category filter
+void removeCategoryFilter(WidgetRef ref, String categoryId) {
+  final current = ref.read(selectedCategoryFiltersProvider);
+  if (current == null) return;
+  final updated = current.where((id) => id != categoryId).toList();
+  ref.read(selectedCategoryFiltersProvider.notifier).state =
+      updated.isEmpty ? null : updated;
+}
+
+/// Clear all category filters belonging to a specific type ('expense' or 'income')
+void clearCategoryFiltersByType(
+  WidgetRef ref,
+  String type,
+  List<dynamic> allCategories,
+) {
+  final current = ref.read(selectedCategoryFiltersProvider);
+  if (current == null) return;
+  final typeIds = allCategories
+      .where((c) => c.type == type)
+      .map((c) => c.id as String)
+      .toSet();
+  final updated = current.where((id) => !typeIds.contains(id)).toList();
+  ref.read(selectedCategoryFiltersProvider.notifier).state =
+      updated.isEmpty ? null : updated;
+}
+
+/// Clear all category filters
+void clearAllCategoryFilters(WidgetRef ref) {
+  ref.read(selectedCategoryFiltersProvider.notifier).state = null;
+}
+
+/// Backwards-compatible helpers
+void setCategoryFilterForCurrentType(WidgetRef ref, List<String>? categories) {
+  ref.read(selectedCategoryFiltersProvider.notifier).state =
+      (categories == null || categories.isEmpty) ? null : categories;
+}
+
+void removeCategoryFilterForCurrentType(WidgetRef ref, String categoryId) {
+  removeCategoryFilter(ref, categoryId);
+}
+
+void clearCategoryFilterForCurrentType(WidgetRef ref) {
+  clearAllCategoryFilters(ref);
+}
+
 final transactionCategoryFilterDraftProvider =
     StateProvider.autoDispose<List<String>>((ref) => []);
 

@@ -1,79 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/category_utils.dart';
 import '../../../models/category_model.dart';
+import '../../../providers/budget_provider.dart';
 import '../../../providers/category_provider.dart';
 import '../budgets_ui_providers.dart';
 
-class AddBudgetCategorySelector extends StatelessWidget {
+class AddBudgetCategorySelector extends ConsumerWidget {
   const AddBudgetCategorySelector({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final categories = ref.watch(expenseCategoriesProvider);
-        final selectedCategory = ref.watch(addBudgetCategoryProvider);
-        return categories.when(
-          loading: () => const LinearProgressIndicator(),
-          error: (error, _) => Text(error.toString()),
-          data: (items) {
-            if (items.isEmpty) return const Text('No expense categories yet.');
-            return Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: items.map(
-                (category) => _BudgetCategoryChip(
-                  category: category,
-                  selected: selectedCategory == category.id,
-                ),
-              ).toList(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = ref.watch(expenseCategoriesProvider);
+    final selectedCategory = ref.watch(addBudgetCategoryProvider);
+    final selectedMonth = ref.watch(selectedBudgetMonthProvider);
+    final budgets = ref.watch(monthBudgetProgressProvider(selectedMonth)).value ?? [];
+    final existingBudgetCategoryIds =
+        budgets.map((b) => b.budget.categoryId).toSet();
+
+    return categories.when(
+      loading: () => const LinearProgressIndicator(),
+      error: (error, _) => Text(error.toString()),
+      data: (items) {
+        if (items.isEmpty) {
+          return const Text('No expense categories available.');
+        }
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: items.map((category) {
+            final isSelected = selectedCategory == category.id;
+            final hasBudget = existingBudgetCategoryIds.contains(category.id);
+            final color = categoryColorFromHex(category.color);
+            final icon = categoryIconFromName(category.icon);
+
+            return ChoiceChip(
+              avatar: Icon(icon, size: 16, color: isSelected ? null : color),
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(category.name),
+                  if (hasBudget) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.check_circle_outline, size: 13),
+                  ],
+                ],
+              ),
+              selected: isSelected,
+              onSelected: (_) {
+                ref.read(addBudgetCategoryProvider.notifier).state = category.id;
+                // If a budget already exists, prefill its amount for convenience
+                if (hasBudget) {
+                  final existing =
+                      budgets.where((b) => b.budget.categoryId == category.id).firstOrNull;
+                  if (existing != null) {
+                    ref.read(addBudgetAmountProvider.notifier).state =
+                        existing.budget.amount.toStringAsFixed(0);
+                  }
+                }
+              },
             );
-          },
+          }).toList(),
         );
       },
     );
-  }
-}
-
-class _BudgetCategoryChip extends StatelessWidget {
-  const _BudgetCategoryChip({required this.category, required this.selected});
-
-  final CategoryModel category;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) => GestureDetector(
-        onLongPress: () => _deleteCategory(context, ref),
-        child: ChoiceChip(
-          label: Text(category.name),
-          selected: selected,
-          onSelected: (_) => ref.read(addBudgetCategoryProvider.notifier).state = category.id,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _deleteCategory(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete category'),
-        content: Text('Delete "${category.name}"? This cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Delete')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await ref.read(categoriesProvider.notifier).delete(category.id);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category deleted')));
-    } catch (error) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
-    }
   }
 }
