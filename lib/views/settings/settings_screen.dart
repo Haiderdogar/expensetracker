@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/global_keys.dart';
 import 'widgets/settings_currency_section.dart';
-import 'widgets/settings_data_section.dart';
-import 'widgets/settings_security_section.dart';
 import 'widgets/settings_section.dart';
+import 'widgets/settings_security_section.dart';
 import 'widgets/settings_theme_section.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -48,11 +47,6 @@ class SettingsScreen extends StatelessWidget {
             const SettingsSection(
               title: 'Currency',
               child: SettingsCurrencySection(),
-            ),
-            const SizedBox(height: 18),
-            const SettingsSection(
-              title: 'Data',
-              child: SettingsDataSection(),
             ),
           ],
         ),

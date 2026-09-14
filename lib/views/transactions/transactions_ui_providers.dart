@@ -106,8 +106,11 @@ class TransactionFormDraft {
     this.isSaving = false,
   });
 
-  factory TransactionFormDraft.fromTransaction(TransactionModel? transaction) {
-    final type = transaction?.type;
+  factory TransactionFormDraft.fromTransaction(
+    TransactionModel? transaction, {
+    String? initialType,
+  }) {
+    final type = transaction?.type ?? initialType;
     final activeType = type == 'income' || type == 'expense' ? type! : 'expense';
     final catId = transaction?.categoryId.isNotEmpty == true
         ? transaction!.categoryId
@@ -219,7 +222,16 @@ class TransactionFormDraft {
       _withActive(_active.selectCategory(categoryId));
 }
 
+final transactionInitialTypeProvider =
+    StateProvider.autoDispose<String>((ref) => 'expense');
+
 final transactionFormProvider = StateProvider.autoDispose
     .family<TransactionFormDraft, TransactionModel?>(
-      (ref, transaction) => TransactionFormDraft.fromTransaction(transaction),
+      (ref, transaction) {
+        final initialType = ref.watch(transactionInitialTypeProvider);
+        return TransactionFormDraft.fromTransaction(
+          transaction,
+          initialType: initialType,
+        );
+      },
     );

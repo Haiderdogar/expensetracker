@@ -22,30 +22,80 @@ class AppShellLogoutButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final busy = ref.watch(appShellLogoutInProgressProvider);
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      child: Material(
-        color: colors.errorContainer,
-        borderRadius: BorderRadius.circular(14),
-        child: ListTile(
-          onTap: busy ? null : () => _logout(context, ref),
-          leading: const Icon(Icons.logout_rounded, color: Colors.red),
-          title: Text(
-            AppStrings.logout,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: colors.error,
-              fontWeight: FontWeight.w600,
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Divider(
+            height: 1,
+            color: colors.outlineVariant.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: 12),
+          Material(
+            color: isDark
+                ? colors.error.withValues(alpha: 0.1)
+                : colors.errorContainer.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              onTap: busy ? null : () => _logout(context, ref),
+              borderRadius: BorderRadius.circular(14),
+              splashColor: colors.error.withValues(alpha: 0.08),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: colors.error.withValues(alpha: isDark ? 0.25 : 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: busy
+                          ? Center(
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: colors.error,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              Icons.logout_rounded,
+                              size: 19,
+                              color: colors.error,
+                            ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        AppStrings.logout,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colors.error,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                    ),
+                    if (!busy)
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: colors.error.withValues(alpha: 0.5),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
-          trailing: busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.chevron_right_rounded, color: Colors.red),
-        ),
+        ],
       ),
     );
   }

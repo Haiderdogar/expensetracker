@@ -37,6 +37,7 @@ class AuthFlow {
   }
 
   static void backspace(WidgetRef ref, AuthScreenConfig config) {
+    HapticFeedback.selectionClick();
     final state = ref.read(authUiStateProvider(config));
     if (isCoolingDown(state) || state.pin.isEmpty) return;
     final pin = state.pin.substring(0, state.pin.length - 1);
@@ -61,7 +62,9 @@ class AuthFlow {
     ref.read(authUiStateProvider(config).notifier).state = state.copyWith(isSubmitting: true);
     try {
       if (config.verifyOnly) {
-        if (await ref.read(authControllerProvider.notifier).checkPin(state.pin)) {
+        final ok = await ref.read(authControllerProvider.notifier).checkPin(state.pin);
+        if (!context.mounted) return;
+        if (ok) {
           finish(context);
         } else {
           await wrongPin(context, ref, config);
@@ -81,11 +84,15 @@ class AuthFlow {
           return;
         }
         await ref.read(authControllerProvider.notifier).setupPin(state.pin);
+        if (!context.mounted) return;
         if (config.offerBiometricAfterSetup) await offerBiometric(context, ref, config);
+        if (!context.mounted) return;
         finish(context);
         return;
       }
-      if (await ref.read(authControllerProvider.notifier).verifyPin(state.pin)) {
+      final verified = await ref.read(authControllerProvider.notifier).verifyPin(state.pin);
+      if (!context.mounted) return;
+      if (verified) {
         finish(context);
       } else {
         await wrongPin(context, ref, config);
@@ -117,7 +124,9 @@ class AuthFlow {
     final state = ref.read(authUiStateProvider(config));
     if (state.didPromptBiometric) return;
     ref.read(authUiStateProvider(config).notifier).state = state.copyWith(didPromptBiometric: true);
-    if (await ref.read(biometricEnabledProvider.future)) await promptBiometric(context, ref, config);
+    final enabled = await ref.read(biometricEnabledProvider.future);
+    if (!context.mounted) return;
+    if (enabled) await promptBiometric(context, ref, config);
   }
 
   static Future<void> promptBiometric(BuildContext context, WidgetRef ref, AuthScreenConfig config) async {
@@ -127,9 +136,10 @@ class AuthFlow {
     var state = ref.read(authUiStateProvider(config));
     ref.read(authUiStateProvider(config).notifier).state = state.copyWith(isBiometricMode: true, biometricType: type);
     final success = await ref.read(authControllerProvider.notifier).authenticateWithBiometric();
+    if (!context.mounted) return;
     if (success) {
       finish(context);
-    } else if (context.mounted) {
+    } else {
       state = ref.read(authUiStateProvider(config));
       ref.read(authUiStateProvider(config).notifier).state = state.copyWith(isBiometricMode: false);
     }

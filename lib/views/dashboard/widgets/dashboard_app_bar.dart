@@ -23,35 +23,23 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-class _DashboardWalletTitle extends StatelessWidget {
+/// Shows the single wallet name as a static title (no switcher needed).
+class _DashboardWalletTitle extends ConsumerWidget {
   const _DashboardWalletTitle();
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final wallets = ref.watch(walletsProvider);
-        final selectedWalletId = ref.watch(selectedWalletIdProvider);
-        final walletName = wallets.maybeWhen(
-          data: (items) {
-            if (selectedWalletId != null) {
-              for (final wallet in items) {
-                if (wallet.id == selectedWalletId) return wallet.name;
-              }
-            }
-            return items.isEmpty ? AppStrings.dashboard : items.first.name;
-          },
-          orElse: () => AppStrings.dashboard,
-        );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final walletsAsync = ref.watch(walletsProvider);
 
-        if (wallets.hasValue && selectedWalletId == null && wallets.requireValue.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!context.mounted) return;
-            ref.read(selectedWalletIdProvider.notifier).state = wallets.requireValue.first.id;
-          });
-        }
-        return Text(walletName);
-      },
+    final walletName = walletsAsync.maybeWhen(
+      data: (items) => items.isNotEmpty ? items.first.name : AppStrings.dashboard,
+      orElse: () => AppStrings.dashboard,
+    );
+
+    return Text(
+      walletName,
+      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

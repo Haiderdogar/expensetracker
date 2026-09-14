@@ -21,8 +21,18 @@ class RecentTransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = category == null ? Colors.grey : categoryColorFromHex(category!.color);
-    final icon = category == null ? Icons.receipt : categoryIconFromName(category!.icon);
+    final isTransfer = transaction.type == 'transfer';
+    final color = isTransfer
+        ? Colors.blue
+        : (category == null ? Colors.grey : categoryColorFromHex(category!.color));
+    final icon = isTransfer
+        ? Icons.swap_horiz_rounded
+        : (category == null ? Icons.receipt : categoryIconFromName(category!.icon));
+    final prefix = isTransfer ? '⇄ ' : (transaction.isIncome ? '+' : '-');
+    final amountColor = isTransfer
+        ? Colors.blue
+        : (transaction.isIncome ? Colors.green : Colors.red);
+
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
@@ -32,9 +42,9 @@ class RecentTransactionTile extends StatelessWidget {
       title: Text(transaction.subcategory),
       subtitle: Text(Formatters.date(DateTime.parse(transaction.date))),
       trailing: Text(
-        '${transaction.isIncome ? '+' : '-'}${Formatters.currency(transaction.amount, symbol: symbol)}',
+        '$prefix${Formatters.currency(transaction.amount, symbol: symbol)}',
         style: TextStyle(
-          color: transaction.isIncome ? Colors.green : Colors.red,
+          color: amountColor,
           fontWeight: FontWeight.w600,
         ),
       ),

@@ -79,17 +79,21 @@ class _AuthScreenBody extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final keypadHeight =
-            (constraints.maxHeight * 0.4).clamp(324.0, 440.0).toDouble();
+            (constraints.maxHeight * 0.44).clamp(320.0, 420.0).toDouble();
         return SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                AuthHeader(config: config),
-                const SizedBox(height: 24),
-                AuthPinInput(config: config),
+                Column(
+                  children: [
+                    AuthHeader(config: config),
+                    const SizedBox(height: 16),
+                    AuthPinInput(config: config),
+                  ],
+                ),
                 AuthKeypad(config: config, height: keypadHeight),
-                const SizedBox(height: 12),
               ],
             ),
           ),

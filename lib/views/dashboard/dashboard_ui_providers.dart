@@ -11,3 +11,7 @@ const recentTransactionFilterOptions = <String>[
 final recentTransactionFilterProvider = StateProvider.autoDispose<String>(
   (ref) => 'All',
 );
+
+final dashboardBalanceHiddenProvider = StateProvider<bool>(
+  (ref) => false,
+);

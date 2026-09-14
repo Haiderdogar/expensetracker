@@ -6,27 +6,61 @@ class DashboardStatChip extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.icon,
   });
 
   final String label;
   final String value;
   final Color color;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12),
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            const SizedBox(height: 4),
-            Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+            Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 14, color: color),
+                  const SizedBox(width: 4),
+                ],
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),

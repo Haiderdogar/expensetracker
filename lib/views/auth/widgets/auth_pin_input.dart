@@ -15,18 +15,24 @@ class AuthPinInput extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, _) {
-        final pin = ref.watch(authUiStateProvider(config).select((state) => state.pin));
+        final state = ref.watch(authUiStateProvider(config));
+        final pin = state.pin;
         final controller = ref.read(authPinControllerProvider(config));
         final focusNode = ref.read(authPinFocusNodeProvider(config));
+
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Column(
             children: [
               GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onTap: () => FocusScope.of(context).requestFocus(focusNode),
-                child: _PinIndicators(pin: pin),
+                child: _PinIndicators(
+                  pin: pin,
+                  isSubmitting: state.isSubmitting,
+                ),
               ),
+              // Hidden accessible TextField for hardware keyboard or autofill support
               Opacity(
                 opacity: 0,
                 child: SizedBox(
@@ -40,17 +46,21 @@ class AuthPinInput extends StatelessWidget {
                     obscureText: true,
                     enableSuggestions: false,
                     autocorrect: false,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(4),
+                    ],
                     onChanged: (value) {
                       AuthFlow.updatePin(ref, config, value);
-                      if (value.length == 4) AuthFlow.complete(context, ref, config);
+                      if (value.length == 4) {
+                        AuthFlow.complete(context, ref, config);
+                      }
                     },
                     onSubmitted: (_) => AuthFlow.complete(context, ref, config),
                     decoration: const InputDecoration.collapsed(hintText: ''),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
             ],
           ),
         );
@@ -60,42 +70,68 @@ class AuthPinInput extends StatelessWidget {
 }
 
 class _PinIndicators extends StatelessWidget {
-  const _PinIndicators({required this.pin});
+  const _PinIndicators({
+    required this.pin,
+    required this.isSubmitting,
+  });
 
   final String pin;
+  final bool isSubmitting;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
-      child: Row(
-        key: ValueKey(pin),
-        children: List.generate(4, (index) {
-          final filled = index < pin.length;
-          final focused = index == pin.length;
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(left: index == 0 ? 0 : 4, right: index == 3 ? 0 : 4),
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: filled ? AppColors.primaryEmerald : focused ? AppColors.primaryEmerald.withValues(alpha: 0.28) : AppColors.gray200,
-                    width: filled ? 2 : 1.2,
-                  ),
-                ),
-                child: Center(
-                  child: filled
-                      ? const SizedBox(width: 12, height: 12, child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.primaryEmerald)))
-                      : focused ? Container(width: 2, height: 24, color: AppColors.primaryEmerald) : null,
-                ),
-              ),
+    final colors = Theme.of(context).colorScheme;
+
+    if (isSubmitting) {
+      return const SizedBox(
+        height: 24,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.primaryEmerald,
             ),
-          );
-        }),
-      ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(4, (index) {
+        final filled = index < pin.length;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutBack,
+            width: filled ? 18 : 16,
+            height: filled ? 18 : 16,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: filled ? AppColors.primaryEmerald : Colors.transparent,
+              border: Border.all(
+                color: filled
+                    ? AppColors.primaryEmerald
+                    : colors.outlineVariant.withValues(alpha: 0.8),
+                width: filled ? 0 : 2,
+              ),
+              boxShadow: filled
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primaryEmerald.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+        );
+      }),
     );
   }
 }

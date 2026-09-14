@@ -47,6 +47,11 @@ class Wallets extends _$Wallets {
 
   Future<WalletModel> create({required String name, double balance = 0}) async {
     try {
+      // Only one wallet is allowed at a time.
+      final existing = await _fetchAll();
+      if (existing.isNotEmpty) {
+        throw Exception('Only one wallet is supported. Edit the existing wallet name from your profile.');
+      }
       const uuid = Uuid();
       final wallet = WalletModel(id: uuid.v4(), name: name, balance: balance);
       final db = await ref.read(databaseProvider.future);

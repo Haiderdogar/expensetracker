@@ -1,9 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
 import '../models/transaction_model.dart';
+import '../models/wallet_model.dart';
 import 'category_provider.dart';
 import 'database_provider.dart';
 import 'wallet_provider.dart';
@@ -130,6 +132,74 @@ class Transactions extends _$Transactions {
     await add(transaction);
     return transaction;
   }
+
+  Future<void> transfer({
+    required String fromWalletId,
+    required String toWalletId,
+    required double amount,
+    String? note,
+    DateTime? date,
+  }) async {
+    try {
+      final db = await ref.read(databaseProvider.future);
+      final txDate = (date ?? DateTime.now()).toIso8601String();
+
+      final walletRows = await db.query(DatabaseTables.wallets);
+      final wallets = walletRows.map(WalletModel.fromMap).toList();
+      final fromWallet = wallets.firstWhere(
+        (w) => w.id == fromWalletId,
+        orElse: () => WalletModel(id: fromWalletId, name: 'Wallet', balance: 0),
+      );
+      final toWallet = wallets.firstWhere(
+        (w) => w.id == toWalletId,
+        orElse: () => WalletModel(id: toWalletId, name: 'Wallet', balance: 0),
+      );
+
+      final catRows = await db.query(DatabaseTables.categories, limit: 1);
+      final fallbackCatId = catRows.isNotEmpty ? catRows.first['id'] as String : '';
+
+      const uuid = Uuid();
+      await db.transaction((txn) async {
+        await txn.rawUpdate(
+          'UPDATE ${DatabaseTables.wallets} SET balance = balance - ? WHERE id = ?',
+          [amount, fromWalletId],
+        );
+        await txn.rawUpdate(
+          'UPDATE ${DatabaseTables.wallets} SET balance = balance + ? WHERE id = ?',
+          [amount, toWalletId],
+        );
+
+        final outTx = TransactionModel(
+          id: uuid.v4(),
+          subcategory: 'Transfer to ${toWallet.name}',
+          amount: amount,
+          type: 'transfer',
+          categoryId: fallbackCatId,
+          walletId: fromWalletId,
+          date: txDate,
+          note: note,
+        );
+        await txn.insert(DatabaseTables.transactions, outTx.toMap());
+
+        final inTx = TransactionModel(
+          id: uuid.v4(),
+          subcategory: 'Transfer from ${fromWallet.name}',
+          amount: amount,
+          type: 'transfer',
+          categoryId: fallbackCatId,
+          walletId: toWalletId,
+          date: txDate,
+          note: note,
+        );
+        await txn.insert(DatabaseTables.transactions, inTx.toMap());
+      });
+
+      await refresh();
+      await ref.read(walletsProvider.notifier).refresh();
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
 }
 
 @riverpod
@@ -187,3 +257,35 @@ Future<List<TransactionModel>> filteredTransactions(
     return true;
   }).toList();
 }
+
+final currentMonthIncomeProvider = FutureProvider<double>((ref) async {
+  final all = await ref.watch(transactionsProvider.future);
+  final selectedWalletId = ref.watch(selectedWalletIdProvider);
+  final now = DateTime.now();
+  return all.where((t) {
+    if (!t.isIncome) return false;
+    if (selectedWalletId != null && t.walletId != selectedWalletId) return false;
+    final d = DateTime.tryParse(t.date);
+    if (d == null) return false;
+    return d.year == now.year && d.month == now.month;
+  }).fold<double>(0.0, (s, t) => s + t.amount);
+});
+
+final currentMonthExpenseProvider = FutureProvider<double>((ref) async {
+  final all = await ref.watch(transactionsProvider.future);
+  final selectedWalletId = ref.watch(selectedWalletIdProvider);
+  final now = DateTime.now();
+  return all.where((t) {
+    if (!t.isExpense) return false;
+    if (selectedWalletId != null && t.walletId != selectedWalletId) return false;
+    final d = DateTime.tryParse(t.date);
+    if (d == null) return false;
+    return d.year == now.year && d.month == now.month;
+  }).fold<double>(0.0, (s, t) => s + t.amount);
+});
+
+// Always returns the single wallet's balance (multi-wallet not supported).
+final dashboardDisplayBalanceProvider = FutureProvider<double>((ref) async {
+  final wallets = await ref.watch(walletsProvider.future);
+  return wallets.isNotEmpty ? wallets.first.balance : 0.0;
+});
