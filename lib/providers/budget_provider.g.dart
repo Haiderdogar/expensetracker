@@ -33,7 +33,7 @@ final class BudgetsProvider
   Budgets create() => Budgets();
 }
 
-String _$budgetsHash() => r'e1ffa476adf1d606f4108d758e20d184d808e71c';
+String _$budgetsHash() => r'b330d08ad87172570b5db9ae33467c6d95f6ef42';
 
 abstract class _$Budgets extends $AsyncNotifier<List<BudgetModel>> {
   FutureOr<List<BudgetModel>> build();
@@ -52,6 +52,84 @@ abstract class _$Budgets extends $AsyncNotifier<List<BudgetModel>> {
             >;
     return element.handleCreate(ref, build);
   }
+}
+
+@ProviderFor(monthBudgetProgress)
+final monthBudgetProgressProvider = MonthBudgetProgressFamily._();
+
+final class MonthBudgetProgressProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<BudgetProgress>>,
+          List<BudgetProgress>,
+          FutureOr<List<BudgetProgress>>
+        >
+    with
+        $FutureModifier<List<BudgetProgress>>,
+        $FutureProvider<List<BudgetProgress>> {
+  MonthBudgetProgressProvider._({
+    required MonthBudgetProgressFamily super.from,
+    required DateTime super.argument,
+  }) : super(
+         retry: null,
+         name: r'monthBudgetProgressProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$monthBudgetProgressHash();
+
+  @override
+  String toString() {
+    return r'monthBudgetProgressProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<BudgetProgress>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<BudgetProgress>> create(Ref ref) {
+    final argument = this.argument as DateTime;
+    return monthBudgetProgress(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MonthBudgetProgressProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$monthBudgetProgressHash() =>
+    r'847e08ee92649917a22dd0dfbbb941463f6d486a';
+
+final class MonthBudgetProgressFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<BudgetProgress>>, DateTime> {
+  MonthBudgetProgressFamily._()
+    : super(
+        retry: null,
+        name: r'monthBudgetProgressProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  MonthBudgetProgressProvider call(DateTime month) =>
+      MonthBudgetProgressProvider._(argument: month, from: this);
+
+  @override
+  String toString() => r'monthBudgetProgressProvider';
 }
 
 @ProviderFor(currentMonthBudgetProgress)
@@ -95,4 +173,4 @@ final class CurrentMonthBudgetProgressProvider
 }
 
 String _$currentMonthBudgetProgressHash() =>
-    r'76125c490d2a5b76b190c6e19008ac1b7772d868';
+    r'9bf316fd97678f86c387d11ec84173fbd34a575e';

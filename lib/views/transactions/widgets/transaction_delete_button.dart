@@ -6,21 +6,17 @@ import '../../../models/transaction_model.dart';
 import '../../../providers/transaction_provider.dart';
 import '../transactions_ui_providers.dart';
 
-class TransactionDeleteButton extends StatelessWidget {
+class TransactionDeleteButton extends ConsumerWidget {
   const TransactionDeleteButton({super.key, required this.transaction});
 
   final TransactionModel transaction;
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final isSaving = ref.watch(transactionFormProvider(transaction)).isSaving;
-        return IconButton(
-          icon: const Icon(Icons.delete),
-          onPressed: isSaving ? null : () => _delete(context, ref),
-        );
-      },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isSaving = ref.watch(transactionFormProvider(transaction)).isSaving;
+    return IconButton(
+      icon: const Icon(Icons.delete),
+      onPressed: isSaving ? null : () => _delete(context, ref),
     );
   }
 

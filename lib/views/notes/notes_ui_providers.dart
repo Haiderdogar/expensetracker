@@ -1,9 +1,17 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../models/note_model.dart';
 
-final notesSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
+part 'notes_ui_providers.g.dart';
+
+@riverpod
+class NotesSearchQuery extends _$NotesSearchQuery {
+  @override
+  String build() => '';
+
+  @override
+  set state(String value) => super.state = value;
+}
 
 class NoteEditorDraft {
   const NoteEditorDraft({required this.title, required this.content, this.isSaving = false});
@@ -25,6 +33,11 @@ class NoteEditorDraft {
   }
 }
 
-final noteEditorDraftProvider = StateProvider.autoDispose.family<NoteEditorDraft, NoteModel?>(
-  (ref, note) => NoteEditorDraft.fromNote(note),
-);
+@riverpod
+class NoteEditorDraftNotifier extends _$NoteEditorDraftNotifier {
+  @override
+  NoteEditorDraft build(NoteModel? note) => NoteEditorDraft.fromNote(note);
+
+  @override
+  set state(NoteEditorDraft value) => super.state = value;
+}

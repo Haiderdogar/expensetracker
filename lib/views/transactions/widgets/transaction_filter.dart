@@ -7,7 +7,9 @@ import '../../../models/category_model.dart';
 import '../../../providers/category_provider.dart';
 import '../transactions_ui_providers.dart';
 
-class TransactionFilter extends ConsumerStatefulWidget {
+/// A stateless filter bar that drives its search text and category filter
+/// state entirely through Riverpod providers.
+class TransactionFilter extends ConsumerWidget {
   const TransactionFilter({
     super.key,
     required this.selectedCategories,
@@ -20,48 +22,30 @@ class TransactionFilter extends ConsumerStatefulWidget {
   final ValueChanged<List<String>?> onCategorySelected;
 
   @override
-  ConsumerState<TransactionFilter> createState() => _TransactionFilterState();
-}
-
-class _TransactionFilterState extends ConsumerState<TransactionFilter> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(
-      text: ref.read(transactionSearchProvider),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen(transactionSearchProvider, (_, next) {
-      if (_controller.text != next) {
-        _controller.text = next;
-      }
-    });
-
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final hasSearch = _controller.text.isNotEmpty;
-    final activeFilterCount = widget.selectedCategories?.length ?? 0;
+    final activeFilterCount = selectedCategories?.length ?? 0;
     final hasActiveFilters = activeFilterCount > 0;
+    // Use the provider-backed TextEditingController (auto-disposed).
+    final controller = ref.watch(transactionSearchTextControllerProvider);
+    final searchText = ref.watch(transactionSearchProvider);
+    final hasSearch = searchText.isNotEmpty;
+
+    // Keep controller in sync when search is cleared externally (e.g., by
+    // the transaction list's clear-filter button).
+    ref.listen(transactionSearchProvider, (_, next) {
+      if (controller.text != next) controller.text = next;
+    });
 
     return Row(
       children: [
         // ── Search Input ────────────────────────────────────────────────
         Expanded(
           child: TextField(
-            controller: _controller,
+            controller: controller,
             onChanged: (val) {
-              setState(() {});
-              widget.onSearchChanged(val);
+              ref.read(transactionSearchProvider.notifier).state = val;
+              onSearchChanged(val);
             },
             decoration: InputDecoration(
               hintText: 'Search transactions...',
@@ -81,9 +65,9 @@ class _TransactionFilterState extends ConsumerState<TransactionFilter> {
                       icon: const Icon(Icons.close_rounded, size: 18),
                       tooltip: 'Clear search',
                       onPressed: () {
-                        _controller.clear();
-                        setState(() {});
-                        widget.onSearchChanged('');
+                        controller.clear();
+                        ref.read(transactionSearchProvider.notifier).state = '';
+                        onSearchChanged('');
                       },
                     )
                   : null,
@@ -122,8 +106,8 @@ class _TransactionFilterState extends ConsumerState<TransactionFilter> {
             onTap: () => showUnifiedCategoryFilterSheet(
               context: context,
               ref: ref,
-              selectedCategories: widget.selectedCategories,
-              onSelected: widget.onCategorySelected,
+              selectedCategories: selectedCategories,
+              onSelected: onCategorySelected,
             ),
             child: Ink(
               height: 48,
@@ -199,15 +183,24 @@ Future<void> showUnifiedCategoryFilterSheet({
 }) async {
   final allCats = ref.read(categoriesProvider).value ?? const [];
 
+  // Seed the draft before showing the sheet so the ConsumerWidget has the
+  // correct initial selection.
+  ref
+      .read(unifiedCategoryFilterDraftProvider.notifier)
+      .init(selectedCategories);
+
   final selected = await showModalBottomSheet<List<String>?>(
     context: context,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (_) => _UnifiedCategoryFilterSheet(
-      allCategories: allCats,
-      initialSelected: selectedCategories,
+    builder: (_) => ProviderScope(
+      overrides: [],
+      child: _UnifiedCategoryFilterSheet(
+        allCategories: allCats,
+        initialSelected: selectedCategories,
+      ),
     ),
   );
 
@@ -215,7 +208,9 @@ Future<void> showUnifiedCategoryFilterSheet({
   onSelected(selected.isEmpty ? null : selected);
 }
 
-class _UnifiedCategoryFilterSheet extends StatefulWidget {
+/// A fully stateless (ConsumerWidget) bottom sheet for category filtering.
+/// Draft selection state is managed by [UnifiedCategoryFilterDraft] provider.
+class _UnifiedCategoryFilterSheet extends ConsumerWidget {
   const _UnifiedCategoryFilterSheet({
     required this.allCategories,
     required this.initialSelected,
@@ -225,32 +220,19 @@ class _UnifiedCategoryFilterSheet extends StatefulWidget {
   final List<String>? initialSelected;
 
   @override
-  State<_UnifiedCategoryFilterSheet> createState() =>
-      _UnifiedCategoryFilterSheetState();
-}
-
-class _UnifiedCategoryFilterSheetState
-    extends State<_UnifiedCategoryFilterSheet> {
-  late final Set<String> _draftSelected;
-
-  @override
-  void initState() {
-    super.initState();
-    _draftSelected = Set<String>.from(widget.initialSelected ?? const []);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final draftSelected = ref.watch(unifiedCategoryFilterDraftProvider);
+
     final expenseCategories =
-        widget.allCategories.where((c) => c.type == 'expense').toList();
+        allCategories.where((c) => c.type == 'expense').toList();
     final incomeCategories =
-        widget.allCategories.where((c) => c.type == 'income').toList();
+        allCategories.where((c) => c.type == 'income').toList();
 
     final isAllExpenseSelected = expenseCategories.isNotEmpty &&
-        expenseCategories.every((c) => _draftSelected.contains(c.id));
+        expenseCategories.every((c) => draftSelected.contains(c.id));
     final isAllIncomeSelected = incomeCategories.isNotEmpty &&
-        incomeCategories.every((c) => _draftSelected.contains(c.id));
+        incomeCategories.every((c) => draftSelected.contains(c.id));
 
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -304,19 +286,18 @@ class _UnifiedCategoryFilterSheetState
                 children: [
                   // ── Expense Section ───────────────────────────────────────
                   _buildSectionHeader(
+                    context: context,
+                    ref: ref,
                     title: 'Expense',
                     color: AppColors.expenseRed,
                     isAllSelected: isAllExpenseSelected,
                     onToggleSelectAll: () {
-                      setState(() {
-                        if (isAllExpenseSelected) {
-                          _draftSelected
-                              .removeAll(expenseCategories.map((c) => c.id));
-                        } else {
-                          _draftSelected
-                              .addAll(expenseCategories.map((c) => c.id));
-                        }
-                      });
+                      ref
+                          .read(unifiedCategoryFilterDraftProvider.notifier)
+                          .setAll(
+                            expenseCategories.map((c) => c.id),
+                            !isAllExpenseSelected,
+                          );
                     },
                   ),
                   const SizedBox(height: 10),
@@ -327,7 +308,7 @@ class _UnifiedCategoryFilterSheetState
                       spacing: 8,
                       runSpacing: 8,
                       children: expenseCategories.map((cat) {
-                        final isSelected = _draftSelected.contains(cat.id);
+                        final isSelected = draftSelected.contains(cat.id);
                         return FilterChip(
                           avatar: Icon(
                             categoryIconFromName(cat.icon),
@@ -358,14 +339,11 @@ class _UnifiedCategoryFilterSheetState
                                 : AppColors.expenseRed,
                           ),
                           visualDensity: VisualDensity.compact,
-                          onSelected: (val) {
-                            setState(() {
-                              if (val) {
-                                _draftSelected.add(cat.id);
-                              } else {
-                                _draftSelected.remove(cat.id);
-                              }
-                            });
+                          onSelected: (_) {
+                            ref
+                                .read(
+                                    unifiedCategoryFilterDraftProvider.notifier)
+                                .toggle(cat.id);
                           },
                         );
                       }).toList(),
@@ -375,19 +353,18 @@ class _UnifiedCategoryFilterSheetState
 
                   // ── Income Section ────────────────────────────────────────
                   _buildSectionHeader(
+                    context: context,
+                    ref: ref,
                     title: 'Income',
                     color: AppColors.incomeGreen,
                     isAllSelected: isAllIncomeSelected,
                     onToggleSelectAll: () {
-                      setState(() {
-                        if (isAllIncomeSelected) {
-                          _draftSelected
-                              .removeAll(incomeCategories.map((c) => c.id));
-                        } else {
-                          _draftSelected
-                              .addAll(incomeCategories.map((c) => c.id));
-                        }
-                      });
+                      ref
+                          .read(unifiedCategoryFilterDraftProvider.notifier)
+                          .setAll(
+                            incomeCategories.map((c) => c.id),
+                            !isAllIncomeSelected,
+                          );
                     },
                   ),
                   const SizedBox(height: 10),
@@ -398,7 +375,7 @@ class _UnifiedCategoryFilterSheetState
                       spacing: 8,
                       runSpacing: 8,
                       children: incomeCategories.map((cat) {
-                        final isSelected = _draftSelected.contains(cat.id);
+                        final isSelected = draftSelected.contains(cat.id);
                         return FilterChip(
                           avatar: Icon(
                             categoryIconFromName(cat.icon),
@@ -429,14 +406,11 @@ class _UnifiedCategoryFilterSheetState
                                 : AppColors.incomeGreen,
                           ),
                           visualDensity: VisualDensity.compact,
-                          onSelected: (val) {
-                            setState(() {
-                              if (val) {
-                                _draftSelected.add(cat.id);
-                              } else {
-                                _draftSelected.remove(cat.id);
-                              }
-                            });
+                          onSelected: (_) {
+                            ref
+                                .read(
+                                    unifiedCategoryFilterDraftProvider.notifier)
+                                .toggle(cat.id);
                           },
                         );
                       }).toList(),
@@ -470,9 +444,9 @@ class _UnifiedCategoryFilterSheetState
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {
-                        setState(() {
-                          _draftSelected.clear();
-                        });
+                        ref
+                            .read(unifiedCategoryFilterDraftProvider.notifier)
+                            .clear();
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -487,7 +461,10 @@ class _UnifiedCategoryFilterSheetState
                   Expanded(
                     child: FilledButton(
                       onPressed: () {
-                        Navigator.of(context).pop(_draftSelected.toList());
+                        final result = ref
+                            .read(unifiedCategoryFilterDraftProvider)
+                            .toList();
+                        Navigator.of(context).pop(result);
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -508,6 +485,8 @@ class _UnifiedCategoryFilterSheetState
   }
 
   Widget _buildSectionHeader({
+    required BuildContext context,
+    required WidgetRef ref,
     required String title,
     required Color color,
     required bool isAllSelected,
@@ -543,14 +522,18 @@ class _UnifiedCategoryFilterSheetState
                 ? Icons.check_circle_rounded
                 : Icons.check_circle_outline_rounded,
             size: 18,
-            color: isAllSelected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
+            color: isAllSelected
+                ? color
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           label: Text(
             isAllSelected ? 'Deselect All' : 'Select All',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: isAllSelected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
+              color: isAllSelected
+                  ? color
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ),

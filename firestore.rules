@@ -1,0 +1,15 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Every record is physically partitioned under its Firebase Auth uid. The
+    // userId payload check prevents a client from writing a mismatched record.
+    match /users/{userId}/{collection}/{documentId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.userId == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

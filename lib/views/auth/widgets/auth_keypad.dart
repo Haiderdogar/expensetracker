@@ -7,16 +7,14 @@ import '../auth_flow.dart';
 import '../auth_ui_providers.dart';
 import 'pin_pad_button.dart';
 
-class AuthKeypad extends StatelessWidget {
+class AuthKeypad extends ConsumerWidget {
   const AuthKeypad({super.key, required this.config, required this.height});
 
   final AuthScreenConfig config;
   final double height;
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
+  Widget build(BuildContext context, WidgetRef ref) {
         final state = ref.watch(authUiStateProvider(config));
         final coolingDown = AuthFlow.isCoolingDown(state);
         final biometricEnabled = ref.watch(biometricEnabledProvider);
@@ -101,8 +99,6 @@ class AuthKeypad extends StatelessWidget {
             ],
           ),
         );
-      },
-    );
   }
 
   void _showForgotPinDialog(BuildContext context, WidgetRef ref) {

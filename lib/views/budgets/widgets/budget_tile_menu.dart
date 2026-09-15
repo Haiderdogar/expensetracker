@@ -4,21 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/budget_provider.dart';
 import '../budgets_ui_providers.dart';
 
-class BudgetTileMenu extends StatelessWidget {
+class BudgetTileMenu extends ConsumerWidget {
   const BudgetTileMenu({super.key, required this.progress});
 
   final BudgetProgress progress;
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) => PopupMenuButton<String>(
-        onSelected: (action) => _handleAction(context, ref, action),
-        itemBuilder: (_) => const [
-          PopupMenuItem(value: 'edit', child: Text('Edit')),
-          PopupMenuItem(value: 'delete', child: Text('Delete')),
-        ],
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<String>(
+      onSelected: (action) => _handleAction(context, ref, action),
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 'edit', child: Text('Edit')),
+        PopupMenuItem(value: 'delete', child: Text('Delete')),
+      ],
     );
   }
 
@@ -32,13 +30,17 @@ class BudgetTileMenu extends StatelessWidget {
   }
 
   Future<void> _edit(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController(
+      text: progress.budget.amount.toStringAsFixed(0),
+    );
     final result = await showDialog<String>(
       context: context,
       builder: (dialogContext) => _EditBudgetDialog(
         categoryName: progress.categoryName,
-        initialAmount: progress.budget.amount,
+        controller: controller,
       ),
     );
+    controller.dispose();
 
     if (result == null || result.isEmpty) return;
 
@@ -112,42 +114,21 @@ class BudgetTileMenu extends StatelessWidget {
   }
 }
 
-class _EditBudgetDialog extends StatefulWidget {
+class _EditBudgetDialog extends StatelessWidget {
   const _EditBudgetDialog({
     required this.categoryName,
-    required this.initialAmount,
+    required this.controller,
   });
 
   final String categoryName;
-  final double initialAmount;
-
-  @override
-  State<_EditBudgetDialog> createState() => _EditBudgetDialogState();
-}
-
-class _EditBudgetDialogState extends State<_EditBudgetDialog> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(
-      text: widget.initialAmount.toStringAsFixed(0),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Edit budget for ${widget.categoryName}'),
+      title: Text('Edit budget for $categoryName'),
       content: TextField(
-        controller: _controller,
+        controller: controller,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         autofocus: true,
         decoration: const InputDecoration(
@@ -161,10 +142,11 @@ class _EditBudgetDialogState extends State<_EditBudgetDialog> {
           child: const Text('Cancel'),
         ),
         TextButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
           child: const Text('Save'),
         ),
       ],
     );
   }
 }
+

@@ -24,17 +24,15 @@ class BudgetsAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-class _BudgetsRefreshButton extends StatelessWidget {
+class _BudgetsRefreshButton extends ConsumerWidget {
   const _BudgetsRefreshButton();
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) => IconButton(
-        icon: const Icon(Icons.refresh),
-        tooltip: 'Refresh',
-        onPressed: () => ref.invalidate(currentMonthBudgetProgressProvider),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return IconButton(
+      icon: const Icon(Icons.refresh),
+      tooltip: 'Refresh',
+      onPressed: () => ref.invalidate(currentMonthBudgetProgressProvider),
     );
   }
 }

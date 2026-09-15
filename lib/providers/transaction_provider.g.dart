@@ -33,7 +33,7 @@ final class TransactionsProvider
   Transactions create() => Transactions();
 }
 
-String _$transactionsHash() => r'529742239f734290f192916ed559660045170e6c';
+String _$transactionsHash() => r'705814401746268dd0da884fb135d9776840d82b';
 
 abstract class _$Transactions extends $AsyncNotifier<List<TransactionModel>> {
   FutureOr<List<TransactionModel>> build();
@@ -243,7 +243,7 @@ final class FilteredTransactionsProvider
 }
 
 String _$filteredTransactionsHash() =>
-    r'c027f6a2f3c303688a44969a8b98867dc81c4cdd';
+    r'29a96ea3c101d9cd1c4f061f96f7cf442c8fb814';
 
 final class FilteredTransactionsFamily extends $Family
     with
@@ -283,3 +283,105 @@ final class FilteredTransactionsFamily extends $Family
   @override
   String toString() => r'filteredTransactionsProvider';
 }
+
+@ProviderFor(currentMonthIncome)
+final currentMonthIncomeProvider = CurrentMonthIncomeProvider._();
+
+final class CurrentMonthIncomeProvider
+    extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
+    with $FutureModifier<double>, $FutureProvider<double> {
+  CurrentMonthIncomeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentMonthIncomeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentMonthIncomeHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<double> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<double> create(Ref ref) {
+    return currentMonthIncome(ref);
+  }
+}
+
+String _$currentMonthIncomeHash() =>
+    r'1f33cde8baec5a73329c74422c86fb024323b37f';
+
+@ProviderFor(currentMonthExpense)
+final currentMonthExpenseProvider = CurrentMonthExpenseProvider._();
+
+final class CurrentMonthExpenseProvider
+    extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
+    with $FutureModifier<double>, $FutureProvider<double> {
+  CurrentMonthExpenseProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentMonthExpenseProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentMonthExpenseHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<double> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<double> create(Ref ref) {
+    return currentMonthExpense(ref);
+  }
+}
+
+String _$currentMonthExpenseHash() =>
+    r'5c8f079e7405357febe62adb49c25d82c7d0db97';
+
+@ProviderFor(dashboardDisplayBalance)
+final dashboardDisplayBalanceProvider = DashboardDisplayBalanceProvider._();
+
+final class DashboardDisplayBalanceProvider
+    extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
+    with $FutureModifier<double>, $FutureProvider<double> {
+  DashboardDisplayBalanceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'dashboardDisplayBalanceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$dashboardDisplayBalanceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<double> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<double> create(Ref ref) {
+    return dashboardDisplayBalance(ref);
+  }
+}
+
+String _$dashboardDisplayBalanceHash() =>
+    r'20c91cfc05b50bef1728b5042215d7246182d9e0';

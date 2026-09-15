@@ -18,13 +18,11 @@ class DashboardSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) => const _DashboardSummaryContent();
 }
 
-class _DashboardSummaryContent extends StatelessWidget {
+class _DashboardSummaryContent extends ConsumerWidget {
   const _DashboardSummaryContent();
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
+  Widget build(BuildContext context, WidgetRef ref) {
         final balance = ref.watch(dashboardDisplayBalanceProvider);
         final income = ref.watch(currentMonthIncomeProvider);
         final expense = ref.watch(currentMonthExpenseProvider);
@@ -88,7 +86,7 @@ class _DashboardSummaryContent extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     onTap: () => ref
                         .read(dashboardBalanceHiddenProvider.notifier)
-                        .update((v) => !v),
+                        .toggle(),
                     child: Padding(
                       padding: const EdgeInsets.all(4),
                       child: Icon(
@@ -131,7 +129,5 @@ class _DashboardSummaryContent extends StatelessWidget {
             ],
           ),
         );
-      },
-    );
   }
 }

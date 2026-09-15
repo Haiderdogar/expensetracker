@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_strings.dart';
-import '../../core/theme/theme_provider.dart';
 import '../../core/utils/global_keys.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/backup_provider.dart';
@@ -170,26 +169,14 @@ class AppShellLogoutButton extends ConsumerWidget {
       if (!authenticated || !context.mounted) return;
     }
 
-    // ── Step 3: Wipe all data ─────────────────────────────────────────────
     ref.read(appShellLogoutInProgressProvider.notifier).state = true;
     try {
-      // Close drawer if still open (e.g. biometric confirmed without closing it)
       if (context.mounted &&
           (appShellScaffoldKey.currentState?.isDrawerOpen ?? false)) {
         Navigator.of(context).pop();
         await WidgetsBinding.instance.endOfFrame;
       }
 
-      final database = ref.read(databaseHelperProvider);
-      final seenIntro = await storage.hasSeenIntroOnboarding();
-      await database.resetDatabase();
-      await storage.clearAll();
-      await database.initializeInstallationIdentity(storage);
-      // Preserve the intro flag so returning users skip the intro slides.
-      if (seenIntro) await storage.setIntroOnboardingSeen();
-
-      // Invalidate all cached providers so AppBootstrap re-evaluates state.
-      ref.invalidate(databaseProvider);
       ref.invalidate(transactionsProvider);
       ref.invalidate(categoriesProvider);
       ref.invalidate(walletsProvider);
@@ -197,21 +184,13 @@ class AppShellLogoutButton extends ConsumerWidget {
       ref.invalidate(notesProvider);
       ref.invalidate(backupServiceProvider);
       ref.invalidate(selectedWalletIdProvider);
-      ref.invalidate(pinEnabledProvider);
-      ref.invalidate(biometricEnabledProvider);
-      ref.invalidate(lockPromptCompletedProvider);
-      ref.invalidate(introOnboardingSeenProvider);
       ref.invalidate(onboardingCompleteProvider);
       ref.invalidate(currencySymbolProvider);
       ref.invalidate(currencyCodeProvider);
-      ref.invalidate(themeModeControllerProvider);
       ref.read(appShellNavigationIndexProvider.notifier).state = 0;
       ref.read(appShellVisitedIndexesProvider.notifier).state = {0};
 
-      // Set auth to authenticated so AppBootstrap's navigation logic runs
-      // normally. With onboardingComplete = false (DB wiped), it will route
-      // to OnboardingScreen (the welcome screen).
-      await ref.read(authControllerProvider.notifier).logoutAndReset();
+      await ref.read(authControllerProvider.notifier).signOut();
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -6,15 +6,13 @@ import '../../../core/constants/app_strings.dart';
 import '../auth_flow.dart';
 import '../auth_ui_providers.dart';
 
-class AuthHeader extends StatelessWidget {
+class AuthHeader extends ConsumerWidget {
   const AuthHeader({super.key, required this.config});
 
   final AuthScreenConfig config;
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
+  Widget build(BuildContext context, WidgetRef ref) {
         final state = ref.watch(authUiStateProvider(config));
         if (config.isUnlock && !state.didPromptBiometric) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -129,7 +127,5 @@ class AuthHeader extends StatelessWidget {
             ],
           ),
         );
-      },
-    );
   }
 }

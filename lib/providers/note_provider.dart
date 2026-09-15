@@ -1,9 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
-import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
 import '../models/note_model.dart';
+import 'auth_provider.dart';
 import 'database_provider.dart';
 
 part 'note_provider.g.dart';
@@ -15,12 +15,10 @@ class Notes extends _$Notes {
 
   Future<List<NoteModel>> _fetchAll() async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      final rows = await db.query(
-        DatabaseTables.notes,
-        orderBy: 'updated_at DESC',
-      );
-      return rows.map(NoteModel.fromMap).toList();
+      ref.watch(localDataEpochProvider);
+      final userId = ref.watch(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      return await syncRepo.getNotes(userId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -37,25 +35,22 @@ class Notes extends _$Notes {
     required String content,
   }) async {
     try {
-      final db = await ref.read(databaseProvider.future);
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
       final now = DateTime.now();
-      if (id == null) {
-        await db.insert(DatabaseTables.notes, NoteModel(
-          id: const Uuid().v4(),
-          title: title,
-          content: content,
-          createdAt: now,
-          updatedAt: now,
-        ).toMap());
-      } else {
-        await db.update(
-          DatabaseTables.notes,
-          {'title': title, 'content': content, 'updated_at': now.toUtc().toIso8601String()},
-          where: 'id = ?',
-          whereArgs: [id],
-        );
-      }
-      state = const AsyncData([]);
+      final existing = id == null ? null : await syncRepo.getNote(id, userId);
+
+      final note = NoteModel(
+        id: id ?? const Uuid().v4(),
+        userId: userId,
+        title: title,
+        content: content,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+        isSynced: false,
+      );
+
+      await syncRepo.saveNote(note);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -64,9 +59,9 @@ class Notes extends _$Notes {
 
   Future<void> delete(String id) async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      await db.delete(DatabaseTables.notes, where: 'id = ?', whereArgs: [id]);
-      state = const AsyncData([]);
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.deleteNote(id, userId);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);

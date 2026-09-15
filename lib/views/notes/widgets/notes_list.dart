@@ -8,13 +8,11 @@ import '../note_editor_screen.dart';
 import '../notes_ui_providers.dart';
 import 'note_list_widgets.dart';
 
-class NotesList extends StatelessWidget {
+class NotesList extends ConsumerWidget {
   const NotesList({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
+  Widget build(BuildContext context, WidgetRef ref) {
         final notes = ref.watch(notesProvider);
         final query = ref.watch(notesSearchQueryProvider).trim().toLowerCase();
         return notes.when(
@@ -31,8 +29,6 @@ class NotesList extends StatelessWidget {
           ),
           data: (items) => _NotesContent(notes: _filter(items, query)),
         );
-      },
-    );
   }
 
   List<NoteModel> _filter(List<NoteModel> notes, String query) {

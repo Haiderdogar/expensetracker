@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../providers/database_provider.dart';
+
+part 'analytics_filters_provider.g.dart';
 
 class AnalyticsFilter {
   const AnalyticsFilter({
@@ -34,11 +37,13 @@ class AnalyticsFilter {
   }
 }
 
-final accountCreatedAtProvider = FutureProvider<DateTime>((ref) {
+@riverpod
+Future<DateTime> accountCreatedAt(Ref ref) {
   return ref.watch(databaseHelperProvider).getAccountCreatedAt();
-});
+}
 
-class AnalyticsFilterNotifier extends Notifier<AnalyticsFilter> {
+@riverpod
+class AnalyticsFilterNotifier extends _$AnalyticsFilterNotifier {
   @override
   AnalyticsFilter build() => const AnalyticsFilter();
 
@@ -62,8 +67,3 @@ class AnalyticsFilterNotifier extends Notifier<AnalyticsFilter> {
     state = state.copyWith(trendType: type);
   }
 }
-
-final analyticsFilterProvider =
-    NotifierProvider<AnalyticsFilterNotifier, AnalyticsFilter>(
-  AnalyticsFilterNotifier.new,
-);

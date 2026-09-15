@@ -5,31 +5,27 @@ import '../../../core/constants/app_strings.dart';
 import '../settings_actions.dart';
 import 'settings_tile.dart';
 
-class SettingsDataSection extends StatelessWidget {
+class SettingsDataSection extends ConsumerWidget {
   const SettingsDataSection({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final colors = Theme.of(context).colorScheme;
-        return Column(
-          children: [
-            SettingsTile(
-              icon: Icons.upload_outlined,
-              title: AppStrings.exportData,
-              accentColor: colors.primary.withValues(alpha: 0.10),
-              onTap: () => SettingsActions.exportData(context, ref),
-            ),
-            SettingsTile(
-              icon: Icons.download_outlined,
-              title: AppStrings.importData,
-              accentColor: colors.secondaryContainer,
-              onTap: () => SettingsActions.importData(context, ref),
-            ),
-          ],
-        );
-      },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        SettingsTile(
+          icon: Icons.upload_outlined,
+          title: AppStrings.exportData,
+          accentColor: colors.primary.withValues(alpha: 0.10),
+          onTap: () => SettingsActions.exportData(context, ref),
+        ),
+        SettingsTile(
+          icon: Icons.download_outlined,
+          title: AppStrings.importData,
+          accentColor: colors.secondaryContainer,
+          onTap: () => SettingsActions.importData(context, ref),
+        ),
+      ],
     );
   }
 }

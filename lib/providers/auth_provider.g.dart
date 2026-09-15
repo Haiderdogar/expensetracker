@@ -9,6 +9,120 @@ part of 'auth_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
+@ProviderFor(authStateChanges)
+final authStateChangesProvider = AuthStateChangesProvider._();
+
+final class AuthStateChangesProvider
+    extends $FunctionalProvider<AsyncValue<User?>, User?, Stream<User?>>
+    with $FutureModifier<User?>, $StreamProvider<User?> {
+  AuthStateChangesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'authStateChangesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$authStateChangesHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<User?> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<User?> create(Ref ref) {
+    return authStateChanges(ref);
+  }
+}
+
+String _$authStateChangesHash() => r'bef447329b41a0cab05281da35c6953f6c4256e5';
+
+@ProviderFor(currentUser)
+final currentUserProvider = CurrentUserProvider._();
+
+final class CurrentUserProvider extends $FunctionalProvider<User?, User?, User?>
+    with $Provider<User?> {
+  CurrentUserProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentUserProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentUserHash();
+
+  @$internal
+  @override
+  $ProviderElement<User?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  User? create(Ref ref) {
+    return currentUser(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(User? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<User?>(value),
+    );
+  }
+}
+
+String _$currentUserHash() => r'af05f5689632dc3d78dd23a442aceac67155ff8b';
+
+@ProviderFor(currentUserId)
+final currentUserIdProvider = CurrentUserIdProvider._();
+
+final class CurrentUserIdProvider
+    extends $FunctionalProvider<String, String, String>
+    with $Provider<String> {
+  CurrentUserIdProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentUserIdProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentUserIdHash();
+
+  @$internal
+  @override
+  $ProviderElement<String> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  String create(Ref ref) {
+    return currentUserId(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String>(value),
+    );
+  }
+}
+
+String _$currentUserIdHash() => r'4670df300ddd9ebedfee25de9eea0046cfac437c';
+
 @ProviderFor(AuthController)
 final authControllerProvider = AuthControllerProvider._();
 
@@ -33,7 +147,7 @@ final class AuthControllerProvider
   AuthController create() => AuthController();
 }
 
-String _$authControllerHash() => r'4df4d1e9c4bc5f8e5a939d6e99589d3b8fe0a00d';
+String _$authControllerHash() => r'cf238ca21a40181f9e56803304b8eb06f5b960e3';
 
 abstract class _$AuthController extends $AsyncNotifier<AuthStatus> {
   FutureOr<AuthStatus> build();
@@ -52,6 +166,74 @@ abstract class _$AuthController extends $AsyncNotifier<AuthStatus> {
     return element.handleCreate(ref, build);
   }
 }
+
+@ProviderFor(lockPromptCompleted)
+final lockPromptCompletedProvider = LockPromptCompletedProvider._();
+
+final class LockPromptCompletedProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  LockPromptCompletedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'lockPromptCompletedProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$lockPromptCompletedHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    return lockPromptCompleted(ref);
+  }
+}
+
+String _$lockPromptCompletedHash() =>
+    r'b305306a6c53daadf563b999aeb138adb2f6f9df';
+
+@ProviderFor(introOnboardingSeen)
+final introOnboardingSeenProvider = IntroOnboardingSeenProvider._();
+
+final class IntroOnboardingSeenProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  IntroOnboardingSeenProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'introOnboardingSeenProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$introOnboardingSeenHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    return introOnboardingSeen(ref);
+  }
+}
+
+String _$introOnboardingSeenHash() =>
+    r'cfca47a1db4596943fcbce2c04263335b9b0fe27';
 
 @ProviderFor(pinEnabled)
 final pinEnabledProvider = PinEnabledProvider._();
@@ -84,7 +266,7 @@ final class PinEnabledProvider
   }
 }
 
-String _$pinEnabledHash() => r'8c20c78a3db77ae597669a1821a297ca0692703f';
+String _$pinEnabledHash() => r'6b52d2962f08df9ffb052f12d84233abba0d6c91';
 
 @ProviderFor(biometricEnabled)
 final biometricEnabledProvider = BiometricEnabledProvider._();
@@ -117,7 +299,7 @@ final class BiometricEnabledProvider
   }
 }
 
-String _$biometricEnabledHash() => r'f6ce57bf90c4cf5e2e7b7538238a0d9ff85dcbde';
+String _$biometricEnabledHash() => r'80c1f22cec1a5ca4c18efcd5726ad82941e9e1a4';
 
 @ProviderFor(onboardingComplete)
 final onboardingCompleteProvider = OnboardingCompleteProvider._();
@@ -151,7 +333,7 @@ final class OnboardingCompleteProvider
 }
 
 String _$onboardingCompleteHash() =>
-    r'904b21f92ea145a4b6955d760dd4b4f5e55005b4';
+    r'6be2fbc5584f1dbb5a89c0a282aa95b234a98973';
 
 @ProviderFor(currencySymbol)
 final currencySymbolProvider = CurrencySymbolProvider._();
@@ -184,4 +366,4 @@ final class CurrencySymbolProvider
   }
 }
 
-String _$currencySymbolHash() => r'36490af39051c665f978b049889f5b7179e83f73';
+String _$currencySymbolHash() => r'cb33695efa2a820ed7fe76e6b722fcf31cd1d292';

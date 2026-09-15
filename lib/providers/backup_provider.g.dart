@@ -41,7 +41,7 @@ final class BackupServiceProvider
   }
 }
 
-String _$backupServiceHash() => r'bc512dcbfe5fdc5addad674180284ed0ccb709e6';
+String _$backupServiceHash() => r'b3bfa30d42b7294dc79b66a04b10e307661c752f';
 
 abstract class _$BackupService extends $Notifier<void> {
   void build();
@@ -100,7 +100,7 @@ final class ExpenseByCategoryProvider
   }
 }
 
-String _$expenseByCategoryHash() => r'8803cc933fce9056943190b59ec04740d2eb48d4';
+String _$expenseByCategoryHash() => r'19026361dbad13df0fd7c10e87b93864be088fc1';
 
 @ProviderFor(monthlySpendingTrend)
 final monthlySpendingTrendProvider = MonthlySpendingTrendProvider._();
@@ -142,4 +142,4 @@ final class MonthlySpendingTrendProvider
 }
 
 String _$monthlySpendingTrendHash() =>
-    r'643ecee2a462def549b5abf448a976ecc9b7f323';
+    r'1918126581b0991d32a87be70cb37e721eb0710e';

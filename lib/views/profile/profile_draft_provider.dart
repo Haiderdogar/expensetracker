@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../providers/auth_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/wallet_provider.dart';
+
+part 'profile_draft_provider.g.dart';
 
 class ProfileDraft {
   const ProfileDraft({
@@ -59,29 +62,46 @@ class ProfileDraft {
   }
 }
 
-final profileDraftProvider = StateProvider.autoDispose<ProfileDraft>(
-  (ref) => const ProfileDraft(),
-);
+@riverpod
+class ProfileDraftNotifier extends _$ProfileDraftNotifier {
+  @override
+  ProfileDraft build() => const ProfileDraft();
+
+  @override
+  set state(ProfileDraft value) => super.state = value;
+}
 
 Future<void> loadProfile(WidgetRef ref) async {
   final current = ref.read(profileDraftProvider);
   if (current.isInitialized) return;
   ref.read(profileDraftProvider.notifier).state = current.copyWith(isInitialized: true);
+
+  final user = ref.read(currentUserProvider);
+  final userId = ref.read(currentUserIdProvider);
   final database = ref.read(databaseHelperProvider);
   final values = await Future.wait<String?>([
-    database.getSetting('profile_name'),
-    database.getSetting('profile_email'),
+    database.getSetting('profile_name_$userId'),
+    database.getSetting('profile_email_$userId'),
   ]);
+
+  final defaultName = values[0]?.isNotEmpty == true
+      ? values[0]!
+      : (user?.displayName ?? '');
+  final defaultEmail = values[1]?.isNotEmpty == true
+      ? values[1]!
+      : (user?.email ?? '');
+
   final wallets = await ref.read(walletsProvider.future);
   final selectedId = ref.read(selectedWalletIdProvider);
   final matching = wallets.where((wallet) => wallet.id == selectedId).toList();
   final wallet = matching.isNotEmpty ? matching.first : (wallets.isNotEmpty ? wallets.first : null);
+
   ref.read(profileDraftProvider.notifier).state = ProfileDraft(
-    name: values[0] ?? '',
-    email: values[1] ?? '',
+    name: defaultName,
+    email: defaultEmail,
     walletName: wallet?.name ?? '',
-    savedName: values[0] ?? '',
-    savedEmail: values[1] ?? '',
+    savedName: defaultName,
+    savedEmail: defaultEmail,
     savedWalletName: wallet?.name ?? '',
     walletId: wallet?.id,
     isInitialized: true,

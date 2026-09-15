@@ -1,18 +1,49 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../models/transaction_model.dart';
 
-final transactionSearchProvider = StateProvider.autoDispose<String>((ref) => '');
-final transactionTypeFilterProvider = StateProvider.autoDispose<String?>(
-  (ref) => null,
-);
+part 'transactions_ui_providers.g.dart';
 
-/// Unified category filter state across all transactions.
-final selectedCategoryFiltersProvider = StateProvider.autoDispose<List<String>?>(
-  (ref) => null,
-);
+/// A generated provider-backed controller for the transaction search field.
+///
+/// The controller is disposed with the provider, keeping ephemeral widget input
+/// out of stateful widgets while still using Riverpod code generation.
+@riverpod
+TextEditingController transactionSearchTextController(Ref ref) {
+  final controller =
+      TextEditingController(text: ref.read(transactionSearchProvider));
+  ref.onDispose(controller.dispose);
+  return controller;
+}
+
+@riverpod
+class TransactionSearch extends _$TransactionSearch {
+  @override
+  String build() => '';
+
+  @override
+  set state(String value) => super.state = value;
+}
+
+@riverpod
+class TransactionTypeFilter extends _$TransactionTypeFilter {
+  @override
+  String? build() => null;
+
+  @override
+  set state(String? value) => super.state = value;
+}
+
+@riverpod
+class SelectedCategoryFilters extends _$SelectedCategoryFilters {
+  @override
+  List<String>? build() => null;
+
+  @override
+  set state(List<String>? value) => super.state = value;
+}
 
 /// Backwards-compatible aliases
 final activeCategoryFilterProvider = selectedCategoryFiltersProvider;
@@ -63,8 +94,14 @@ void clearCategoryFilterForCurrentType(WidgetRef ref) {
   clearAllCategoryFilters(ref);
 }
 
-final transactionCategoryFilterDraftProvider =
-    StateProvider.autoDispose<List<String>>((ref) => []);
+@riverpod
+class TransactionCategoryFilterDraft extends _$TransactionCategoryFilterDraft {
+  @override
+  List<String> build() => [];
+
+  @override
+  set state(List<String> value) => super.state = value;
+}
 
 /// Holds form state for a single transaction type (expense or income).
 class TypeDraft {
@@ -143,15 +180,11 @@ class TransactionFormDraft {
   final String note;
   final bool isSaving;
 
-  // ── Convenience accessors for the currently active tab ────────────────────
-
   TypeDraft get _active => type == 'income' ? incomeDraft : expenseDraft;
 
   String? get categoryId => _active.categoryId;
   String? get subcategory => _active.subcategory;
   String get amount => _active.amount;
-
-  // ── Mutators ─────────────────────────────────────────────────────────────
 
   TransactionFormDraft _withActive(TypeDraft updated) {
     return TransactionFormDraft(
@@ -164,7 +197,6 @@ class TransactionFormDraft {
     );
   }
 
-  /// Switch to a different type; preserves each tab's own state.
   TransactionFormDraft switchType(String newType) {
     return TransactionFormDraft(
       type: newType,
@@ -200,7 +232,6 @@ class TransactionFormDraft {
     );
   }
 
-  /// Internal helper to update top-level fields without recursion.
   TransactionFormDraft copyWith2({
     DateTime? date,
     String? note,
@@ -222,16 +253,55 @@ class TransactionFormDraft {
       _withActive(_active.selectCategory(categoryId));
 }
 
-final transactionInitialTypeProvider =
-    StateProvider.autoDispose<String>((ref) => 'expense');
+@riverpod
+class TransactionInitialType extends _$TransactionInitialType {
+  @override
+  String build() => 'expense';
 
-final transactionFormProvider = StateProvider.autoDispose
-    .family<TransactionFormDraft, TransactionModel?>(
-      (ref, transaction) {
-        final initialType = ref.watch(transactionInitialTypeProvider);
-        return TransactionFormDraft.fromTransaction(
-          transaction,
-          initialType: initialType,
-        );
-      },
+  @override
+  set state(String value) => super.state = value;
+}
+
+@riverpod
+class TransactionFormNotifier extends _$TransactionFormNotifier {
+  @override
+  TransactionFormDraft build(TransactionModel? transaction) {
+    final initialType = ref.watch(transactionInitialTypeProvider);
+    return TransactionFormDraft.fromTransaction(
+      transaction,
+      initialType: initialType,
     );
+  }
+
+  @override
+  set state(TransactionFormDraft value) => super.state = value;
+}
+
+@riverpod
+class UnifiedCategoryFilterDraft extends _$UnifiedCategoryFilterDraft {
+  @override
+  Set<String> build() => {};
+
+  void init(List<String>? initial) =>
+      state = Set<String>.from(initial ?? const []);
+
+  void toggle(String id) {
+    if (state.contains(id)) {
+      state = Set<String>.from(state)..remove(id);
+    } else {
+      state = Set<String>.from(state)..add(id);
+    }
+  }
+
+  void setAll(Iterable<String> ids, bool select) {
+    final next = Set<String>.from(state);
+    if (select) {
+      next.addAll(ids);
+    } else {
+      next.removeAll(ids);
+    }
+    state = next;
+  }
+
+  void clear() => state = {};
+}

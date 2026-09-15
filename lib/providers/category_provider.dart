@@ -5,6 +5,8 @@ import 'package:uuid/uuid.dart';
 import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
 import '../models/category_model.dart';
+import '../models/subcategory_model.dart';
+import 'auth_provider.dart';
 import 'database_provider.dart';
 import 'transaction_provider.dart';
 
@@ -17,12 +19,10 @@ class Categories extends _$Categories {
 
   Future<List<CategoryModel>> _fetchAll() async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      final rows = await db.query(
-        DatabaseTables.categories,
-        orderBy: 'name ASC',
-      );
-      return rows.map(CategoryModel.fromMap).toList();
+      ref.watch(localDataEpochProvider);
+      final userId = ref.watch(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      return await syncRepo.getCategories(userId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -40,15 +40,19 @@ class Categories extends _$Categories {
 
   Future<void> add(CategoryModel category) async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      await db.transaction((transaction) async {
-        await transaction.insert(DatabaseTables.categories, category.toMap());
-        await transaction.insert(DatabaseTables.subcategories, {
-          'id': const Uuid().v4(),
-          'category_id': category.id,
-          'name': 'General',
-        });
-      });
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      final catToSave = category.copyWith(userId: userId);
+      await syncRepo.saveCategory(catToSave);
+
+      final sub = SubcategoryModel(
+        id: const Uuid().v4(),
+        userId: userId,
+        categoryId: category.id,
+        name: 'General',
+      );
+      await syncRepo.saveSubcategory(sub);
+
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -62,8 +66,10 @@ class Categories extends _$Categories {
     required String color,
   }) async {
     const uuid = Uuid();
+    final userId = ref.read(currentUserIdProvider);
     final category = CategoryModel(
       id: uuid.v4(),
+      userId: userId,
       name: name,
       type: type,
       icon: icon,
@@ -76,18 +82,19 @@ class Categories extends _$Categories {
   Future<void> delete(String id) async {
     try {
       final db = await ref.read(databaseProvider.future);
+      final userId = ref.read(currentUserIdProvider);
       final transactions = await db.query(
         DatabaseTables.transactions,
         columns: ['id'],
-        where: 'category_id = ?',
-        whereArgs: [id],
+        where: 'category_id = ? AND user_id = ?',
+        whereArgs: [id, userId],
         limit: 1,
       );
       final budgets = await db.query(
         DatabaseTables.budgets,
         columns: ['id'],
-        where: 'category_id = ?',
-        whereArgs: [id],
+        where: 'category_id = ? AND user_id = ?',
+        whereArgs: [id, userId],
         limit: 1,
       );
       if (transactions.isNotEmpty || budgets.isNotEmpty) {
@@ -95,7 +102,9 @@ class Categories extends _$Categories {
           'Categories used by transactions or budgets cannot be deleted.',
         );
       }
-      await db.delete(DatabaseTables.categories, where: 'id = ?', whereArgs: [id]);
+
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.deleteCategory(id, userId);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -111,22 +120,26 @@ class Categories extends _$Categories {
   }) async {
     try {
       const uuid = Uuid();
+      final userId = ref.read(currentUserIdProvider);
       final category = CategoryModel(
         id: uuid.v4(),
+        userId: userId,
         name: name.trim(),
         type: type,
         icon: icon,
         color: color,
       );
-      final db = await ref.read(databaseProvider.future);
-      await db.transaction((transaction) async {
-        await transaction.insert(DatabaseTables.categories, category.toMap());
-        await transaction.insert(DatabaseTables.subcategories, {
-          'id': uuid.v4(),
-          'category_id': category.id,
-          'name': subcategoryName.trim(),
-        });
-      });
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.saveCategory(category);
+
+      final sub = SubcategoryModel(
+        id: uuid.v4(),
+        userId: userId,
+        categoryId: category.id,
+        name: subcategoryName.trim(),
+      );
+      await syncRepo.saveSubcategory(sub);
+
       await refresh();
       return category;
     } catch (e) {
@@ -136,13 +149,9 @@ class Categories extends _$Categories {
 
   Future<void> updateCategory(CategoryModel category) async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      await db.update(
-        DatabaseTables.categories,
-        category.toMap(),
-        where: 'id = ?',
-        whereArgs: [category.id],
-      );
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.saveCategory(category.copyWith(userId: userId));
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -164,11 +173,10 @@ Future<List<CategoryModel>> expenseCategories(Ref ref) async {
       );
 }
 
-// Categories that are actually used in transactions. Returns categories of the
-// given type that have at least one transaction referencing them.
-final usedCategoriesProvider = FutureProvider.family<List<CategoryModel>, String?>((ref, type) async {
+@riverpod
+Future<List<CategoryModel>> usedCategories(Ref ref, String? type) async {
   final all = await ref.watch(categoriesProvider.future);
   final txs = await ref.watch(transactionsProvider.future);
   final usedIds = txs.map((t) => t.categoryId).toSet();
   return all.where((c) => usedIds.contains(c.id) && (type == null || c.type == type)).toList();
-});
+}

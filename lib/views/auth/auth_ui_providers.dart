@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'auth_ui_providers.g.dart';
 
 class AuthScreenConfig {
   const AuthScreenConfig({
@@ -79,18 +81,25 @@ class AuthUiState {
   }
 }
 
-final authUiStateProvider = StateProvider.autoDispose.family<AuthUiState, AuthScreenConfig>(
-  (ref, config) => const AuthUiState(),
-);
+@riverpod
+class AuthUiStateNotifier extends _$AuthUiStateNotifier {
+  @override
+  AuthUiState build(AuthScreenConfig config) => const AuthUiState();
 
-final authPinControllerProvider = Provider.autoDispose.family<TextEditingController, AuthScreenConfig>((ref, config) {
+  @override
+  set state(AuthUiState value) => super.state = value;
+}
+
+@riverpod
+TextEditingController authPinController(Ref ref, AuthScreenConfig config) {
   final controller = TextEditingController();
   ref.onDispose(controller.dispose);
   return controller;
-});
+}
 
-final authPinFocusNodeProvider = Provider.autoDispose.family<FocusNode, AuthScreenConfig>((ref, config) {
+@riverpod
+FocusNode authPinFocusNode(Ref ref, AuthScreenConfig config) {
   final focusNode = FocusNode();
   ref.onDispose(focusNode.dispose);
   return focusNode;
-});
+}

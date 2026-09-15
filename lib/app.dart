@@ -7,43 +7,25 @@ import 'core/theme/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'views/app_shell.dart';
 import 'views/auth/auth_screen.dart';
+import 'views/auth/google_sign_in_screen.dart';
 import 'views/auth/lock_setup_screen.dart';
 import 'views/onboarding/intro_onboarding_screen.dart';
 import 'views/onboarding/onboarding_screen.dart';
 
-class ExpenseTrackerApp extends ConsumerStatefulWidget {
+class ExpenseTrackerApp extends StatelessWidget {
   const ExpenseTrackerApp({super.key});
 
   @override
-  ConsumerState<ExpenseTrackerApp> createState() => _ExpenseTrackerAppState();
+  Widget build(BuildContext context) {
+    return const _AppThemeWrapper();
+  }
 }
 
-class _ExpenseTrackerAppState extends ConsumerState<ExpenseTrackerApp>
-    with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
+class _AppThemeWrapper extends ConsumerWidget {
+  const _AppThemeWrapper();
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final auth = ref.read(authControllerProvider.notifier);
-    if (state == AppLifecycleState.paused) {
-      auth.onAppBackgrounded();
-    } else if (state == AppLifecycleState.resumed) {
-      auth.onAppResumed();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedMode = ref.watch(themeModeControllerProvider);
     final themeMode = switch (selectedMode) {
       AppThemeMode.light => ThemeMode.light,
@@ -67,42 +49,77 @@ class AppBootstrap extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final onboardingAsync = ref.watch(onboardingCompleteProvider);
     final introSeenAsync = ref.watch(introOnboardingSeenProvider);
-    final authAsync = ref.watch(authControllerProvider);
-    final lockPromptAsync = ref.watch(lockPromptCompletedProvider);
-
     return introSeenAsync.when(
-      loading: () => Scaffold(
-        body: Container(color: Theme.of(context).scaffoldBackgroundColor),
-      ),
-      error: (e, _) => Scaffold(body: Center(child: Text(e.toString()))),
+      loading: () => const _BootstrapLoading(),
+      error: (error, _) => _BootstrapError(error: error),
       data: (hasSeenIntro) {
         if (!hasSeenIntro) return const IntroOnboardingScreen();
+
+        final onboardingAsync = ref.watch(onboardingCompleteProvider);
         return onboardingAsync.when(
-          loading: () => Scaffold(
-            body: Container(color: Theme.of(context).scaffoldBackgroundColor),
-          ),
-          error: (e, _) => Scaffold(body: Center(child: Text(e.toString()))),
+          loading: () => const _BootstrapLoading(),
+          error: (error, _) => _BootstrapError(error: error),
           data: (complete) {
             if (!complete) return const OnboardingScreen();
-            if (authAsync.value == AuthStatus.unauthenticated) {
-              return const AuthGate();
+
+        final authAsync = ref.watch(authControllerProvider);
+        return authAsync.when(
+          loading: () => const _BootstrapLoading(),
+          error: (error, _) => _BootstrapError(error: error),
+          data: (status) {
+            if (status == AuthStatus.unauthenticated) {
+              return const GoogleSignInScreen();
             }
-            return lockPromptAsync.when(
-              loading: () => Scaffold(
-                body: Container(color: Theme.of(context).scaffoldBackgroundColor),
-              ),
-              error: (e, _) =>
-                  Scaffold(body: Center(child: Text(e.toString()))),
-              data: (prompted) {
-                if (!prompted) return const LockSetupScreen();
-                return const AuthGate();
-              },
-            );
+            if (status == AuthStatus.pinLocked) return const AuthScreen();
+            if (status == AuthStatus.guest) return const AppShell();
+
+                final lockPromptAsync = ref.watch(lockPromptCompletedProvider);
+                return lockPromptAsync.when(
+                  loading: () => const _BootstrapLoading(),
+                  error: (error, _) => _BootstrapError(error: error),
+                  data: (prompted) {
+                    if (!prompted && status != AuthStatus.unauthenticated) {
+                      return const LockSetupScreen();
+                    }
+                    return const AppShell();
+                  },
+                );
+          },
+        );
           },
         );
       },
+    );
+  }
+}
+
+class _BootstrapLoading extends StatelessWidget {
+  const _BootstrapLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(body: ColoredBox(color: Colors.transparent));
+  }
+}
+
+class _BootstrapError extends StatelessWidget {
+  const _BootstrapError({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Unable to start the app. Please try again.\n\n$error',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -122,8 +139,11 @@ class AuthGate extends ConsumerWidget {
       data: (status) {
         return switch (status) {
           AuthStatus.authenticated => const AppShell(),
-          AuthStatus.unauthenticated => const AuthScreen(),
-          AuthStatus.needsPinSetup || AuthStatus.loading => const AuthScreen(),
+          AuthStatus.unauthenticated => const GoogleSignInScreen(),
+          AuthStatus.guest => const AppShell(),
+          AuthStatus.pinLocked => const AuthScreen(),
+          AuthStatus.needsPinSetup ||
+          AuthStatus.loading => const GoogleSignInScreen(),
         };
       },
     );

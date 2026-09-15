@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_snackbars.dart';
 import '../../transactions/add_transaction_screen.dart';
 import 'transfer_bottom_sheet.dart';
 
-class DashboardQuickActions extends ConsumerWidget {
+class DashboardQuickActions extends StatelessWidget {
   const DashboardQuickActions({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(

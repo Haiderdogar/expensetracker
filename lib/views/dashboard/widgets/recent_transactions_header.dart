@@ -19,13 +19,11 @@ class RecentTransactionsHeader extends StatelessWidget {
   }
 }
 
-class RecentTransactionFilter extends StatelessWidget {
+class RecentTransactionFilter extends ConsumerWidget {
   const RecentTransactionFilter({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
+  Widget build(BuildContext context, WidgetRef ref) {
         final selected = ref.watch(recentTransactionFilterProvider);
         final colors = Theme.of(context).colorScheme;
         return Row(
@@ -52,8 +50,6 @@ class RecentTransactionFilter extends StatelessWidget {
             ),
           ],
         );
-      },
-    );
   }
 
   PopupMenuItem<String> _filterOption(BuildContext context, String filter, String selected) {

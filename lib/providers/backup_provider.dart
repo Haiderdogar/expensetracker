@@ -6,9 +6,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
+import 'auth_provider.dart';
+import 'category_provider.dart';
 import 'database_provider.dart';
 import 'transaction_provider.dart';
-import 'category_provider.dart';
 
 part 'backup_provider.g.dart';
 
@@ -20,6 +21,7 @@ class BackupService extends _$BackupService {
   Future<Map<String, dynamic>> exportAll() async {
     try {
       final db = await ref.read(databaseProvider.future);
+      final userId = ref.read(currentUserIdProvider);
       final data = <String, dynamic>{};
 
       for (final table in [
@@ -27,13 +29,17 @@ class BackupService extends _$BackupService {
         DatabaseTables.subcategories,
         DatabaseTables.wallets,
         DatabaseTables.transactions,
-        DatabaseTables.subcategories,
         DatabaseTables.budgets,
-        DatabaseTables.settings,
+        DatabaseTables.notes,
       ]) {
-        data[table] = await db.query(table);
+        data[table] = await db.query(
+          table,
+          where: 'user_id = ?',
+          whereArgs: [userId],
+        );
       }
 
+      data[DatabaseTables.settings] = await db.query(DatabaseTables.settings);
       return data;
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -53,16 +59,22 @@ class BackupService extends _$BackupService {
     try {
       final data = jsonDecode(json) as Map<String, dynamic>;
       final db = await ref.read(databaseProvider.future);
+      final userId = ref.read(currentUserIdProvider);
 
       await db.transaction((txn) async {
         for (final table in [
           DatabaseTables.transactions,
           DatabaseTables.budgets,
+          DatabaseTables.notes,
+          DatabaseTables.subcategories,
           DatabaseTables.wallets,
           DatabaseTables.categories,
-          DatabaseTables.settings,
         ]) {
-          await txn.delete(table);
+          await txn.delete(
+            table,
+            where: 'user_id = ?',
+            whereArgs: [userId],
+          );
         }
 
         for (final table in [
@@ -71,14 +83,19 @@ class BackupService extends _$BackupService {
           DatabaseTables.wallets,
           DatabaseTables.transactions,
           DatabaseTables.budgets,
-          DatabaseTables.settings,
+          DatabaseTables.notes,
         ]) {
           final rows = (data[table] as List?) ?? [];
           for (final row in rows) {
-            await txn.insert(table, Map<String, dynamic>.from(row as Map));
+            final mapped = Map<String, dynamic>.from(row as Map);
+            mapped['user_id'] = userId;
+            mapped['is_synced'] = 0;
+            await txn.insert(table, mapped);
           }
         }
       });
+
+      await ref.read(syncRepositoryProvider).syncPending(userId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -87,44 +104,27 @@ class BackupService extends _$BackupService {
 
 @riverpod
 Future<Map<String, double>> expenseByCategory(Ref ref) async {
-  // Depend on transactions and categories so this provider auto-refreshes when they change
-  await ref.watch(transactionsProvider.future);
-  await ref.watch(categoriesProvider.future);
-
-  final db = await ref.watch(databaseProvider.future);
-  final rows = await db.rawQuery('''
-    SELECT c.name, c.color, SUM(t.amount) as total
-    FROM ${DatabaseTables.transactions} t
-    JOIN ${DatabaseTables.categories} c ON t.category_id = c.id
-    WHERE t.type = 'expense'
-    GROUP BY c.id
-    ORDER BY total DESC
-  ''');
-
-  return {
-    for (final row in rows)
-      row['name'] as String: (row['total'] as num).toDouble(),
-  };
+  final transactions = await ref.watch(transactionsProvider.future);
+  final categories = await ref.watch(categoriesProvider.future);
+  final names = {for (final c in categories) c.id: c.name};
+  final totals = <String, double>{};
+  for (final t in transactions) {
+    if (!t.isExpense) continue;
+    final name = names[t.categoryId] ?? 'Other';
+    totals[name] = (totals[name] ?? 0) + t.amount;
+  }
+  return totals;
 }
 
 @riverpod
 Future<List<MapEntry<String, double>>> monthlySpendingTrend(Ref ref) async {
-  // Depend on transactions so chart refreshes automatically on changes
-  await ref.watch(transactionsProvider.future);
-
-  final db = await ref.watch(databaseProvider.future);
-  final rows = await db.rawQuery('''
-    SELECT substr(date, 1, 7) as month, SUM(amount) as total
-    FROM ${DatabaseTables.transactions}
-    WHERE type = 'expense'
-    GROUP BY month
-    ORDER BY month ASC
-    LIMIT 6
-  ''');
-
-  return rows
-      .map(
-        (r) => MapEntry(r['month'] as String, (r['total'] as num).toDouble()),
-      )
-      .toList();
+  final transactions = await ref.watch(transactionsProvider.future);
+  final totals = <String, double>{};
+  for (final t in transactions) {
+    if (!t.isExpense) continue;
+    final month = t.date.length >= 7 ? t.date.substring(0, 7) : t.date;
+    totals[month] = (totals[month] ?? 0) + t.amount;
+  }
+  final entries = totals.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
+  return entries.length <= 6 ? entries : entries.sublist(entries.length - 6);
 }

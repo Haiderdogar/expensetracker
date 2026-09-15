@@ -15,41 +15,50 @@ class SettingsSecuritySection extends StatelessWidget {
   }
 }
 
-class SettingsPinTile extends StatelessWidget {
+class SettingsPinTile extends ConsumerWidget {
   const SettingsPinTile({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) => ref.watch(pinEnabledProvider).when(
-        loading: () => const ListTile(leading: CircularProgressIndicator(), title: Text('PIN lock')),
-        error: (error, _) => ListTile(title: Text(error.toString())),
-        data: (enabled) => SettingsTile(
-          icon: Icons.pin_outlined,
-          title: enabled ? AppStrings.changePin : AppStrings.enablePinLock,
-          trailing: Switch(value: enabled, onChanged: (value) => SettingsActions.togglePin(context, ref, value)),
-          onTap: () => SettingsActions.editPin(context, ref, enabled),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(pinEnabledProvider).when(
+      loading: () => const ListTile(
+        leading: CircularProgressIndicator(),
+        title: Text('PIN lock'),
+      ),
+      error: (error, _) => ListTile(title: Text(error.toString())),
+      data: (enabled) => SettingsTile(
+        icon: Icons.pin_outlined,
+        title: enabled ? AppStrings.changePin : AppStrings.enablePinLock,
+        trailing: Switch(
+          value: enabled,
+          onChanged: (value) => SettingsActions.togglePin(context, ref, value),
         ),
+        onTap: () => SettingsActions.editPin(context, ref, enabled),
       ),
     );
   }
 }
 
-class SettingsBiometricTile extends StatelessWidget {
+class SettingsBiometricTile extends ConsumerWidget {
   const SettingsBiometricTile({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) => ref.watch(biometricEnabledProvider).when(
-        loading: () => const ListTile(leading: CircularProgressIndicator(), title: Text(AppStrings.enableBiometric)),
-        error: (error, _) => ListTile(title: Text(error.toString())),
-        data: (enabled) => SettingsTile(
-          icon: Icons.fingerprint_rounded,
-          title: AppStrings.enableBiometric,
-          trailing: Switch(value: enabled, onChanged: (value) => SettingsActions.toggleBiometric(context, ref, value)),
-          onTap: () => SettingsActions.toggleBiometric(context, ref, !enabled),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(biometricEnabledProvider).when(
+      loading: () => const ListTile(
+        leading: CircularProgressIndicator(),
+        title: Text(AppStrings.enableBiometric),
+      ),
+      error: (error, _) => ListTile(title: Text(error.toString())),
+      data: (enabled) => SettingsTile(
+        icon: Icons.fingerprint_rounded,
+        title: AppStrings.enableBiometric,
+        trailing: Switch(
+          value: enabled,
+          onChanged: (value) =>
+              SettingsActions.toggleBiometric(context, ref, value),
         ),
+        onTap: () => SettingsActions.toggleBiometric(context, ref, !enabled),
       ),
     );
   }

@@ -7,7 +7,7 @@ import 'transactions_ui_providers.dart';
 import 'widgets/transaction_delete_button.dart';
 import 'widgets/transaction_form.dart';
 
-class AddTransactionScreen extends ConsumerWidget {
+class AddTransactionScreen extends StatelessWidget {
   const AddTransactionScreen({
     super.key,
     this.transaction,
@@ -18,14 +18,7 @@ class AddTransactionScreen extends ConsumerWidget {
   final String? initialType;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (initialType != null && transaction == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (ref.read(transactionInitialTypeProvider) != initialType) {
-          ref.read(transactionInitialTypeProvider.notifier).state = initialType!;
-        }
-      });
-    }
+  Widget build(BuildContext context) {
     final isEditing = transaction != null;
     return Scaffold(
       appBar: AppBar(
@@ -34,10 +27,34 @@ class AddTransactionScreen extends ConsumerWidget {
               ? 'Edit ${_capitalize(transaction!.type)}'
               : AppStrings.addTransaction,
         ),
-        actions: isEditing ? [TransactionDeleteButton(transaction: transaction!)] : null,
+        actions: isEditing
+            ? [TransactionDeleteButton(transaction: transaction!)]
+            : null,
       ),
-      body: TransactionForm(transaction: transaction),
+      body: Column(
+        children: [
+          if (initialType != null && transaction == null)
+            _InitialTypeBinder(initialType: initialType!),
+          Expanded(child: TransactionForm(transaction: transaction)),
+        ],
+      ),
     );
+  }
+}
+
+class _InitialTypeBinder extends ConsumerWidget {
+  const _InitialTypeBinder({required this.initialType});
+
+  final String initialType;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(transactionInitialTypeProvider) != initialType) {
+        ref.read(transactionInitialTypeProvider.notifier).state = initialType;
+      }
+    });
+    return const SizedBox.shrink();
   }
 }
 

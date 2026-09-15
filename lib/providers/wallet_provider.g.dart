@@ -9,6 +9,58 @@ part of 'wallet_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
+@ProviderFor(SelectedWalletId)
+final selectedWalletIdProvider = SelectedWalletIdProvider._();
+
+final class SelectedWalletIdProvider
+    extends $NotifierProvider<SelectedWalletId, String?> {
+  SelectedWalletIdProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'selectedWalletIdProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$selectedWalletIdHash();
+
+  @$internal
+  @override
+  SelectedWalletId create() => SelectedWalletId();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$selectedWalletIdHash() => r'896e944d0119c0119f4559c9e4594ae5b953b138';
+
+abstract class _$SelectedWalletId extends $Notifier<String?> {
+  String? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<String?, String?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<String?, String?>,
+              String?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(activeWalletName)
 final activeWalletNameProvider = ActiveWalletNameProvider._();
 
@@ -74,7 +126,7 @@ final class WalletsProvider
   Wallets create() => Wallets();
 }
 
-String _$walletsHash() => r'f00766fffc0f65af471186755e4d9d0a9b8e5876';
+String _$walletsHash() => r'750359d556c0eeff246377cab76391a4bf4e75aa';
 
 abstract class _$Wallets extends $AsyncNotifier<List<WalletModel>> {
   FutureOr<List<WalletModel>> build();

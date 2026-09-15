@@ -5,21 +5,19 @@ import '../../../core/constants/app_strings.dart';
 import '../../../models/note_model.dart';
 import '../../../providers/note_provider.dart';
 
-class NoteEditorDeleteButton extends StatelessWidget {
+class NoteEditorDeleteButton extends ConsumerWidget {
   const NoteEditorDeleteButton({super.key, required this.note});
 
   final NoteModel note;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
-    return Consumer(
-      builder: (context, ref, _) => IconButton(
-        tooltip: 'Delete note',
-        icon: const Icon(Icons.delete_outline_rounded),
-        color: colors.error,
-        onPressed: () => _delete(context, ref),
-      ),
+    return IconButton(
+      tooltip: 'Delete note',
+      icon: const Icon(Icons.delete_outline_rounded),
+      color: colors.error,
+      onPressed: () => _delete(context, ref),
     );
   }
 

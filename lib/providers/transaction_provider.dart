@@ -6,6 +6,7 @@ import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
 import '../models/transaction_model.dart';
 import '../models/wallet_model.dart';
+import 'auth_provider.dart';
 import 'category_provider.dart';
 import 'database_provider.dart';
 import 'wallet_provider.dart';
@@ -19,12 +20,10 @@ class Transactions extends _$Transactions {
 
   Future<List<TransactionModel>> _fetchAll() async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      final rows = await db.query(
-        DatabaseTables.transactions,
-        orderBy: 'date DESC',
-      );
-      return rows.map(TransactionModel.fromMap).toList();
+      ref.watch(localDataEpochProvider);
+      final userId = ref.watch(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      return await syncRepo.getTransactions(userId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -37,8 +36,11 @@ class Transactions extends _$Transactions {
 
   Future<void> add(TransactionModel transaction) async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      await db.insert(DatabaseTables.transactions, transaction.toMap());
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      final txToSave = transaction.copyWith(userId: userId);
+      await syncRepo.saveTransaction(txToSave);
+
       final delta = transaction.isIncome ? transaction.amount : -transaction.amount;
       await ref.read(walletsProvider.notifier).updateBalance(
             transaction.walletId,
@@ -52,25 +54,18 @@ class Transactions extends _$Transactions {
 
   Future<void> updateTransaction(TransactionModel transaction) async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      final existing = await db.query(
-        DatabaseTables.transactions,
-        where: 'id = ?',
-        whereArgs: [transaction.id],
-        limit: 1,
-      );
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      final existingTxs = await syncRepo.getTransactions(userId);
+      final existing = existingTxs.where((t) => t.id == transaction.id).toList();
       if (existing.isEmpty) throw ErrorHandler.from(Exception('not found'));
 
-      final old = TransactionModel.fromMap(existing.first);
+      final old = existing.first;
       final oldDelta = old.isIncome ? -old.amount : old.amount;
       await ref.read(walletsProvider.notifier).updateBalance(old.walletId, oldDelta);
 
-      await db.update(
-        DatabaseTables.transactions,
-        transaction.toMap(),
-        where: 'id = ?',
-        whereArgs: [transaction.id],
-      );
+      final txToSave = transaction.copyWith(userId: userId);
+      await syncRepo.saveTransaction(txToSave);
 
       final newDelta = transaction.isIncome ? transaction.amount : -transaction.amount;
       await ref.read(walletsProvider.notifier).updateBalance(
@@ -85,24 +80,17 @@ class Transactions extends _$Transactions {
 
   Future<void> delete(String id) async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      final existing = await db.query(
-        DatabaseTables.transactions,
-        where: 'id = ?',
-        whereArgs: [id],
-        limit: 1,
-      );
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      final existingTxs = await syncRepo.getTransactions(userId);
+      final existing = existingTxs.where((t) => t.id == id).toList();
       if (existing.isEmpty) return;
 
-      final old = TransactionModel.fromMap(existing.first);
+      final old = existing.first;
       final delta = old.isIncome ? -old.amount : old.amount;
       await ref.read(walletsProvider.notifier).updateBalance(old.walletId, delta);
 
-      await db.delete(
-        DatabaseTables.transactions,
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      await syncRepo.deleteTransaction(id, userId);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -119,8 +107,10 @@ class Transactions extends _$Transactions {
     String? note,
   }) async {
     const uuid = Uuid();
+    final userId = ref.read(currentUserIdProvider);
     final transaction = TransactionModel(
       id: uuid.v4(),
+      userId: userId,
       subcategory: subcategory,
       amount: amount,
       type: type,
@@ -142,57 +132,61 @@ class Transactions extends _$Transactions {
   }) async {
     try {
       final db = await ref.read(databaseProvider.future);
+      final userId = ref.read(currentUserIdProvider);
       final txDate = (date ?? DateTime.now()).toIso8601String();
 
-      final walletRows = await db.query(DatabaseTables.wallets);
+      final walletRows = await db.query(
+        DatabaseTables.wallets,
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
       final wallets = walletRows.map(WalletModel.fromMap).toList();
       final fromWallet = wallets.firstWhere(
         (w) => w.id == fromWalletId,
-        orElse: () => WalletModel(id: fromWalletId, name: 'Wallet', balance: 0),
+        orElse: () => WalletModel(id: fromWalletId, userId: userId, name: 'Wallet', balance: 0),
       );
       final toWallet = wallets.firstWhere(
         (w) => w.id == toWalletId,
-        orElse: () => WalletModel(id: toWalletId, name: 'Wallet', balance: 0),
+        orElse: () => WalletModel(id: toWalletId, userId: userId, name: 'Wallet', balance: 0),
       );
 
-      final catRows = await db.query(DatabaseTables.categories, limit: 1);
+      final catRows = await db.query(
+        DatabaseTables.categories,
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        limit: 1,
+      );
       final fallbackCatId = catRows.isNotEmpty ? catRows.first['id'] as String : '';
 
       const uuid = Uuid();
-      await db.transaction((txn) async {
-        await txn.rawUpdate(
-          'UPDATE ${DatabaseTables.wallets} SET balance = balance - ? WHERE id = ?',
-          [amount, fromWalletId],
-        );
-        await txn.rawUpdate(
-          'UPDATE ${DatabaseTables.wallets} SET balance = balance + ? WHERE id = ?',
-          [amount, toWalletId],
-        );
+      final outTx = TransactionModel(
+        id: uuid.v4(),
+        userId: userId,
+        subcategory: 'Transfer to ${toWallet.name}',
+        amount: amount,
+        type: 'transfer',
+        categoryId: fallbackCatId,
+        walletId: fromWalletId,
+        date: txDate,
+        note: note,
+      );
+      final inTx = TransactionModel(
+        id: uuid.v4(),
+        userId: userId,
+        subcategory: 'Transfer from ${fromWallet.name}',
+        amount: amount,
+        type: 'transfer',
+        categoryId: fallbackCatId,
+        walletId: toWalletId,
+        date: txDate,
+        note: note,
+      );
 
-        final outTx = TransactionModel(
-          id: uuid.v4(),
-          subcategory: 'Transfer to ${toWallet.name}',
-          amount: amount,
-          type: 'transfer',
-          categoryId: fallbackCatId,
-          walletId: fromWalletId,
-          date: txDate,
-          note: note,
-        );
-        await txn.insert(DatabaseTables.transactions, outTx.toMap());
-
-        final inTx = TransactionModel(
-          id: uuid.v4(),
-          subcategory: 'Transfer from ${fromWallet.name}',
-          amount: amount,
-          type: 'transfer',
-          categoryId: fallbackCatId,
-          walletId: toWalletId,
-          date: txDate,
-          note: note,
-        );
-        await txn.insert(DatabaseTables.transactions, inTx.toMap());
-      });
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.updateWalletBalance(fromWalletId, userId, -amount);
+      await syncRepo.updateWalletBalance(toWalletId, userId, amount);
+      await syncRepo.saveTransaction(outTx);
+      await syncRepo.saveTransaction(inTx);
 
       await refresh();
       await ref.read(walletsProvider.notifier).refresh();
@@ -231,8 +225,6 @@ Future<List<TransactionModel>> filteredTransactions(
   final all = await ref.watch(transactionsProvider.future);
   final allCategories = await ref.watch(categoriesProvider.future);
 
-  // If a specific type is selected ('income' or 'expense'), only apply category
-  // filters belonging to that type. In 'All' (type == null), all category filters apply.
   final applicableCategories = categories?.where((catId) {
     if (type == null) return true;
     final cat = allCategories.where((c) => c.id == catId).firstOrNull;
@@ -258,7 +250,8 @@ Future<List<TransactionModel>> filteredTransactions(
   }).toList();
 }
 
-final currentMonthIncomeProvider = FutureProvider<double>((ref) async {
+@riverpod
+Future<double> currentMonthIncome(Ref ref) async {
   final all = await ref.watch(transactionsProvider.future);
   final selectedWalletId = ref.watch(selectedWalletIdProvider);
   final now = DateTime.now();
@@ -269,9 +262,10 @@ final currentMonthIncomeProvider = FutureProvider<double>((ref) async {
     if (d == null) return false;
     return d.year == now.year && d.month == now.month;
   }).fold<double>(0.0, (s, t) => s + t.amount);
-});
+}
 
-final currentMonthExpenseProvider = FutureProvider<double>((ref) async {
+@riverpod
+Future<double> currentMonthExpense(Ref ref) async {
   final all = await ref.watch(transactionsProvider.future);
   final selectedWalletId = ref.watch(selectedWalletIdProvider);
   final now = DateTime.now();
@@ -282,10 +276,10 @@ final currentMonthExpenseProvider = FutureProvider<double>((ref) async {
     if (d == null) return false;
     return d.year == now.year && d.month == now.month;
   }).fold<double>(0.0, (s, t) => s + t.amount);
-});
+}
 
-// Always returns the single wallet's balance (multi-wallet not supported).
-final dashboardDisplayBalanceProvider = FutureProvider<double>((ref) async {
+@riverpod
+Future<double> dashboardDisplayBalance(Ref ref) async {
   final wallets = await ref.watch(walletsProvider.future);
   return wallets.isNotEmpty ? wallets.first.balance : 0.0;
-});
+}

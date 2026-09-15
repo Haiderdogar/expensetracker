@@ -85,7 +85,7 @@ abstract final class AppStrings {
   static const String enableBiometric = 'Enable biometrics';
   static const String logout = 'Log out';
   static const String logoutConfirmation =
-      'The app will lock and require your PIN or biometrics to unlock. Your offline data will remain on this device.';
+      'You will be signed out of Google. Your offline data stays on this device, isolated to your account.';
   static const String exportData = 'Export data';
   static const String importData = 'Import data';
   static const String backupSuccess = 'Backup exported successfully';

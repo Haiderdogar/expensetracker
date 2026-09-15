@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/utils/category_utils.dart';
 import '../../models/category_model.dart';
@@ -10,14 +11,19 @@ import '../../providers/transaction_provider.dart';
 import 'analytics_date_range.dart';
 import 'analytics_filters_provider.dart';
 
-final analyticsDateRangeProvider = Provider<DateTimeRange>((ref) {
+part 'analytics_data_providers.g.dart';
+
+@riverpod
+DateTimeRange analyticsDateRangeData(Ref ref) {
   final filter = ref.watch(analyticsFilterProvider);
   return analyticsDateRange(
     filter.timeRange,
     customStartDate: filter.customStartDate,
     customEndDate: filter.customEndDate,
   );
-});
+}
+
+final analyticsDateRangeProvider = analyticsDateRangeDataProvider;
 
 class CategoryBreakdownItem {
   const CategoryBreakdownItem({
@@ -49,7 +55,8 @@ class CategoryBreakdownData {
   final String type;
 }
 
-final categoryBreakdownProvider = Provider<CategoryBreakdownData>((ref) {
+@riverpod
+CategoryBreakdownData categoryBreakdown(Ref ref) {
   final transactions = ref.watch(transactionsProvider).value ?? const [];
   final categories = ref.watch(categoriesProvider).value ?? const [];
   final filter = ref.watch(analyticsFilterProvider);
@@ -58,58 +65,49 @@ final categoryBreakdownProvider = Provider<CategoryBreakdownData>((ref) {
   final categoryMap = {for (final cat in categories) cat.id: cat};
   final targetType = filter.categoryType;
 
-  final filtered = transactions.where((tx) {
-    if (tx.type != targetType) return false;
-    final txDate = DateTime.tryParse(tx.date);
+  final filtered = transactions.where((t) {
+    if (t.type != targetType) return false;
+    final txDate = DateTime.tryParse(t.date);
     if (txDate == null) return false;
     return !txDate.isBefore(dateRange.start) && !txDate.isAfter(dateRange.end);
   }).toList();
 
-  final totals = <String, double>{};
-  final counts = <String, int>{};
+  final total = filtered.fold<double>(0.0, (s, t) => s + t.amount);
 
-  for (final tx in filtered) {
-    totals[tx.categoryId] = (totals[tx.categoryId] ?? 0.0) + tx.amount;
-    counts[tx.categoryId] = (counts[tx.categoryId] ?? 0) + 1;
+  final categorySums = <String, double>{};
+  final categoryCounts = <String, int>{};
+  for (final t in filtered) {
+    categorySums[t.categoryId] = (categorySums[t.categoryId] ?? 0.0) + t.amount;
+    categoryCounts[t.categoryId] = (categoryCounts[t.categoryId] ?? 0) + 1;
   }
 
-  final grandTotal = totals.values.fold<double>(0.0, (sum, val) => sum + val);
-
-  final items = totals.entries.map((entry) {
-    final catId = entry.key;
-    final amount = entry.value;
-    final count = counts[catId] ?? 0;
-    final percent = grandTotal > 0 ? (amount / grandTotal) * 100 : 0.0;
-
-    final cat = categoryMap[catId] ??
+  final items = categorySums.entries.map((e) {
+    final cat = categoryMap[e.key] ??
         CategoryModel(
-          id: catId,
+          id: e.key,
           name: 'Other',
           type: targetType,
           icon: 'category',
           color: '#94A3B8',
         );
-
-    final color = categoryColorFromHex(cat.color);
-    final icon = categoryIconFromName(cat.icon);
-
+    final percentage = total > 0 ? (e.value / total) * 100 : 0.0;
     return CategoryBreakdownItem(
       category: cat,
-      amount: amount,
-      percentage: percent,
-      count: count,
-      color: color,
-      icon: icon,
+      amount: e.value,
+      percentage: percentage,
+      count: categoryCounts[e.key] ?? 0,
+      color: categoryColorFromHex(cat.color),
+      icon: categoryIconFromName(cat.icon),
     );
   }).toList()
     ..sort((a, b) => b.amount.compareTo(a.amount));
 
   return CategoryBreakdownData(
     items: items,
-    total: grandTotal,
+    total: total,
     type: targetType,
   );
-});
+}
 
 class AnalyticsSummary {
   const AnalyticsSummary({
@@ -133,7 +131,8 @@ class AnalyticsSummary {
   final int dayCount;
 }
 
-final analyticsSummaryProvider = Provider<AnalyticsSummary>((ref) {
+@riverpod
+AnalyticsSummary analyticsSummary(Ref ref) {
   final transactions = ref.watch(transactionsProvider).value ?? const [];
   final dateRange = ref.watch(analyticsDateRangeProvider);
   final categories = ref.watch(categoriesProvider).value ?? const [];
@@ -161,7 +160,6 @@ final analyticsSummaryProvider = Provider<AnalyticsSummary>((ref) {
     }
   }
 
-  // Calculate day count
   final days = (dateRange.end.difference(dateRange.start).inHours / 24).ceil();
   final effectiveDays = days <= 0 ? 1 : days;
   final dailyAverage = totalExpense / effectiveDays;
@@ -203,7 +201,7 @@ final analyticsSummaryProvider = Provider<AnalyticsSummary>((ref) {
     transactionCount: count,
     dayCount: effectiveDays,
   );
-});
+}
 
 class TrendBucket {
   TrendBucket({
@@ -221,13 +219,13 @@ class TrendBucket {
   double income;
 }
 
-final trendSeriesProvider = Provider<List<TrendBucket>>((ref) {
+@riverpod
+List<TrendBucket> trendSeries(Ref ref) {
   final transactions = ref.watch(transactionsProvider).value ?? const [];
   final dateRange = ref.watch(analyticsDateRangeProvider);
 
   final diffDays = dateRange.end.difference(dateRange.start).inDays;
 
-  // 1. Daily intervals for ranges up to 35 days (e.g. week, month)
   if (diffDays <= 35) {
     final buckets = <String, TrendBucket>{};
     var current = DateTime(
@@ -244,8 +242,8 @@ final trendSeriesProvider = Provider<List<TrendBucket>>((ref) {
     while (!current.isAfter(endDay)) {
       final key = DateFormat('yyyy-MM-dd').format(current);
       final label = diffDays <= 7
-          ? DateFormat('E').format(current) // Mon, Tue, etc.
-          : '${current.day}'; // 1, 2, 3...
+          ? DateFormat('E').format(current)
+          : '${current.day}';
       final tooltip = DateFormat('EEE, d MMM y').format(current);
 
       buckets[key] = TrendBucket(
@@ -273,7 +271,6 @@ final trendSeriesProvider = Provider<List<TrendBucket>>((ref) {
     return buckets.values.toList();
   }
 
-  // 2. Monthly intervals for quarter / year / wide custom ranges
   final buckets = <String, TrendBucket>{};
   var currentMonth = DateTime(dateRange.start.year, dateRange.start.month, 1);
   final endMonth = DateTime(dateRange.end.year, dateRange.end.month, 1);
@@ -306,4 +303,14 @@ final trendSeriesProvider = Provider<List<TrendBucket>>((ref) {
   }
 
   return buckets.values.toList();
-});
+}
+
+@riverpod
+class PieChartTouchedIndex extends _$PieChartTouchedIndex {
+  @override
+  int? build() => null;
+
+  @override
+  set state(int? value) => super.state = value;
+}
+

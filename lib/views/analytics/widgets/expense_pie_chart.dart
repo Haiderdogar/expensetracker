@@ -9,37 +9,30 @@ import '../analytics_data_providers.dart';
 import '../analytics_filters_provider.dart';
 import 'analytics_category_list.dart';
 
-class ExpensePieChart extends ConsumerStatefulWidget {
+class ExpensePieChart extends ConsumerWidget {
   const ExpensePieChart({super.key});
 
   @override
-  ConsumerState<ExpensePieChart> createState() => _ExpensePieChartState();
-}
-
-class _ExpensePieChartState extends ConsumerState<ExpensePieChart> {
-  int? _touchedIndex;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final breakdown = ref.watch(categoryBreakdownProvider);
     final filter = ref.watch(analyticsFilterProvider);
     final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final touchedIndex = ref.watch(pieChartTouchedIndexProvider);
 
     final items = breakdown.items;
     final total = breakdown.total;
     final isExpense = filter.categoryType == 'expense';
 
-    if (_touchedIndex != null && _touchedIndex! >= items.length) {
-      _touchedIndex = null;
-    }
+    final effectiveTouchedIndex = (touchedIndex != null && touchedIndex >= items.length)
+        ? null
+        : touchedIndex;
 
-    final touchedItem =
-        (_touchedIndex != null &&
-            _touchedIndex! >= 0 &&
-            _touchedIndex! < items.length)
-        ? items[_touchedIndex!]
+    final touchedItem = (effectiveTouchedIndex != null &&
+            effectiveTouchedIndex >= 0 &&
+            effectiveTouchedIndex < items.length)
+        ? items[effectiveTouchedIndex]
         : null;
 
     final centerTitle = touchedItem != null
@@ -90,7 +83,7 @@ class _ExpensePieChartState extends ConsumerState<ExpensePieChart> {
               ],
               selected: {filter.categoryType},
               onSelectionChanged: (selection) {
-                setState(() => _touchedIndex = null);
+                ref.read(pieChartTouchedIndexProvider.notifier).state = null;
                 ref
                     .read(analyticsFilterProvider.notifier)
                     .setCategoryType(selection.first);
@@ -137,23 +130,20 @@ class _ExpensePieChartState extends ConsumerState<ExpensePieChart> {
                   PieChartData(
                     pieTouchData: PieTouchData(
                       touchCallback: (event, pieTouchResponse) {
-                        setState(() {
-                          if (!event.isInterestedForInteractions ||
-                              pieTouchResponse == null ||
-                              pieTouchResponse.touchedSection == null) {
-                            return;
-                          }
-                          _touchedIndex = pieTouchResponse
-                              .touchedSection!
-                              .touchedSectionIndex;
-                        });
+                        if (!event.isInterestedForInteractions ||
+                            pieTouchResponse == null ||
+                            pieTouchResponse.touchedSection == null) {
+                          return;
+                        }
+                        ref.read(pieChartTouchedIndexProvider.notifier).state =
+                            pieTouchResponse.touchedSection!.touchedSectionIndex;
                       },
                     ),
                     borderData: FlBorderData(show: false),
                     sectionsSpace: 2.5,
                     centerSpaceRadius: 64,
                     sections: List.generate(items.length, (i) {
-                      final isTouched = i == _touchedIndex;
+                      final isTouched = i == effectiveTouchedIndex;
                       final item = items[i];
                       final showTitle = isTouched || item.percentage >= 7.0;
 
@@ -177,7 +167,7 @@ class _ExpensePieChartState extends ConsumerState<ExpensePieChart> {
                 // Donut Center Content
                 GestureDetector(
                   onTap: () {
-                    setState(() => _touchedIndex = null);
+                    ref.read(pieChartTouchedIndexProvider.notifier).state = null;
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -229,9 +219,9 @@ class _ExpensePieChartState extends ConsumerState<ExpensePieChart> {
           // Category Tiles
           AnalyticsCategoryList(
             items: items,
-            selectedIndex: _touchedIndex,
+            selectedIndex: effectiveTouchedIndex,
             onSelect: (index) {
-              setState(() => _touchedIndex = index);
+              ref.read(pieChartTouchedIndexProvider.notifier).state = index;
             },
           ),
         ],

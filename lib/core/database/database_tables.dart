@@ -6,30 +6,38 @@ abstract final class DatabaseTables {
   static const String budgets = 'budgets';
   static const String settings = 'settings';
   static const String notes = 'notes';
+  static const String syncQueue = 'sync_queue';
 
-  static const int dbVersion = 6;
+  static const int dbVersion = 7;
 
   static const String createCategories = '''
     CREATE TABLE $categories (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       name TEXT NOT NULL,
       type TEXT NOT NULL,
       icon TEXT NOT NULL,
-      color TEXT NOT NULL
+      color TEXT NOT NULL,
+      is_synced INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL
     )
   ''';
 
   static const String createWallets = '''
     CREATE TABLE $wallets (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       name TEXT NOT NULL,
-      balance REAL NOT NULL DEFAULT 0
+      balance REAL NOT NULL DEFAULT 0,
+      is_synced INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL
     )
   ''';
 
   static const String createTransactions = '''
     CREATE TABLE $transactions (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       title TEXT NOT NULL,
       subcategory TEXT NOT NULL DEFAULT '',
       amount REAL NOT NULL,
@@ -38,6 +46,8 @@ abstract final class DatabaseTables {
       wallet_id TEXT NOT NULL,
       date TEXT NOT NULL,
       note TEXT,
+      is_synced INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
       FOREIGN KEY (category_id) REFERENCES $categories(id),
       FOREIGN KEY (wallet_id) REFERENCES $wallets(id)
     )
@@ -46,9 +56,12 @@ abstract final class DatabaseTables {
   static const String createSubcategories = '''
     CREATE TABLE $subcategories (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       category_id TEXT NOT NULL,
       name TEXT NOT NULL,
-      UNIQUE(category_id, name),
+      is_synced INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      UNIQUE(user_id, category_id, name),
       FOREIGN KEY (category_id) REFERENCES $categories(id) ON DELETE CASCADE
     )
   ''';
@@ -56,9 +69,12 @@ abstract final class DatabaseTables {
   static const String createBudgets = '''
     CREATE TABLE $budgets (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       category_id TEXT NOT NULL,
       amount REAL NOT NULL,
       month_year TEXT NOT NULL,
+      is_synced INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
       FOREIGN KEY (category_id) REFERENCES $categories(id)
     )
   ''';
@@ -73,10 +89,23 @@ abstract final class DatabaseTables {
   static const String createNotes = '''
     CREATE TABLE $notes (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       title TEXT NOT NULL,
       content TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      is_synced INTEGER NOT NULL DEFAULT 0
+    )
+  ''';
+
+  static const String createSyncQueue = '''
+    CREATE TABLE $syncQueue (
+      id TEXT PRIMARY KEY,
+      table_name TEXT NOT NULL,
+      record_id TEXT NOT NULL,
+      operation TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
     )
   ''';
 

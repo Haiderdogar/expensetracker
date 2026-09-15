@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
-import '../core/database/database_tables.dart';
 import '../core/utils/category_utils.dart';
 import '../core/utils/error_handler.dart';
 import '../core/utils/formatters.dart';
 import '../models/budget_model.dart';
 import '../models/category_model.dart';
+import 'auth_provider.dart';
 import 'category_provider.dart';
 import 'database_provider.dart';
 import 'transaction_provider.dart';
@@ -23,9 +22,10 @@ class Budgets extends _$Budgets {
 
   Future<List<BudgetModel>> _fetchAll() async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      final rows = await db.query(DatabaseTables.budgets);
-      return rows.map(BudgetModel.fromMap).toList();
+      ref.watch(localDataEpochProvider);
+      final userId = ref.watch(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      return await syncRepo.getBudgets(userId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -38,12 +38,9 @@ class Budgets extends _$Budgets {
 
   Future<void> upsert(BudgetModel budget) async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      await db.insert(
-        DatabaseTables.budgets,
-        budget.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.saveBudget(budget.copyWith(userId: userId));
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -52,12 +49,9 @@ class Budgets extends _$Budgets {
 
   Future<void> delete(String id) async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      await db.delete(
-        DatabaseTables.budgets,
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.deleteBudget(id, userId);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -70,9 +64,11 @@ class Budgets extends _$Budgets {
     DateTime? month,
   }) async {
     const uuid = Uuid();
+    final userId = ref.read(currentUserIdProvider);
     final m = month ?? DateTime.now();
     final budget = BudgetModel(
       id: uuid.v4(),
+      userId: userId,
       categoryId: categoryId,
       amount: amount,
       monthYear: Formatters.monthYear(m),
@@ -139,8 +135,8 @@ class BudgetProgress {
   bool get isNearLimit => !isOverBudget && (progress >= 0.80);
 }
 
-final monthBudgetProgressProvider =
-    FutureProvider.family<List<BudgetProgress>, DateTime>((ref, month) async {
+@riverpod
+Future<List<BudgetProgress>> monthBudgetProgress(Ref ref, DateTime month) async {
   final monthKey = Formatters.monthYear(month);
   final budgets = await ref.watch(budgetsProvider.future);
   final transactions = await ref.watch(transactionsProvider.future);
@@ -166,7 +162,7 @@ final monthBudgetProgressProvider =
       categoryName: category?.name ?? 'Unknown',
     );
   }).toList();
-});
+}
 
 @riverpod
 Future<List<BudgetProgress>> currentMonthBudgetProgress(Ref ref) async {

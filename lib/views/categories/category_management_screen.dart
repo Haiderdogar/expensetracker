@@ -9,20 +9,27 @@ class CategoryManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Manage categories'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-        ),
-        floatingActionButton: Consumer(
-          builder: (context, ref, _) => FloatingActionButton.extended(
-            onPressed: () => addCategory(context, ref),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('New category'),
-          ),
-        ),
-        body: const CategoryManagementBody(),
-      );
+    appBar: AppBar(
+      title: const Text('Manage categories'),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded),
+        onPressed: () => Navigator.of(context).maybePop(),
+      ),
+    ),
+    floatingActionButton: const _AddCategoryButton(),
+    body: const CategoryManagementBody(),
+  );
+}
+
+class _AddCategoryButton extends ConsumerWidget {
+  const _AddCategoryButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FloatingActionButton.extended(
+      onPressed: () => addCategory(context, ref),
+      icon: const Icon(Icons.add_rounded),
+      label: const Text('New category'),
+    );
+  }
 }

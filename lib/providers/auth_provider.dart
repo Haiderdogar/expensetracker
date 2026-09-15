@@ -1,4 +1,9 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -6,21 +11,132 @@ import 'database_provider.dart';
 
 part 'auth_provider.g.dart';
 
-enum AuthStatus { loading, unauthenticated, authenticated, needsPinSetup }
+enum AuthStatus {
+  loading,
+  unauthenticated, // Not signed in with Google
+  authenticated, // Signed in and unlocked
+  guest, // Continuing without creating an account
+  pinLocked, // Signed in, but locked behind local PIN
+  needsPinSetup,
+}
 
 const _resumeLockAfter = Duration(seconds: 30);
 
 @Riverpod(keepAlive: true)
+Stream<User?> authStateChanges(Ref ref) {
+  try {
+    return FirebaseAuth.instance.authStateChanges();
+  } catch (e) {
+    debugPrint('[authStateChanges] Firebase unavailable: $e');
+    return Stream<User?>.value(null);
+  }
+}
+
+@Riverpod(keepAlive: true)
+User? currentUser(Ref ref) {
+  return ref.watch(authStateChangesProvider).value;
+}
+
+@Riverpod(keepAlive: true)
+String currentUserId(Ref ref) {
+  final user = ref.watch(currentUserProvider);
+  return user?.uid ?? 'default_user';
+}
+
+@Riverpod(keepAlive: true)
 class AuthController extends _$AuthController {
   DateTime? _backgroundedAt;
+  bool _pinUnlocked = false;
 
   @override
   Future<AuthStatus> build() async {
-    final storage = ref.read(secureStorageProvider);
-    if (await storage.hasConfiguredPinLock()) {
+    final user = await ref.watch(authStateChangesProvider.future);
+    if (user == null) {
+      _pinUnlocked = false;
       return AuthStatus.unauthenticated;
     }
+
+    await ref.read(databaseHelperProvider).ensureUserInitialized(user.uid);
+
+    final syncRepo = ref.read(syncRepositoryProvider);
+    syncRepo.initConnectivityListener(() => user.uid);
+    unawaited(_reconcileAndRefresh(user.uid));
+
+    // Check optional local PIN lock
+    final storage = ref.read(secureStorageProvider);
+    final hasPin = await storage.hasConfiguredPinLock();
+    if (hasPin && !_pinUnlocked) {
+      return AuthStatus.pinLocked;
+    }
+
     return AuthStatus.authenticated;
+  }
+
+  Future<void> _reconcileAndRefresh(String userId) async {
+    await ref.read(syncRepositoryProvider).reconcileWithRemote(userId);
+    ref.read(localDataEpochProvider.notifier).bump();
+  }
+
+  Future<bool> signInWithGoogle() async {
+    state = const AsyncLoading();
+    try {
+      final GoogleSignInAccount googleUser = await GoogleSignIn.instance
+          .authenticate();
+      final String? idToken = googleUser.authentication.idToken;
+      if (idToken == null) {
+        throw StateError('Google Sign-In did not return an ID token.');
+      }
+
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
+      final user = userCredential.user;
+      if (user != null) {
+        await ref.read(databaseHelperProvider).ensureUserInitialized(user.uid);
+        _pinUnlocked = true;
+        final syncRepo = ref.read(syncRepositoryProvider);
+        syncRepo.initConnectivityListener(() => user.uid);
+        unawaited(_reconcileAndRefresh(user.uid));
+        state = const AsyncData(AuthStatus.authenticated);
+        return true;
+      }
+
+      state = const AsyncData(AuthStatus.unauthenticated);
+      return false;
+    } on GoogleSignInException catch (e) {
+      final message = e.code == GoogleSignInExceptionCode.clientConfigurationError
+          ? 'Google Sign-In is not configured. Regenerate google-services.json '
+                'after enabling Google Auth and adding this app\'s SHA-1.'
+          : 'Google sign-in cancelled or failed: $e';
+      debugPrint('[AuthController] $message');
+      final current = FirebaseAuth.instance.currentUser;
+      state = AsyncData(
+        current != null ? AuthStatus.authenticated : AuthStatus.unauthenticated,
+      );
+      return false;
+    } catch (e) {
+      debugPrint('[AuthController] Google sign-in failed: $e');
+      state = const AsyncData(AuthStatus.unauthenticated);
+      return false;
+    }
+  }
+
+  /// Continue without contacting Firebase or creating an anonymous account.
+  void continueAsGuest() {
+    state = const AsyncData(AuthStatus.guest);
+  }
+
+  Future<void> signOut() async {
+    _backgroundedAt = null;
+    _pinUnlocked = false;
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
+    state = const AsyncData(AuthStatus.unauthenticated);
   }
 
   Future<bool> checkPin(String pin) async {
@@ -32,6 +148,7 @@ class AuthController extends _$AuthController {
   Future<bool> verifyPin(String pin) async {
     final valid = await checkPin(pin);
     if (valid) {
+      _pinUnlocked = true;
       state = const AsyncData(AuthStatus.authenticated);
     }
     return valid;
@@ -42,6 +159,7 @@ class AuthController extends _$AuthController {
     await storage.savePinHash(pin);
     await storage.setPinEnabled(true);
     await storage.setLockPromptCompleted(true);
+    _pinUnlocked = true;
     ref.invalidate(pinEnabledProvider);
     ref.invalidate(lockPromptCompletedProvider);
     state = const AsyncData(AuthStatus.authenticated);
@@ -50,6 +168,7 @@ class AuthController extends _$AuthController {
   Future<void> skipLockSetup() async {
     final storage = ref.read(secureStorageProvider);
     await storage.setLockPromptCompleted(true);
+    _pinUnlocked = true;
     ref.invalidate(lockPromptCompletedProvider);
     state = const AsyncData(AuthStatus.authenticated);
   }
@@ -60,11 +179,7 @@ class AuthController extends _$AuthController {
       return false;
     }
 
-    // Remove stored PIN entirely to avoid leaving stale hashes on device.
-    // deletePin also clears the pin enabled flag.
     await storage.deletePin();
-
-    // Ensure biometric flag is cleared as well.
     await storage.setBiometricEnabled(false);
 
     ref.invalidate(pinEnabledProvider);
@@ -75,9 +190,10 @@ class AuthController extends _$AuthController {
 
   Future<void> lock() async {
     final storage = ref.read(secureStorageProvider);
+    _pinUnlocked = false;
     state = AsyncData(
       await storage.hasConfiguredPinLock()
-          ? AuthStatus.unauthenticated
+          ? AuthStatus.pinLocked
           : AuthStatus.authenticated,
     );
   }
@@ -91,24 +207,21 @@ class AuthController extends _$AuthController {
     _backgroundedAt = null;
     if (started == null) return;
     if (DateTime.now().difference(started) < _resumeLockAfter) return;
-    if (state.value == AuthStatus.unauthenticated) return;
-    await lock();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final storage = ref.read(secureStorageProvider);
+    if (await storage.hasConfiguredPinLock()) {
+      _pinUnlocked = false;
+      state = const AsyncData(AuthStatus.pinLocked);
+    }
   }
 
   Future<void> logout() async {
-    // Without a configured lock there is no credential screen to return to.
-    // Keep the local-only app usable after the user confirms logout.
-    _backgroundedAt = null;
-    await lock();
+    await signOut();
   }
 
-  /// Called after a confirmed logout that wipes all user data.
-  /// Sets state to [AuthStatus.authenticated] so [AppBootstrap] routes through
-  /// its normal logic. Since all providers are invalidated and the DB is reset,
-  /// [onboardingCompleteProvider] returns false → [OnboardingScreen] is shown.
   Future<void> logoutAndReset() async {
-    _backgroundedAt = null;
-    state = const AsyncData(AuthStatus.authenticated);
+    await signOut();
   }
 
   Future<bool> isBiometricAvailable() async {
@@ -126,8 +239,6 @@ class AuthController extends _$AuthController {
       if (biometrics.contains(BiometricType.fingerprint)) {
         return BiometricType.fingerprint;
       }
-      // Android exposes enrolled sensors as weak/strong classifications,
-      // rather than identifying fingerprint or face directly.
       if (biometrics.contains(BiometricType.strong)) {
         return BiometricType.strong;
       }
@@ -140,7 +251,6 @@ class AuthController extends _$AuthController {
     }
   }
 
-  /// Prompts only an enrolled face or fingerprint biometric.
   Future<bool> promptBiometric({
     String reason = 'Unlock Expense Tracker',
   }) async {
@@ -164,6 +274,7 @@ class AuthController extends _$AuthController {
 
     final success = await promptBiometric(reason: 'Unlock Expense Tracker');
     if (success) {
+      _pinUnlocked = true;
       state = const AsyncData(AuthStatus.authenticated);
     }
     return success;
@@ -180,13 +291,15 @@ class AuthController extends _$AuthController {
   }
 }
 
-final lockPromptCompletedProvider = FutureProvider<bool>((ref) async {
+@riverpod
+Future<bool> lockPromptCompleted(Ref ref) async {
   return ref.read(secureStorageProvider).isLockPromptCompleted();
-});
+}
 
-final introOnboardingSeenProvider = FutureProvider<bool>((ref) async {
+@riverpod
+Future<bool> introOnboardingSeen(Ref ref) async {
   return ref.read(secureStorageProvider).hasSeenIntroOnboarding();
-});
+}
 
 @riverpod
 Future<bool> pinEnabled(Ref ref) async {
@@ -200,10 +313,12 @@ Future<bool> biometricEnabled(Ref ref) async {
 
 @riverpod
 Future<bool> onboardingComplete(Ref ref) async {
-  return ref.read(databaseHelperProvider).isOnboardingComplete();
+  final userId = ref.watch(currentUserIdProvider);
+  return ref.read(databaseHelperProvider).isOnboardingComplete(userId);
 }
 
 @riverpod
 Future<String> currencySymbol(Ref ref) async {
-  return ref.read(databaseHelperProvider).getCurrencySymbol();
+  final userId = ref.watch(currentUserIdProvider);
+  return ref.read(databaseHelperProvider).getCurrencySymbol(userId);
 }

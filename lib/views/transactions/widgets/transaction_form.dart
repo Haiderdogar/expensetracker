@@ -15,18 +15,16 @@ import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
 import '../transactions_ui_providers.dart';
 
-class TransactionForm extends StatelessWidget {
+class TransactionForm extends ConsumerWidget {
   TransactionForm({super.key, this.transaction});
 
   final TransactionModel? transaction;
   final _formKey = GlobalKey<FormState>();
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final draft = ref.watch(transactionFormProvider(transaction));
-        return Form(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final draft = ref.watch(transactionFormProvider(transaction));
+    return Form(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(16),
@@ -90,8 +88,6 @@ class TransactionForm extends StatelessWidget {
             ],
           ),
         );
-      },
-    );
   }
 
   void _updateDraft(WidgetRef ref, TransactionFormDraft draft) {

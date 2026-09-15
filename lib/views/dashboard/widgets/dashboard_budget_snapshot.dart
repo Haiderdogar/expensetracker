@@ -208,6 +208,6 @@ class DashboardBudgetSnapshot extends ConsumerWidget {
 
   void _navigateToBudgets(WidgetRef ref) {
     ref.read(appShellNavigationIndexProvider.notifier).state = 3;
-    ref.read(appShellVisitedIndexesProvider.notifier).update((v) => {...v, 3});
+    ref.read(appShellVisitedIndexesProvider.notifier).addIndex(3);
   }
 }

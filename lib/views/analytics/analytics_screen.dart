@@ -10,15 +10,11 @@ import 'widgets/analytics_summary_cards.dart';
 import 'widgets/analytics_time_range_filter.dart';
 import 'widgets/analytics_trend_section.dart';
 
-class AnalyticsScreen extends ConsumerWidget {
+class AnalyticsScreen extends StatelessWidget {
   const AnalyticsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final filter = ref.watch(analyticsFilterProvider);
-    final accountCreatedAt = ref.watch(accountCreatedAtProvider).value;
-    final isCustom = filter.timeRange == 'custom';
-
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -29,59 +25,76 @@ class AnalyticsScreen extends ConsumerWidget {
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        children: [
-          // Unified Global Time Range Selector
-          AnalyticsTimeRangeFilter(
-            selected: filter.timeRange,
-            onChanged: (range) {
-              if (range == 'custom' && accountCreatedAt != null) {
-                ref
-                    .read(analyticsFilterProvider.notifier)
-                    .setCustomRange(
-                      filter.customStartDate ?? accountCreatedAt,
-                      filter.customEndDate ?? DateTime.now(),
-                    );
-              } else {
-                ref.read(analyticsFilterProvider.notifier).setTimeRange(range);
-              }
-            },
-          ),
-
-          // Custom Date Range Picker
-          if (isCustom && accountCreatedAt != null) ...[
-            const SizedBox(height: 12),
-            AnalyticsCustomDateRange(
-              startDate: filter.customStartDate ?? accountCreatedAt,
-              endDate: filter.customEndDate ?? DateTime.now(),
-              onStartDateTap: () => _pickDate(
-                context: context,
-                ref: ref,
-                filter: filter,
-                accountCreatedAt: accountCreatedAt,
-                isStart: true,
-              ),
-              onEndDateTap: () => _pickDate(
-                context: context,
-                ref: ref,
-                filter: filter,
-                accountCreatedAt: accountCreatedAt,
-                isStart: false,
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-
-          // Key Performance Indicators / Financial Summary
-          const AnalyticsSummaryCards(),
-          const SizedBox(height: 10),
-
-          // Category Breakdown (Pie chart + ranked category progress list)
-          const AnalyticsCategorySection(),
-          const SizedBox(height: 10),
-
-          // Spending Trend (Continuous bar chart with zero-filling and interval labels)
-          const AnalyticsTrendSection(),
+        children: const [
+          _AnalyticsTimeRangeSection(),
+          _AnalyticsCustomRangeSection(),
+          SizedBox(height: 10),
+          AnalyticsSummaryCards(),
+          SizedBox(height: 10),
+          AnalyticsCategorySection(),
+          SizedBox(height: 10),
+          AnalyticsTrendSection(),
         ],
+      ),
+    );
+  }
+}
+
+class _AnalyticsTimeRangeSection extends ConsumerWidget {
+  const _AnalyticsTimeRangeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filter = ref.watch(analyticsFilterProvider);
+    final accountCreatedAt = ref.watch(accountCreatedAtProvider).value;
+
+    return AnalyticsTimeRangeFilter(
+      selected: filter.timeRange,
+      onChanged: (range) {
+        if (range == 'custom' && accountCreatedAt != null) {
+          ref.read(analyticsFilterProvider.notifier).setCustomRange(
+                filter.customStartDate ?? accountCreatedAt,
+                filter.customEndDate ?? DateTime.now(),
+              );
+        } else {
+          ref.read(analyticsFilterProvider.notifier).setTimeRange(range);
+        }
+      },
+    );
+  }
+}
+
+class _AnalyticsCustomRangeSection extends ConsumerWidget {
+  const _AnalyticsCustomRangeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filter = ref.watch(analyticsFilterProvider);
+    final accountCreatedAt = ref.watch(accountCreatedAtProvider).value;
+    final isCustom = filter.timeRange == 'custom';
+    if (!isCustom || accountCreatedAt == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: AnalyticsCustomDateRange(
+        startDate: filter.customStartDate ?? accountCreatedAt,
+        endDate: filter.customEndDate ?? DateTime.now(),
+        onStartDateTap: () => _pickDate(
+          context: context,
+          ref: ref,
+          filter: filter,
+          accountCreatedAt: accountCreatedAt,
+          isStart: true,
+        ),
+        onEndDateTap: () => _pickDate(
+          context: context,
+          ref: ref,
+          filter: filter,
+          accountCreatedAt: accountCreatedAt,
+          isStart: false,
+        ),
       ),
     );
   }

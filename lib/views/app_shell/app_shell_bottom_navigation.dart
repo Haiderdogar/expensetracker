@@ -22,9 +22,7 @@ class AppShellBottomNavigation extends ConsumerWidget {
       items: _items,
       onTap: (index) {
         ref.read(appShellNavigationIndexProvider.notifier).state = index;
-        ref.read(appShellVisitedIndexesProvider.notifier).update(
-          (visited) => {...visited, index},
-        );
+        ref.read(appShellVisitedIndexesProvider.notifier).addIndex(index);
       },
     );
   }

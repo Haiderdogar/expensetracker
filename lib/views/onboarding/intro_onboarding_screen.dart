@@ -5,21 +5,12 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/database_provider.dart';
+import 'intro_providers.dart';
 
-class IntroOnboardingScreen extends ConsumerStatefulWidget {
+class IntroOnboardingScreen extends StatelessWidget {
   const IntroOnboardingScreen({super.key});
 
-  @override
-  ConsumerState<IntroOnboardingScreen> createState() =>
-      _IntroOnboardingScreenState();
-}
-
-class _IntroOnboardingScreenState extends ConsumerState<IntroOnboardingScreen> {
-  final PageController _pageController = PageController();
-  var _pageIndex = 0;
-  var _isCompleting = false;
-
-  static const _pages = [
+  static const pages = [
     _IntroPageData(
       icon: Icons.receipt_long_rounded,
       color: AppColors.primaryEmerald,
@@ -56,95 +47,130 @@ class _IntroOnboardingScreenState extends ConsumerState<IntroOnboardingScreen> {
   ];
 
   @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _advance() async {
-    if (_isCompleting) return;
-    if (_pageIndex < _pages.length - 1) {
-      await _pageController.nextPage(
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOut,
-      );
-      return;
-    }
-
-    setState(() => _isCompleting = true);
-    try {
-      await ref.read(secureStorageProvider).setIntroOnboardingSeen();
-      ref.invalidate(introOnboardingSeenProvider);
-    } finally {
-      if (mounted) setState(() => _isCompleting = false);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final page = _pages[_pageIndex];
-    final colors = Theme.of(context).colorScheme;
-
-    return Scaffold(
+    return const Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _pages.length,
-                onPageChanged: (index) => setState(() => _pageIndex = index),
-                itemBuilder: (context, index) => _IntroPage(data: _pages[index]),
-              ),
-            ),
+            Expanded(child: _IntroPageView()),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+              padding: EdgeInsets.fromLTRB(24, 12, 24, 32),
               child: Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(_pages.length, (index) {
-                      final selected = index == _pageIndex;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: selected ? 24 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: selected ? page.color : colors.outlineVariant,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 28),
-                  FilledButton(
-                    onPressed: _isCompleting ? null : _advance,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: page.color,
-                      minimumSize: const Size(double.infinity, 52),
-                    ),
-                    child: _isCompleting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            _pageIndex == _pages.length - 1
-                                ? AppStrings.continueLabel
-                                : AppStrings.next,
-                          ),
-                  ),
+                  _IntroPageIndicators(),
+                  SizedBox(height: 28),
+                  _IntroAdvanceButton(),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _IntroPageView extends ConsumerWidget {
+  const _IntroPageView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.watch(introPageControllerProvider);
+
+    return PageView.builder(
+      controller: controller,
+      itemCount: IntroOnboardingScreen.pages.length,
+      onPageChanged: (index) =>
+          ref.read(introPageIndexProvider.notifier).setIndex(index),
+      itemBuilder: (context, index) =>
+          _IntroPage(data: IntroOnboardingScreen.pages[index]),
+    );
+  }
+}
+
+class _IntroPageIndicators extends ConsumerWidget {
+  const _IntroPageIndicators();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pageIndex = ref.watch(introPageIndexProvider);
+    final page = IntroOnboardingScreen.pages[pageIndex];
+    final colors = Theme.of(context).colorScheme;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(IntroOnboardingScreen.pages.length, (index) {
+        final selected = index == pageIndex;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: selected ? 24 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: selected ? page.color : colors.outlineVariant,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _IntroAdvanceButton extends ConsumerWidget {
+  const _IntroAdvanceButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pageIndex = ref.watch(introPageIndexProvider);
+    final isCompleting = ref.watch(introCompletingProvider);
+    final page = IntroOnboardingScreen.pages[pageIndex];
+
+    Future<void> advance() async {
+      if (isCompleting) return;
+      if (pageIndex < IntroOnboardingScreen.pages.length - 1) {
+        final controller = ref.read(introPageControllerProvider);
+        await controller.nextPage(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOut,
+        );
+        return;
+      }
+
+      ref.read(introCompletingProvider.notifier).setCompleting(true);
+      try {
+        await ref.read(secureStorageProvider).setIntroOnboardingSeen();
+        ref.invalidate(introOnboardingSeenProvider);
+      } catch (error) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not save onboarding progress: $error')),
+          );
+        }
+      } finally {
+        ref.read(introCompletingProvider.notifier).setCompleting(false);
+      }
+    }
+
+    return FilledButton(
+      onPressed: isCompleting ? null : advance,
+      style: FilledButton.styleFrom(
+        backgroundColor: page.color,
+        minimumSize: const Size(double.infinity, 52),
+      ),
+      child: isCompleting
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Text(
+              pageIndex == IntroOnboardingScreen.pages.length - 1
+                  ? AppStrings.continueLabel
+                  : AppStrings.next,
+            ),
     );
   }
 }

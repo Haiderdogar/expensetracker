@@ -1,11 +1,42 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-final selectedBudgetMonthProvider = StateProvider<DateTime>((ref) {
-  final now = DateTime.now();
-  return DateTime(now.year, now.month, 1);
-});
+part 'budgets_ui_providers.g.dart';
 
-final addBudgetCategoryProvider = StateProvider.autoDispose<String?>((ref) => null);
-final addBudgetAmountProvider = StateProvider.autoDispose<String>((ref) => '');
-final addBudgetLoadingProvider = StateProvider.autoDispose<bool>((ref) => false);
+@Riverpod(keepAlive: true)
+class SelectedBudgetMonth extends _$SelectedBudgetMonth {
+  @override
+  DateTime build() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, 1);
+  }
+
+  @override
+  set state(DateTime value) => super.state = value;
+}
+
+@riverpod
+class AddBudgetCategory extends _$AddBudgetCategory {
+  @override
+  String? build() => null;
+
+  @override
+  set state(String? value) => super.state = value;
+}
+
+@riverpod
+class AddBudgetAmount extends _$AddBudgetAmount {
+  @override
+  String build() => '';
+
+  @override
+  set state(String value) => super.state = value;
+}
+
+@riverpod
+class AddBudgetLoading extends _$AddBudgetLoading {
+  @override
+  bool build() => false;
+
+  @override
+  set state(bool value) => super.state = value;
+}

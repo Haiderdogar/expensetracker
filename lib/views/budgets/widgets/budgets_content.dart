@@ -173,14 +173,14 @@ class BudgetsEmptyState extends ConsumerWidget {
   }
 }
 
-class BudgetsLoadError extends StatelessWidget {
+class BudgetsLoadError extends ConsumerWidget {
   const BudgetsLoadError({super.key, required this.error, required this.month});
 
   final Object error;
   final DateTime month;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -188,12 +188,10 @@ class BudgetsLoadError extends StatelessWidget {
           children: [
             Text('Failed to load budgets: $error'),
             const SizedBox(height: 12),
-            Consumer(
-              builder: (context, ref, _) => ElevatedButton(
-                onPressed: () =>
-                    ref.invalidate(monthBudgetProgressProvider(month)),
-                child: const Text('Retry'),
-              ),
+            ElevatedButton(
+              onPressed: () =>
+                  ref.invalidate(monthBudgetProgressProvider(month)),
+              child: const Text('Retry'),
             ),
           ],
         ),

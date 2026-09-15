@@ -33,7 +33,7 @@ final class NotesProvider
   Notes create() => Notes();
 }
 
-String _$notesHash() => r'bd8dd9877048d1bce86285fd81e4892e0dbdf844';
+String _$notesHash() => r'2f5710c13395c5547d04182802028b646a0da3cf';
 
 abstract class _$Notes extends $AsyncNotifier<List<NoteModel>> {
   FutureOr<List<NoteModel>> build();

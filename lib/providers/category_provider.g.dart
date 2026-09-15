@@ -33,7 +33,7 @@ final class CategoriesProvider
   Categories create() => Categories();
 }
 
-String _$categoriesHash() => r'3aaba8efda9160da67e41c1df78514856731333e';
+String _$categoriesHash() => r'3ded29447407107fe15b83d19b19f06c34247679';
 
 abstract class _$Categories extends $AsyncNotifier<List<CategoryModel>> {
   FutureOr<List<CategoryModel>> build();
@@ -135,3 +135,80 @@ final class ExpenseCategoriesProvider
 }
 
 String _$expenseCategoriesHash() => r'ae0e992bf3eaffafbc390dd92bb02267753b269a';
+
+@ProviderFor(usedCategories)
+final usedCategoriesProvider = UsedCategoriesFamily._();
+
+final class UsedCategoriesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<CategoryModel>>,
+          List<CategoryModel>,
+          FutureOr<List<CategoryModel>>
+        >
+    with
+        $FutureModifier<List<CategoryModel>>,
+        $FutureProvider<List<CategoryModel>> {
+  UsedCategoriesProvider._({
+    required UsedCategoriesFamily super.from,
+    required String? super.argument,
+  }) : super(
+         retry: null,
+         name: r'usedCategoriesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$usedCategoriesHash();
+
+  @override
+  String toString() {
+    return r'usedCategoriesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<CategoryModel>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<CategoryModel>> create(Ref ref) {
+    final argument = this.argument as String?;
+    return usedCategories(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is UsedCategoriesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$usedCategoriesHash() => r'ee6c676aafb462161fe2c3d1598f868a5433a0d6';
+
+final class UsedCategoriesFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<CategoryModel>>, String?> {
+  UsedCategoriesFamily._()
+    : super(
+        retry: null,
+        name: r'usedCategoriesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  UsedCategoriesProvider call(String? type) =>
+      UsedCategoriesProvider._(argument: type, from: this);
+
+  @override
+  String toString() => r'usedCategoriesProvider';
+}

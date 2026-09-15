@@ -1,16 +1,21 @@
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
-import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
 import '../models/wallet_model.dart';
+import 'auth_provider.dart';
 import 'database_provider.dart';
 
 part 'wallet_provider.g.dart';
 
-final selectedWalletIdProvider =
-    StateProvider.autoDispose<String?>((ref) => null);
+@riverpod
+class SelectedWalletId extends _$SelectedWalletId {
+  @override
+  String? build() => null;
+
+  void setSelectedId(String? id) => state = id;
+}
 
 @riverpod
 String activeWalletName(Ref ref) {
@@ -32,9 +37,10 @@ class Wallets extends _$Wallets {
 
   Future<List<WalletModel>> _fetchAll() async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      final rows = await db.query(DatabaseTables.wallets, orderBy: 'name ASC');
-      return rows.map(WalletModel.fromMap).toList();
+      ref.watch(localDataEpochProvider);
+      final userId = ref.watch(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      return await syncRepo.getWallets(userId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -47,15 +53,22 @@ class Wallets extends _$Wallets {
 
   Future<WalletModel> create({required String name, double balance = 0}) async {
     try {
-      // Only one wallet is allowed at a time.
       final existing = await _fetchAll();
       if (existing.isNotEmpty) {
-        throw Exception('Only one wallet is supported. Edit the existing wallet name from your profile.');
+        throw Exception(
+            'Only one wallet is supported. Edit the existing wallet name from your profile.');
       }
       const uuid = Uuid();
-      final wallet = WalletModel(id: uuid.v4(), name: name, balance: balance);
-      final db = await ref.read(databaseProvider.future);
-      await db.insert(DatabaseTables.wallets, wallet.toMap());
+      final userId = ref.read(currentUserIdProvider);
+      final wallet = WalletModel(
+        id: uuid.v4(),
+        userId: userId,
+        name: name,
+        balance: balance,
+        isSynced: false,
+      );
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.saveWallet(wallet);
       await refresh();
       return wallet;
     } catch (e) {
@@ -63,13 +76,22 @@ class Wallets extends _$Wallets {
     }
   }
 
+  Future<void> updateWallet(WalletModel wallet) async {
+    try {
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.saveWallet(wallet.copyWith(userId: userId, isSynced: false));
+      await refresh();
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
   Future<void> updateBalance(String walletId, double delta) async {
     try {
-      final db = await ref.read(databaseProvider.future);
-      await db.rawUpdate(
-        'UPDATE ${DatabaseTables.wallets} SET balance = balance + ? WHERE id = ?',
-        [delta, walletId],
-      );
+      final userId = ref.read(currentUserIdProvider);
+      final syncRepo = ref.read(syncRepositoryProvider);
+      await syncRepo.updateWalletBalance(walletId, userId, delta);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);

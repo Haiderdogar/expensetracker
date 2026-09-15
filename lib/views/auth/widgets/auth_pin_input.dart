@@ -6,15 +6,13 @@ import '../../../core/constants/app_colors.dart';
 import '../auth_flow.dart';
 import '../auth_ui_providers.dart';
 
-class AuthPinInput extends StatelessWidget {
+class AuthPinInput extends ConsumerWidget {
   const AuthPinInput({super.key, required this.config});
 
   final AuthScreenConfig config;
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
+  Widget build(BuildContext context, WidgetRef ref) {
         final state = ref.watch(authUiStateProvider(config));
         final pin = state.pin;
         final controller = ref.read(authPinControllerProvider(config));
@@ -64,8 +62,6 @@ class AuthPinInput extends StatelessWidget {
             ],
           ),
         );
-      },
-    );
   }
 }
 
