@@ -24,8 +24,10 @@ class OnboardingScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Spacer(),
+              _WelcomeArtwork(),
+              SizedBox(height: 24),
               _OnboardingHeader(),
-              SizedBox(height: 32),
+              SizedBox(height: 28),
               _WalletNameInput(),
               SizedBox(height: 24),
               _CurrencySelector(),
@@ -33,6 +35,32 @@ class OnboardingScreen extends StatelessWidget {
               _OnboardingSubmitButton(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WelcomeArtwork extends StatelessWidget {
+  const _WelcomeArtwork();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Center(
+      child: Container(
+        width: 148,
+        height: 148,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: colors.primary.withValues(alpha: 0.08),
+          shape: BoxShape.circle,
+          border: Border.all(color: colors.primary.withValues(alpha: 0.16)),
+        ),
+        child: Image.asset(
+          'assets/icon.png',
+          fit: BoxFit.contain,
+          semanticLabel: 'Expense Tracker wallet',
         ),
       ),
     );
