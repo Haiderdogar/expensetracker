@@ -17,6 +17,7 @@ class SecureStorageService {
   static const String lockPromptKey = 'lock_prompt_completed';
   static const String installationIdKey = 'installation_id';
   static const String introOnboardingSeenKey = 'intro_onboarding_seen';
+  static const String welcomeSetupCompletedKey = 'welcome_setup_completed';
 
   Future<bool> hasSeenIntroOnboarding() async {
     try {
@@ -29,6 +30,22 @@ class SecureStorageService {
   Future<void> setIntroOnboardingSeen() async {
     try {
       await _storage.write(key: introOnboardingSeenKey, value: 'true');
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<bool> hasCompletedWelcomeSetup() async {
+    try {
+      return await _storage.read(key: welcomeSetupCompletedKey) == 'true';
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<void> setWelcomeSetupCompleted() async {
+    try {
+      await _storage.write(key: welcomeSetupCompletedKey, value: 'true');
     } catch (e) {
       throw ErrorHandler.from(e);
     }

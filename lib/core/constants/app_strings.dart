@@ -41,19 +41,19 @@ abstract final class AppStrings {
   static const String enablePinLock = 'Enable PIN lock';
 
   static const String welcome = 'Welcome!';
-  static const String introTrackTitle = 'Capture every money moment';
+  static const String introTrackTitle = 'Track your expenses';
   static const String introTrackBody =
-      'Keep income, spending, categories, and notes together without slowing down your day.';
+      'All your spends, bills, credit card, savings and other expenses in one place';
   static const String introTrackPointOne = 'Add income or expenses in seconds';
   static const String introTrackPointTwo = 'Keep every payment easy to find';
-  static const String introBudgetTitle = 'Spend with a plan';
+  static const String introBudgetTitle = 'Set your budget';
   static const String introBudgetBody =
-      'Set practical monthly limits for the categories that matter most to you.';
+      'Set your daily, weekly, monthly and yearly budgets and track them as you go.';
   static const String introBudgetPointOne = 'See what is left before you spend';
   static const String introBudgetPointTwo = 'Adjust budgets whenever life changes';
-  static const String introInsightsTitle = 'Turn activity into clarity';
+  static const String introInsightsTitle = 'Manage your finances';
   static const String introInsightsBody =
-      'Use simple summaries to understand your habits and make your next decision with confidence.';
+      'Set and track your saving goals very easily';
   static const String introInsightsPointOne = 'Compare income, expenses, and balance';
   static const String introInsightsPointTwo = 'Spot patterns across categories and months';
   static const String next = 'Next';

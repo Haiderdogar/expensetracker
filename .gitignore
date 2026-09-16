@@ -44,6 +44,12 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Firebase configuration files
+# Firebase client configuration and local tooling credentials
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+**/google-services.json
+**/GoogleService-Info.plist
+**/*firebase-adminsdk*.json
+**/*service-account*.json
+.firebase/
+firebase-debug.log

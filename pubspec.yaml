@@ -46,7 +46,7 @@ flutter_launcher_icons:
   ios: false
   image_path: "assets/icon.png"
   # Android adaptive icon (API 26+) – blue background, white wallet foreground
-  adaptive_icon_background: "#2563EB"
+  adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/icon.png"
   remove_alpha_ios: true
 

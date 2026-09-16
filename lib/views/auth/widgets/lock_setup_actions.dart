@@ -30,8 +30,19 @@ class LockSetupActions extends ConsumerWidget {
         CustomButton(
           label: AppStrings.skipForNow,
           isOutlined: true,
-          onPressed: () =>
-              ref.read(authControllerProvider.notifier).skipLockSetup(),
+          onPressed: () async {
+            try {
+              await ref.read(authControllerProvider.notifier).skipLockSetup();
+            } catch (_) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not save your lock preference.'),
+                  ),
+                );
+              }
+            }
+          },
         ),
       ],
     );

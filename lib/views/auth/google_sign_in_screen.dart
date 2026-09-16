@@ -188,19 +188,35 @@ class _GoogleSignInButton extends ConsumerWidget {
         onPressed: isLoading
             ? null
             : () async {
-                final success = await ref
+                final result = await ref
                     .read(authControllerProvider.notifier)
                     .signInWithGoogle();
-                if (!success && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Sign-in cancelled or failed. Please try again.',
+                if (!context.mounted) return;
+                switch (result) {
+                  case GoogleSignInResult.success:
+                    showSuccessSnackBar(context, 'Login successful');
+                    break;
+                  case GoogleSignInResult.cancelled:
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Sign-in was cancelled.')),
+                    );
+                    break;
+                  case GoogleSignInResult.configurationError:
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Google Sign-In is not configured. Please contact support.',
+                        ),
                       ),
-                    ),
-                  );
-                } else if (success && context.mounted) {
-                  showSuccessSnackBar(context, 'Login successful');
+                    );
+                    break;
+                  case GoogleSignInResult.failed:
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sign-in failed. Please try again.'),
+                      ),
+                    );
+                    break;
                 }
               },
         child: isLoading
@@ -243,13 +259,17 @@ class _SkipForNowButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(authControllerProvider).isLoading;
+
     return SizedBox(
       width: double.infinity,
       height: 54,
       child: OutlinedButton(
-        onPressed: () {
-          ref.read(authControllerProvider.notifier).continueAsGuest();
-        },
+        onPressed: isLoading
+            ? null
+            : () {
+                ref.read(authControllerProvider.notifier).continueAsGuest();
+              },
         child: const Text(
           'Skip for Now',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'core/constants/app_strings.dart';
 import 'core/theme/app_theme.dart';
@@ -47,47 +48,89 @@ class _AppThemeWrapper extends ConsumerWidget {
 class AppBootstrap extends ConsumerWidget {
   const AppBootstrap({super.key});
 
+  static bool _nativeSplashRemoved = false;
+
+  void _removeNativeSplash() {
+    if (_nativeSplashRemoved) return;
+    _nativeSplashRemoved = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final introSeenAsync = ref.watch(introOnboardingSeenProvider);
     return introSeenAsync.when(
       loading: () => const _BootstrapLoading(),
-      error: (error, _) => _BootstrapError(error: error),
+      error: (_, __) {
+        _removeNativeSplash();
+        return _BootstrapError(
+          onRetry: () {
+            ref.invalidate(introOnboardingSeenProvider);
+            ref.invalidate(authControllerProvider);
+          },
+        );
+      },
       data: (hasSeenIntro) {
+        _removeNativeSplash();
+        // This secure-storage flag is the source of truth for whether the
+        // first-run experience has finished.  It intentionally does not
+        // depend on a Firebase user or the local database, so guests and
+        // signed-in users get the same one-time onboarding behaviour.
         if (!hasSeenIntro) return const IntroOnboardingScreen();
-
-        final onboardingAsync = ref.watch(onboardingCompleteProvider);
-        return onboardingAsync.when(
-          loading: () => const _BootstrapLoading(),
-          error: (error, _) => _BootstrapError(error: error),
-          data: (complete) {
-            if (!complete) return const OnboardingScreen();
 
         final authAsync = ref.watch(authControllerProvider);
         return authAsync.when(
           loading: () => const _BootstrapLoading(),
-          error: (error, _) => _BootstrapError(error: error),
+          error: (_, __) => _BootstrapError(
+            onRetry: () => ref.invalidate(authControllerProvider),
+          ),
           data: (status) {
-            if (status == AuthStatus.unauthenticated) {
-              return const GoogleSignInScreen();
-            }
             if (status == AuthStatus.pinLocked) return const AuthScreen();
-            if (status == AuthStatus.guest) return const AppShell();
-
-                final lockPromptAsync = ref.watch(lockPromptCompletedProvider);
-                return lockPromptAsync.when(
-                  loading: () => const _BootstrapLoading(),
-                  error: (error, _) => _BootstrapError(error: error),
-                  data: (prompted) {
-                    if (!prompted && status != AuthStatus.unauthenticated) {
-                      return const LockSetupScreen();
-                    }
-                    return const AppShell();
-                  },
-                );
+            if (status == AuthStatus.authenticated &&
+                ref
+                    .read(authControllerProvider.notifier)
+                    .hasLoggedInThisSession) {
+              return const _PostLoginFlow();
+            }
+            if (status == AuthStatus.guest) return const _PostLoginFlow();
+            // A restored Firebase session must still pass through Login on
+            // every new app launch. Only a successful login in this process
+            // (or an explicit guest choice) opens the app shell.
+            return const GoogleSignInScreen();
           },
         );
-          },
+      },
+    );
+  }
+}
+
+/// Runs once after a successful login or guest choice:
+/// welcome setup, then optional local app-lock setup, then the main app.
+class _PostLoginFlow extends ConsumerWidget {
+  const _PostLoginFlow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final welcomeAsync = ref.watch(welcomeSetupCompletedProvider);
+    return welcomeAsync.when(
+      loading: () => const _BootstrapLoading(),
+      error: (_, __) => _BootstrapError(
+        onRetry: () => ref.invalidate(welcomeSetupCompletedProvider),
+      ),
+      data: (welcomeComplete) {
+        if (!welcomeComplete) return const OnboardingScreen();
+
+        final lockPromptAsync = ref.watch(lockPromptCompletedProvider);
+        return lockPromptAsync.when(
+          loading: () => const _BootstrapLoading(),
+          error: (_, __) => _BootstrapError(
+            onRetry: () => ref.invalidate(lockPromptCompletedProvider),
+          ),
+          data: (lockPromptComplete) => lockPromptComplete
+              ? const AppShell()
+              : const LockSetupScreen(),
         );
       },
     );
@@ -104,9 +147,9 @@ class _BootstrapLoading extends StatelessWidget {
 }
 
 class _BootstrapError extends StatelessWidget {
-  const _BootstrapError({required this.error});
+  const _BootstrapError({required this.onRetry});
 
-  final Object error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -114,9 +157,22 @@ class _BootstrapError extends StatelessWidget {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            'Unable to start the app. Please try again.\n\n$error',
-            textAlign: TextAlign.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                'Unable to start the app. Please try again.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
+              ),
+            ],
           ),
         ),
       ),
@@ -137,14 +193,15 @@ class AuthGate extends ConsumerWidget {
       ),
       error: (e, _) => Scaffold(body: Center(child: Text(e.toString()))),
       data: (status) {
-        return switch (status) {
-          AuthStatus.authenticated => const AppShell(),
-          AuthStatus.unauthenticated => const GoogleSignInScreen(),
-          AuthStatus.guest => const AppShell(),
-          AuthStatus.pinLocked => const AuthScreen(),
-          AuthStatus.needsPinSetup ||
-          AuthStatus.loading => const GoogleSignInScreen(),
-        };
+        if (status == AuthStatus.pinLocked) return const AuthScreen();
+        if (status == AuthStatus.guest) return const _PostLoginFlow();
+        if (status == AuthStatus.authenticated &&
+            ref
+                .read(authControllerProvider.notifier)
+                .hasLoggedInThisSession) {
+          return const _PostLoginFlow();
+        }
+        return const GoogleSignInScreen();
       },
     );
   }

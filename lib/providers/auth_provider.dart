@@ -20,6 +20,8 @@ enum AuthStatus {
   needsPinSetup,
 }
 
+enum GoogleSignInResult { success, cancelled, configurationError, failed }
+
 const _resumeLockAfter = Duration(seconds: 30);
 
 @Riverpod(keepAlive: true)
@@ -47,6 +49,11 @@ String currentUserId(Ref ref) {
 class AuthController extends _$AuthController {
   DateTime? _backgroundedAt;
   bool _pinUnlocked = false;
+  bool _hasLoggedInThisSession = false;
+
+  /// True only after the user has pressed Login successfully in this process.
+  /// A Firebase session restored at startup deliberately does not set this.
+  bool get hasLoggedInThisSession => _hasLoggedInThisSession;
 
   @override
   Future<AuthStatus> build() async {
@@ -77,7 +84,7 @@ class AuthController extends _$AuthController {
     ref.read(localDataEpochProvider.notifier).bump();
   }
 
-  Future<bool> signInWithGoogle() async {
+  Future<GoogleSignInResult> signInWithGoogle() async {
     state = const AsyncLoading();
     try {
       final GoogleSignInAccount googleUser = await GoogleSignIn.instance
@@ -98,27 +105,36 @@ class AuthController extends _$AuthController {
         final syncRepo = ref.read(syncRepositoryProvider);
         syncRepo.initConnectivityListener(() => user.uid);
         unawaited(_reconcileAndRefresh(user.uid));
+        _hasLoggedInThisSession = true;
         state = const AsyncData(AuthStatus.authenticated);
-        return true;
+        return GoogleSignInResult.success;
       }
 
       state = const AsyncData(AuthStatus.unauthenticated);
-      return false;
+      return GoogleSignInResult.failed;
     } on GoogleSignInException catch (e) {
-      final message = e.code == GoogleSignInExceptionCode.clientConfigurationError
-          ? 'Google Sign-In is not configured. Regenerate google-services.json '
-                'after enabling Google Auth and adding this app\'s SHA-1.'
-          : 'Google sign-in cancelled or failed: $e';
+      final isConfigurationError =
+          e.code == GoogleSignInExceptionCode.clientConfigurationError;
+      final isCancellation = e.code.toString().toLowerCase().contains('cancel');
+      final message = isConfigurationError
+          ? 'Google Sign-In is not configured.'
+          : isCancellation
+          ? 'Google sign-in was cancelled.'
+          : 'Google sign-in failed: $e';
       debugPrint('[AuthController] $message');
       final current = FirebaseAuth.instance.currentUser;
       state = AsyncData(
         current != null ? AuthStatus.authenticated : AuthStatus.unauthenticated,
       );
-      return false;
+      return isConfigurationError
+          ? GoogleSignInResult.configurationError
+          : isCancellation
+          ? GoogleSignInResult.cancelled
+          : GoogleSignInResult.failed;
     } catch (e) {
       debugPrint('[AuthController] Google sign-in failed: $e');
       state = const AsyncData(AuthStatus.unauthenticated);
-      return false;
+      return GoogleSignInResult.failed;
     }
   }
 
@@ -130,6 +146,7 @@ class AuthController extends _$AuthController {
   Future<void> signOut() async {
     _backgroundedAt = null;
     _pinUnlocked = false;
+    _hasLoggedInThisSession = false;
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}
@@ -300,6 +317,10 @@ Future<bool> lockPromptCompleted(Ref ref) async {
 Future<bool> introOnboardingSeen(Ref ref) async {
   return ref.read(secureStorageProvider).hasSeenIntroOnboarding();
 }
+
+final welcomeSetupCompletedProvider = FutureProvider<bool>((ref) async {
+  return ref.read(secureStorageProvider).hasCompletedWelcomeSetup();
+});
 
 @riverpod
 Future<bool> pinEnabled(Ref ref) async {

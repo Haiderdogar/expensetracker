@@ -58,6 +58,7 @@ class _NotesContent extends StatelessWidget {
               icon: Icons.auto_awesome_rounded,
               title: 'No matching notes',
               message: 'Try a different title to find the note you are looking for.',
+              imageAsset: 'assets/notebook.png',
             )
           else ...[
             Row(

@@ -161,7 +161,9 @@ class _OnboardingSubmitButton extends ConsumerWidget {
                 .updateWallet(wallets.first.copyWith(name: walletName));
           }
           await helper.setOnboardingComplete(true, userId);
+          await ref.read(secureStorageProvider).setWelcomeSetupCompleted();
           ref.invalidate(onboardingCompleteProvider);
+          ref.invalidate(welcomeSetupCompletedProvider);
           ref.invalidate(currencySymbolProvider);
           ref.invalidate(currencyCodeProvider);
         } catch (error) {

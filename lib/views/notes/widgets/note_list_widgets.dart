@@ -96,6 +96,7 @@ class NotesMessage extends StatelessWidget {
     required this.title,
     required this.message,
     this.action,
+    this.imageAsset,
     super.key,
   });
 
@@ -103,6 +104,7 @@ class NotesMessage extends StatelessWidget {
   final String title;
   final String message;
   final Widget? action;
+  final String? imageAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +112,19 @@ class NotesMessage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 52, horizontal: 20),
       child: Column(
         children: [
-          Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary),
+          if (imageAsset != null)
+            Image.asset(
+              imageAsset!,
+              height: 120,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Icon(
+                icon,
+                size: 48,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            )
+          else
+            Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 16),
           Text(
             title,

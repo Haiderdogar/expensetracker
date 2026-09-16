@@ -12,37 +12,25 @@ class IntroOnboardingScreen extends StatelessWidget {
 
   static const pages = [
     _IntroPageData(
-      icon: Icons.receipt_long_rounded,
+      imageAsset: 'assets/onboarding_screen_1.png',
       color: AppColors.primaryEmerald,
       step: '01 / 03',
       title: AppStrings.introTrackTitle,
       body: AppStrings.introTrackBody,
-      highlights: [
-        AppStrings.introTrackPointOne,
-        AppStrings.introTrackPointTwo,
-      ],
     ),
     _IntroPageData(
-      icon: Icons.account_balance_wallet_rounded,
+      imageAsset: 'assets/onboarding_screen_2.png',
       color: AppColors.incomeGreen,
       step: '02 / 03',
       title: AppStrings.introBudgetTitle,
       body: AppStrings.introBudgetBody,
-      highlights: [
-        AppStrings.introBudgetPointOne,
-        AppStrings.introBudgetPointTwo,
-      ],
     ),
     _IntroPageData(
-      icon: Icons.insights_rounded,
+      imageAsset: 'assets/onboarding_screen_3.png',
       color: AppColors.expenseRed,
       step: '03 / 03',
       title: AppStrings.introInsightsTitle,
       body: AppStrings.introInsightsBody,
-      highlights: [
-        AppStrings.introInsightsPointOne,
-        AppStrings.introInsightsPointTwo,
-      ],
     ),
   ];
 
@@ -182,11 +170,17 @@ class _IntroPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageHeight =
+        (MediaQuery.sizeOf(context).height * 0.40)
+            .clamp(300.0, 380.0)
+            .toDouble();
+    final theme = Theme.of(context);
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.fromLTRB(28, 24, 28, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Row(
             children: [
@@ -201,42 +195,41 @@ class _IntroPage extends StatelessWidget {
               Icon(Icons.swipe_left_rounded, color: data.color),
             ],
           ),
+          const SizedBox(height: 16),
+          Image.asset(
+            data.imageAsset,
+            height: imageHeight,
+            width: double.infinity,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Icon(
+              Icons.broken_image_outlined,
+              size: 72,
+              color: data.color,
+            ),
+          ),
           const SizedBox(height: 24),
-          Center(child: _IntroIllustration(data: data)),
-          const SizedBox(height: 28),
           Text(
             data.title,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w700,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontSize: 30,
+              height: 1.15,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+              color: theme.colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Text(
             data.body,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              height: 1.45,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontSize: 17,
+              fontWeight: FontWeight.w500,
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.5,
             ),
           ),
-          const SizedBox(height: 26),
-          for (final highlight in data.highlights) ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.check_circle_rounded, color: data.color, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    highlight,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-          ],
           const SizedBox(height: 8),
         ],
       ),
@@ -244,93 +237,18 @@ class _IntroPage extends StatelessWidget {
   }
 }
 
-class _IntroIllustration extends StatelessWidget {
-  const _IntroIllustration({required this.data});
-
-  final _IntroPageData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 220,
-      height: 190,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 152,
-            height: 152,
-            decoration: BoxDecoration(
-              color: data.color.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: data.color.withValues(alpha: 0.28),
-                width: 2,
-              ),
-            ),
-            child: Icon(data.icon, size: 72, color: data.color),
-          ),
-          Positioned(
-            left: 10,
-            bottom: 18,
-            child: _MetricMark(color: data.color, icon: Icons.add_rounded),
-          ),
-          Positioned(
-            right: 10,
-            top: 18,
-            child: _MetricMark(
-              color: data.color,
-              icon: Icons.check_rounded,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricMark extends StatelessWidget {
-  const _MetricMark({required this.color, required this.icon});
-
-  final Color color;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        shape: BoxShape.circle,
-        border: Border.all(color: color.withValues(alpha: 0.32)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Icon(icon, color: color, size: 20),
-    );
-  }
-}
-
 class _IntroPageData {
   const _IntroPageData({
-    required this.icon,
+    required this.imageAsset,
     required this.color,
     required this.step,
     required this.title,
     required this.body,
-    required this.highlights,
   });
 
-  final IconData icon;
+  final String imageAsset;
   final Color color;
   final String step;
   final String title;
   final String body;
-  final List<String> highlights;
 }
