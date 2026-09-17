@@ -12,6 +12,7 @@ import 'auth_provider.dart';
 import 'category_provider.dart';
 import 'database_provider.dart';
 import 'transaction_provider.dart';
+import 'wallet_provider.dart';
 
 part 'budget_provider.g.dart';
 
@@ -24,8 +25,9 @@ class Budgets extends _$Budgets {
     try {
       ref.watch(localDataEpochProvider);
       final userId = ref.watch(currentUserIdProvider);
+      final walletId = ref.watch(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      return await syncRepo.getBudgets(userId);
+      return await syncRepo.getBudgets(userId, walletId: walletId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -39,8 +41,11 @@ class Budgets extends _$Budgets {
   Future<void> upsert(BudgetModel budget) async {
     try {
       final userId = ref.read(currentUserIdProvider);
+      final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.saveBudget(budget.copyWith(userId: userId));
+      await syncRepo.saveBudget(
+        budget.copyWith(userId: userId, walletId: walletId),
+      );
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -65,10 +70,12 @@ class Budgets extends _$Budgets {
   }) async {
     const uuid = Uuid();
     final userId = ref.read(currentUserIdProvider);
+    final walletId = ref.read(activeWalletIdProvider);
     final m = month ?? DateTime.now();
     final budget = BudgetModel(
       id: uuid.v4(),
       userId: userId,
+      walletId: walletId ?? '',
       categoryId: categoryId,
       amount: amount,
       monthYear: Formatters.monthYear(m),
@@ -83,8 +90,9 @@ class Budgets extends _$Budgets {
     final targetMonthKey = Formatters.monthYear(targetMonth);
 
     final allBudgets = await ref.read(budgetsProvider.future);
-    final prevBudgets =
-        allBudgets.where((b) => b.monthYear == prevMonthKey).toList();
+    final prevBudgets = allBudgets
+        .where((b) => b.monthYear == prevMonthKey)
+        .toList();
     if (prevBudgets.isEmpty) return 0;
 
     final existingTargetCategoryIds = allBudgets
@@ -136,7 +144,10 @@ class BudgetProgress {
 }
 
 @riverpod
-Future<List<BudgetProgress>> monthBudgetProgress(Ref ref, DateTime month) async {
+Future<List<BudgetProgress>> monthBudgetProgress(
+  Ref ref,
+  DateTime month,
+) async {
   final monthKey = Formatters.monthYear(month);
   final budgets = await ref.watch(budgetsProvider.future);
   final transactions = await ref.watch(transactionsProvider.future);
@@ -146,14 +157,17 @@ Future<List<BudgetProgress>> monthBudgetProgress(Ref ref, DateTime month) async 
 
   return monthBudgets.map((budget) {
     final spent = transactions
-        .where((t) =>
-            t.isExpense &&
-            t.categoryId == budget.categoryId &&
-            Formatters.monthYear(DateTime.parse(t.date)) == monthKey)
+        .where(
+          (t) =>
+              t.isExpense &&
+              t.categoryId == budget.categoryId &&
+              Formatters.monthYear(DateTime.parse(t.date)) == monthKey,
+        )
         .fold(0.0, (s, t) => s + t.amount);
 
-    final category =
-        categories.where((c) => c.id == budget.categoryId).firstOrNull;
+    final category = categories
+        .where((c) => c.id == budget.categoryId)
+        .firstOrNull;
 
     return BudgetProgress(
       budget: budget,

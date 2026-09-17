@@ -33,7 +33,7 @@ final class TransactionsProvider
   Transactions create() => Transactions();
 }
 
-String _$transactionsHash() => r'705814401746268dd0da884fb135d9776840d82b';
+String _$transactionsHash() => r'b0e299c6008f5352cf5859dcc40dbf5acbac25be';
 
 abstract class _$Transactions extends $AsyncNotifier<List<TransactionModel>> {
   FutureOr<List<TransactionModel>> build();

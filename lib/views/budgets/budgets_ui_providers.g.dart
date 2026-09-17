@@ -42,7 +42,7 @@ final class SelectedBudgetMonthProvider
 }
 
 String _$selectedBudgetMonthHash() =>
-    r'503eab1cdcb0d9e97b18601387fff9b5c51d77bf';
+    r'146f55e77a28bd86eb98d2e1c46e75ae23d39505';
 
 abstract class _$SelectedBudgetMonth extends $Notifier<DateTime> {
   DateTime build();
@@ -94,7 +94,7 @@ final class AddBudgetCategoryProvider
   }
 }
 
-String _$addBudgetCategoryHash() => r'80196010a164864a5676a9d57e2ba9d8ba09fb7e';
+String _$addBudgetCategoryHash() => r'23aaaf6b5bdca10d684a2ea721c0ce28bc000760';
 
 abstract class _$AddBudgetCategory extends $Notifier<String?> {
   String? build();
@@ -146,7 +146,7 @@ final class AddBudgetAmountProvider
   }
 }
 
-String _$addBudgetAmountHash() => r'eb16f1b6499a8dffc4413da9aa0fe1ec5a05a487';
+String _$addBudgetAmountHash() => r'213314fb194d9dcfe2213788e557c31b064a76ba';
 
 abstract class _$AddBudgetAmount extends $Notifier<String> {
   String build();
@@ -198,7 +198,7 @@ final class AddBudgetLoadingProvider
   }
 }
 
-String _$addBudgetLoadingHash() => r'8c12eaa22c2fbbe95e1b2a6bfe74b79d69eac939';
+String _$addBudgetLoadingHash() => r'402f8e689ad96e7a41175cf4860ac3b5fc1d71c5';
 
 abstract class _$AddBudgetLoading extends $Notifier<bool> {
   bool build();

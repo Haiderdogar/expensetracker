@@ -42,7 +42,7 @@ final class ProfileDraftNotifierProvider
 }
 
 String _$profileDraftNotifierHash() =>
-    r'4c6394e84ff19985a2fad5c6d58c758860c3c659';
+    r'a14df02423a3eb44a37ff53b8a0c1e96a2f6cf94';
 
 abstract class _$ProfileDraftNotifier extends $Notifier<ProfileDraft> {
   ProfileDraft build();

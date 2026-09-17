@@ -50,12 +50,15 @@ abstract final class AppStrings {
   static const String introBudgetBody =
       'Set your daily, weekly, monthly and yearly budgets and track them as you go.';
   static const String introBudgetPointOne = 'See what is left before you spend';
-  static const String introBudgetPointTwo = 'Adjust budgets whenever life changes';
+  static const String introBudgetPointTwo =
+      'Adjust budgets whenever life changes';
   static const String introInsightsTitle = 'Manage your finances';
   static const String introInsightsBody =
       'Set and track your saving goals very easily';
-  static const String introInsightsPointOne = 'Compare income, expenses, and balance';
-  static const String introInsightsPointTwo = 'Spot patterns across categories and months';
+  static const String introInsightsPointOne =
+      'Compare income, expenses, and balance';
+  static const String introInsightsPointTwo =
+      'Spot patterns across categories and months';
   static const String next = 'Next';
   static const String continueLabel = 'Continue';
   static const String setupWallet = 'Set up your first wallet';
@@ -86,6 +89,9 @@ abstract final class AppStrings {
   static const String logout = 'Log out';
   static const String logoutConfirmation =
       'You will be signed out of Google. Your offline data stays on this device, isolated to your account.';
+  static const String guestLogoutWarning =
+      'Guest data is stored only on this device and will be deleted if you log out. Sign in with Google to keep this wallet and its history.';
+  static const String signInWithGoogle = 'Sign in with Google';
   static const String exportData = 'Export data';
   static const String importData = 'Import data';
   static const String backupSuccess = 'Backup exported successfully';

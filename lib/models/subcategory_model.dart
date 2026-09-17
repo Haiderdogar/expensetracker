@@ -2,6 +2,7 @@ class SubcategoryModel {
   const SubcategoryModel({
     required this.id,
     this.userId = 'default_user',
+    this.walletId = '',
     required this.categoryId,
     required this.name,
     this.isSynced = false,
@@ -10,6 +11,7 @@ class SubcategoryModel {
 
   final String id;
   final String userId;
+  final String walletId;
   final String categoryId;
   final String name;
   final bool isSynced;
@@ -18,6 +20,7 @@ class SubcategoryModel {
   SubcategoryModel copyWith({
     String? id,
     String? userId,
+    String? walletId,
     String? categoryId,
     String? name,
     bool? isSynced,
@@ -26,6 +29,7 @@ class SubcategoryModel {
     return SubcategoryModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      walletId: walletId ?? this.walletId,
       categoryId: categoryId ?? this.categoryId,
       name: name ?? this.name,
       isSynced: isSynced ?? this.isSynced,
@@ -36,6 +40,7 @@ class SubcategoryModel {
   Map<String, dynamic> toMap() => {
         'id': id,
         'user_id': userId,
+        'wallet_id': walletId,
         'category_id': categoryId,
         'name': name,
         'is_synced': isSynced ? 1 : 0,
@@ -43,8 +48,6 @@ class SubcategoryModel {
       };
 
   Map<String, dynamic> toFirestore() => {
-        'id': id,
-        'userId': userId,
         'categoryId': categoryId,
         'name': name,
         'updatedAt': updatedAt ?? DateTime.now().toUtc().toIso8601String(),
@@ -54,6 +57,7 @@ class SubcategoryModel {
     return SubcategoryModel(
       id: map['id'] as String,
       userId: (map['user_id'] as String?) ?? 'default_user',
+      walletId: (map['wallet_id'] as String?) ?? '',
       categoryId: map['category_id'] as String,
       name: map['name'] as String,
       isSynced: (map['is_synced'] as int?) == 1,
@@ -63,8 +67,9 @@ class SubcategoryModel {
 
   factory SubcategoryModel.fromFirestore(Map<String, dynamic> data, String docId) {
     return SubcategoryModel(
-      id: (data['id'] as String?) ?? docId,
-      userId: (data['userId'] as String?) ?? 'default_user',
+      id: docId,
+      userId: 'default_user',
+      walletId: '',
       categoryId: (data['categoryId'] as String?) ?? '',
       name: (data['name'] as String?) ?? '',
       isSynced: true,

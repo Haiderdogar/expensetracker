@@ -230,7 +230,7 @@ final class PieChartTouchedIndexProvider
 }
 
 String _$pieChartTouchedIndexHash() =>
-    r'6f4b9ce2c3d71c1a93f53a7c266d2b7f19d7aac1';
+    r'12a64c3fc0e3fbc95d36777d5e097eeec4b7e306';
 
 abstract class _$PieChartTouchedIndex extends $Notifier<int?> {
   int? build();

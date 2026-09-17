@@ -79,32 +79,42 @@ class AuthController extends _$AuthController {
     return AuthStatus.authenticated;
   }
 
-  Future<void> _reconcileAndRefresh(String userId) async {
-    await ref.read(syncRepositoryProvider).reconcileWithRemote(userId);
+  Future<void> _reconcileAndRefresh(
+    String userId, {
+    bool preferLocal = false,
+  }) async {
+    await ref
+        .read(syncRepositoryProvider)
+        .reconcileWithRemote(userId, preferLocal: preferLocal);
     ref.read(localDataEpochProvider.notifier).bump();
   }
 
   Future<GoogleSignInResult> signInWithGoogle() async {
+    final wasGuest = state.value == AuthStatus.guest;
     state = const AsyncLoading();
     try {
       final GoogleSignInAccount googleUser = await GoogleSignIn.instance
-          .authenticate();
+          .authenticate()
+          .timeout(const Duration(seconds: 30));
       final String? idToken = googleUser.authentication.idToken;
       if (idToken == null) {
         throw StateError('Google Sign-In did not return an ID token.');
       }
 
       final credential = GoogleAuthProvider.credential(idToken: idToken);
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(
-        credential,
-      );
+      final userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential)
+          .timeout(const Duration(seconds: 30));
       final user = userCredential.user;
       if (user != null) {
+        if (wasGuest) {
+          await ref.read(syncRepositoryProvider).migrateGuestData(user.uid);
+        }
         await ref.read(databaseHelperProvider).ensureUserInitialized(user.uid);
         _pinUnlocked = true;
         final syncRepo = ref.read(syncRepositoryProvider);
         syncRepo.initConnectivityListener(() => user.uid);
-        unawaited(_reconcileAndRefresh(user.uid));
+        unawaited(_reconcileAndRefresh(user.uid, preferLocal: wasGuest));
         _hasLoggedInThisSession = true;
         state = const AsyncData(AuthStatus.authenticated);
         return GoogleSignInResult.success;
@@ -133,14 +143,37 @@ class AuthController extends _$AuthController {
           : GoogleSignInResult.failed;
     } catch (e) {
       debugPrint('[AuthController] Google sign-in failed: $e');
-      state = const AsyncData(AuthStatus.unauthenticated);
+      if (wasGuest) {
+        try {
+          await FirebaseAuth.instance.signOut();
+          await GoogleSignIn.instance.signOut();
+        } catch (cleanupError) {
+          debugPrint(
+            '[AuthController] Failed to restore guest session: $cleanupError',
+          );
+        }
+        state = const AsyncData(AuthStatus.guest);
+      } else {
+        state = const AsyncData(AuthStatus.unauthenticated);
+      }
       return GoogleSignInResult.failed;
     }
   }
 
   /// Continue without contacting Firebase or creating an anonymous account.
-  void continueAsGuest() {
-    state = const AsyncData(AuthStatus.guest);
+  /// The local guest partition is initialized immediately so a wallet exists
+  /// before onboarding or any subsequent data entry.
+  Future<void> continueAsGuest() async {
+    state = const AsyncLoading();
+    try {
+      await ref
+          .read(databaseHelperProvider)
+          .ensureUserInitialized('default_user');
+      state = const AsyncData(AuthStatus.guest);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
   }
 
   Future<void> signOut() async {
@@ -238,6 +271,14 @@ class AuthController extends _$AuthController {
   }
 
   Future<void> logoutAndReset() async {
+    if (state.value == AuthStatus.guest) {
+      await ref.read(databaseHelperProvider).clearGuestData();
+    }
+    await signOut();
+  }
+
+  Future<void> discardGuestDataAndSignOut() async {
+    await ref.read(databaseHelperProvider).clearGuestData();
     await signOut();
   }
 
@@ -317,10 +358,6 @@ Future<bool> lockPromptCompleted(Ref ref) async {
 Future<bool> introOnboardingSeen(Ref ref) async {
   return ref.read(secureStorageProvider).hasSeenIntroOnboarding();
 }
-
-final welcomeSetupCompletedProvider = FutureProvider<bool>((ref) async {
-  return ref.read(secureStorageProvider).hasCompletedWelcomeSetup();
-});
 
 @riverpod
 Future<bool> pinEnabled(Ref ref) async {

@@ -22,8 +22,9 @@ class Transactions extends _$Transactions {
     try {
       ref.watch(localDataEpochProvider);
       final userId = ref.watch(currentUserIdProvider);
+      final walletId = ref.watch(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      return await syncRepo.getTransactions(userId);
+      return await syncRepo.getTransactions(userId, walletId: walletId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -41,11 +42,12 @@ class Transactions extends _$Transactions {
       final txToSave = transaction.copyWith(userId: userId);
       await syncRepo.saveTransaction(txToSave);
 
-      final delta = transaction.isIncome ? transaction.amount : -transaction.amount;
-      await ref.read(walletsProvider.notifier).updateBalance(
-            transaction.walletId,
-            delta,
-          );
+      final delta = transaction.isIncome
+          ? transaction.amount
+          : -transaction.amount;
+      await ref
+          .read(walletsProvider.notifier)
+          .updateBalance(transaction.walletId, delta);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -55,23 +57,32 @@ class Transactions extends _$Transactions {
   Future<void> updateTransaction(TransactionModel transaction) async {
     try {
       final userId = ref.read(currentUserIdProvider);
+      final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      final existingTxs = await syncRepo.getTransactions(userId);
-      final existing = existingTxs.where((t) => t.id == transaction.id).toList();
+      final existingTxs = await syncRepo.getTransactions(
+        userId,
+        walletId: walletId,
+      );
+      final existing = existingTxs
+          .where((t) => t.id == transaction.id)
+          .toList();
       if (existing.isEmpty) throw ErrorHandler.from(Exception('not found'));
 
       final old = existing.first;
       final oldDelta = old.isIncome ? -old.amount : old.amount;
-      await ref.read(walletsProvider.notifier).updateBalance(old.walletId, oldDelta);
+      await ref
+          .read(walletsProvider.notifier)
+          .updateBalance(old.walletId, oldDelta);
 
       final txToSave = transaction.copyWith(userId: userId);
       await syncRepo.saveTransaction(txToSave);
 
-      final newDelta = transaction.isIncome ? transaction.amount : -transaction.amount;
-      await ref.read(walletsProvider.notifier).updateBalance(
-            transaction.walletId,
-            newDelta,
-          );
+      final newDelta = transaction.isIncome
+          ? transaction.amount
+          : -transaction.amount;
+      await ref
+          .read(walletsProvider.notifier)
+          .updateBalance(transaction.walletId, newDelta);
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -81,14 +92,20 @@ class Transactions extends _$Transactions {
   Future<void> delete(String id) async {
     try {
       final userId = ref.read(currentUserIdProvider);
+      final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      final existingTxs = await syncRepo.getTransactions(userId);
+      final existingTxs = await syncRepo.getTransactions(
+        userId,
+        walletId: walletId,
+      );
       final existing = existingTxs.where((t) => t.id == id).toList();
       if (existing.isEmpty) return;
 
       final old = existing.first;
       final delta = old.isIncome ? -old.amount : old.amount;
-      await ref.read(walletsProvider.notifier).updateBalance(old.walletId, delta);
+      await ref
+          .read(walletsProvider.notifier)
+          .updateBalance(old.walletId, delta);
 
       await syncRepo.deleteTransaction(id, userId);
       await refresh();
@@ -143,11 +160,21 @@ class Transactions extends _$Transactions {
       final wallets = walletRows.map(WalletModel.fromMap).toList();
       final fromWallet = wallets.firstWhere(
         (w) => w.id == fromWalletId,
-        orElse: () => WalletModel(id: fromWalletId, userId: userId, name: 'Wallet', balance: 0),
+        orElse: () => WalletModel(
+          id: fromWalletId,
+          userId: userId,
+          name: 'Wallet',
+          balance: 0,
+        ),
       );
       final toWallet = wallets.firstWhere(
         (w) => w.id == toWalletId,
-        orElse: () => WalletModel(id: toWalletId, userId: userId, name: 'Wallet', balance: 0),
+        orElse: () => WalletModel(
+          id: toWalletId,
+          userId: userId,
+          name: 'Wallet',
+          balance: 0,
+        ),
       );
 
       final catRows = await db.query(
@@ -156,7 +183,9 @@ class Transactions extends _$Transactions {
         whereArgs: [userId],
         limit: 1,
       );
-      final fallbackCatId = catRows.isNotEmpty ? catRows.first['id'] as String : '';
+      final fallbackCatId = catRows.isNotEmpty
+          ? catRows.first['id'] as String
+          : '';
 
       const uuid = Uuid();
       final outTx = TransactionModel(
@@ -211,7 +240,9 @@ Future<double> totalIncome(Ref ref) async {
 @riverpod
 Future<double> totalExpense(Ref ref) async {
   final all = await ref.watch(transactionsProvider.future);
-  return all.where((t) => t.isExpense).fold<double>(0.0, (s, t) => s + t.amount);
+  return all
+      .where((t) => t.isExpense)
+      .fold<double>(0.0, (s, t) => s + t.amount);
 }
 
 @riverpod
@@ -240,7 +271,8 @@ Future<List<TransactionModel>> filteredTransactions(
       return false;
     }
     if (search != null && search.isNotEmpty) {
-      if (!t.subcategory.toLowerCase().contains(search.toLowerCase())) return false;
+      if (!t.subcategory.toLowerCase().contains(search.toLowerCase()))
+        return false;
     }
     if (month != null) {
       final d = DateTime.parse(t.date);
@@ -255,13 +287,16 @@ Future<double> currentMonthIncome(Ref ref) async {
   final all = await ref.watch(transactionsProvider.future);
   final selectedWalletId = ref.watch(selectedWalletIdProvider);
   final now = DateTime.now();
-  return all.where((t) {
-    if (!t.isIncome) return false;
-    if (selectedWalletId != null && t.walletId != selectedWalletId) return false;
-    final d = DateTime.tryParse(t.date);
-    if (d == null) return false;
-    return d.year == now.year && d.month == now.month;
-  }).fold<double>(0.0, (s, t) => s + t.amount);
+  return all
+      .where((t) {
+        if (!t.isIncome) return false;
+        if (selectedWalletId != null && t.walletId != selectedWalletId)
+          return false;
+        final d = DateTime.tryParse(t.date);
+        if (d == null) return false;
+        return d.year == now.year && d.month == now.month;
+      })
+      .fold<double>(0.0, (s, t) => s + t.amount);
 }
 
 @riverpod
@@ -269,13 +304,16 @@ Future<double> currentMonthExpense(Ref ref) async {
   final all = await ref.watch(transactionsProvider.future);
   final selectedWalletId = ref.watch(selectedWalletIdProvider);
   final now = DateTime.now();
-  return all.where((t) {
-    if (!t.isExpense) return false;
-    if (selectedWalletId != null && t.walletId != selectedWalletId) return false;
-    final d = DateTime.tryParse(t.date);
-    if (d == null) return false;
-    return d.year == now.year && d.month == now.month;
-  }).fold<double>(0.0, (s, t) => s + t.amount);
+  return all
+      .where((t) {
+        if (!t.isExpense) return false;
+        if (selectedWalletId != null && t.walletId != selectedWalletId)
+          return false;
+        final d = DateTime.tryParse(t.date);
+        if (d == null) return false;
+        return d.year == now.year && d.month == now.month;
+      })
+      .fold<double>(0.0, (s, t) => s + t.amount);
 }
 
 @riverpod

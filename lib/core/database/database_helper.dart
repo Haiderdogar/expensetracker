@@ -138,32 +138,165 @@ class DatabaseHelper {
       await db.execute(DatabaseTables.createSyncQueue);
 
       // Add user_id, is_synced, and updated_at columns
-      await _safeAddColumn(db, DatabaseTables.categories, 'user_id', 'TEXT NOT NULL DEFAULT \'default_user\'');
-      await _safeAddColumn(db, DatabaseTables.categories, 'is_synced', 'INTEGER NOT NULL DEFAULT 0');
-      await _safeAddColumn(db, DatabaseTables.categories, 'updated_at', 'TEXT NOT NULL DEFAULT \'\'');
+      await _safeAddColumn(
+        db,
+        DatabaseTables.categories,
+        'user_id',
+        'TEXT NOT NULL DEFAULT \'default_user\'',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.categories,
+        'is_synced',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.categories,
+        'updated_at',
+        'TEXT NOT NULL DEFAULT \'\'',
+      );
 
-      await _safeAddColumn(db, DatabaseTables.wallets, 'user_id', 'TEXT NOT NULL DEFAULT \'default_user\'');
-      await _safeAddColumn(db, DatabaseTables.wallets, 'is_synced', 'INTEGER NOT NULL DEFAULT 0');
-      await _safeAddColumn(db, DatabaseTables.wallets, 'updated_at', 'TEXT NOT NULL DEFAULT \'\'');
+      await _safeAddColumn(
+        db,
+        DatabaseTables.wallets,
+        'user_id',
+        'TEXT NOT NULL DEFAULT \'default_user\'',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.wallets,
+        'is_synced',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.wallets,
+        'updated_at',
+        'TEXT NOT NULL DEFAULT \'\'',
+      );
 
-      await _safeAddColumn(db, DatabaseTables.transactions, 'user_id', 'TEXT NOT NULL DEFAULT \'default_user\'');
-      await _safeAddColumn(db, DatabaseTables.transactions, 'is_synced', 'INTEGER NOT NULL DEFAULT 0');
-      await _safeAddColumn(db, DatabaseTables.transactions, 'updated_at', 'TEXT NOT NULL DEFAULT \'\'');
+      await _safeAddColumn(
+        db,
+        DatabaseTables.transactions,
+        'user_id',
+        'TEXT NOT NULL DEFAULT \'default_user\'',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.transactions,
+        'is_synced',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.transactions,
+        'updated_at',
+        'TEXT NOT NULL DEFAULT \'\'',
+      );
 
-      await _safeAddColumn(db, DatabaseTables.subcategories, 'user_id', 'TEXT NOT NULL DEFAULT \'default_user\'');
-      await _safeAddColumn(db, DatabaseTables.subcategories, 'is_synced', 'INTEGER NOT NULL DEFAULT 0');
-      await _safeAddColumn(db, DatabaseTables.subcategories, 'updated_at', 'TEXT NOT NULL DEFAULT \'\'');
+      await _safeAddColumn(
+        db,
+        DatabaseTables.subcategories,
+        'user_id',
+        'TEXT NOT NULL DEFAULT \'default_user\'',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.subcategories,
+        'is_synced',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.subcategories,
+        'updated_at',
+        'TEXT NOT NULL DEFAULT \'\'',
+      );
 
-      await _safeAddColumn(db, DatabaseTables.budgets, 'user_id', 'TEXT NOT NULL DEFAULT \'default_user\'');
-      await _safeAddColumn(db, DatabaseTables.budgets, 'is_synced', 'INTEGER NOT NULL DEFAULT 0');
-      await _safeAddColumn(db, DatabaseTables.budgets, 'updated_at', 'TEXT NOT NULL DEFAULT \'\'');
+      await _safeAddColumn(
+        db,
+        DatabaseTables.budgets,
+        'user_id',
+        'TEXT NOT NULL DEFAULT \'default_user\'',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.budgets,
+        'is_synced',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.budgets,
+        'updated_at',
+        'TEXT NOT NULL DEFAULT \'\'',
+      );
 
-      await _safeAddColumn(db, DatabaseTables.notes, 'user_id', 'TEXT NOT NULL DEFAULT \'default_user\'');
-      await _safeAddColumn(db, DatabaseTables.notes, 'is_synced', 'INTEGER NOT NULL DEFAULT 0');
+      await _safeAddColumn(
+        db,
+        DatabaseTables.notes,
+        'user_id',
+        'TEXT NOT NULL DEFAULT \'default_user\'',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.notes,
+        'is_synced',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    if (oldVersion < 8) {
+      for (final table in [
+        DatabaseTables.categories,
+        DatabaseTables.subcategories,
+        DatabaseTables.transactions,
+        DatabaseTables.budgets,
+        DatabaseTables.notes,
+      ]) {
+        await _safeAddColumn(
+          db,
+          table,
+          'wallet_id',
+          "TEXT NOT NULL DEFAULT ''",
+        );
+      }
+      await _assignRecordsToFirstWallet(db);
+      await _safeAddColumn(
+        db,
+        DatabaseTables.syncQueue,
+        'wallet_id',
+        "TEXT NOT NULL DEFAULT ''",
+      );
     }
   }
 
-  Future<void> _safeAddColumn(Database db, String table, String col, String def) async {
+  Future<void> _assignRecordsToFirstWallet(Database db) async {
+    for (final table in [
+      DatabaseTables.categories,
+      DatabaseTables.subcategories,
+      DatabaseTables.transactions,
+      DatabaseTables.budgets,
+      DatabaseTables.notes,
+    ]) {
+      await db.execute('''
+        UPDATE $table
+        SET wallet_id = (
+          SELECT id FROM ${DatabaseTables.wallets} w
+          WHERE w.user_id = $table.user_id
+          ORDER BY w.id ASC LIMIT 1
+        )
+        WHERE wallet_id = ''
+      ''');
+    }
+  }
+
+  Future<void> _safeAddColumn(
+    Database db,
+    String table,
+    String col,
+    String def,
+  ) async {
     try {
       await db.execute('ALTER TABLE $table ADD COLUMN $col $def');
     } catch (_) {
@@ -208,9 +341,141 @@ class DatabaseHelper {
         'updated_at': now,
       });
     }
+
+    final wallet = await db.query(
+      DatabaseTables.wallets,
+      columns: ['id'],
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'id ASC',
+      limit: 1,
+    );
+    if (wallet.isNotEmpty) {
+      await _assignUserRecordsToWallet(
+        db,
+        userId,
+        wallet.first['id'] as String,
+      );
+    }
   }
 
-  Future<void> _seedDefaultCategories(Database db, String userId) async {
+  Future<void> _assignUserRecordsToWallet(
+    Database db,
+    String userId,
+    String walletId,
+  ) async {
+    for (final table in [
+      DatabaseTables.categories,
+      DatabaseTables.subcategories,
+      DatabaseTables.transactions,
+      DatabaseTables.budgets,
+      DatabaseTables.notes,
+    ]) {
+      await db.update(
+        table,
+        {'wallet_id': walletId},
+        where: 'user_id = ? AND wallet_id = ?',
+        whereArgs: [userId, ''],
+      );
+    }
+  }
+
+  Future<void> ensureWalletDefaults(String userId, String walletId) async {
+    final db = await database;
+    final existing = await db.query(
+      DatabaseTables.categories,
+      columns: ['id'],
+      where: 'user_id = ? AND wallet_id = ?',
+      whereArgs: [userId, walletId],
+      limit: 1,
+    );
+    if (existing.isEmpty) {
+      await _seedDefaultCategories(db, userId, walletId: walletId);
+    }
+  }
+
+  /// Moves all records from the local guest partition to an authenticated
+  /// account while preserving every record ID and account-scoped setting.
+  Future<void> migrateGuestData(String userId) async {
+    if (userId.isEmpty || userId == 'default_user') {
+      throw ArgumentError.value(
+        userId,
+        'userId',
+        'An authenticated user is required',
+      );
+    }
+
+    final db = await database;
+    await db.transaction((txn) async {
+      for (final table in [
+        DatabaseTables.transactions,
+        DatabaseTables.budgets,
+        DatabaseTables.notes,
+        DatabaseTables.subcategories,
+        DatabaseTables.categories,
+        DatabaseTables.wallets,
+      ]) {
+        await txn.update(
+          table,
+          {'user_id': userId, 'is_synced': 0},
+          where: 'user_id = ?',
+          whereArgs: ['default_user'],
+        );
+      }
+
+      final guestSettings = await txn.query(
+        DatabaseTables.settings,
+        where: 'key LIKE ?',
+        whereArgs: ['%_default_user'],
+      );
+      for (final setting in guestSettings) {
+        final key = setting['key'] as String;
+        await txn.insert(DatabaseTables.settings, {
+          'key': key.replaceFirst('_default_user', '_$userId'),
+          'value': setting['value'],
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+  }
+
+  /// Removes only guest account data. Installation identity and global
+  /// preferences intentionally remain intact.
+  Future<void> clearGuestData() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      for (final table in [
+        DatabaseTables.transactions,
+        DatabaseTables.budgets,
+        DatabaseTables.notes,
+        DatabaseTables.subcategories,
+        DatabaseTables.categories,
+        DatabaseTables.wallets,
+      ]) {
+        await txn.delete(
+          table,
+          where: 'user_id = ?',
+          whereArgs: ['default_user'],
+        );
+      }
+
+      await txn.delete(
+        DatabaseTables.syncQueue,
+        where: 'user_id = ?',
+        whereArgs: ['default_user'],
+      );
+      await txn.delete(
+        DatabaseTables.settings,
+        where: 'key LIKE ?',
+        whereArgs: ['%_default_user'],
+      );
+    });
+  }
+
+  Future<void> _seedDefaultCategories(
+    Database db,
+    String userId, {
+    String? walletId,
+  }) async {
     const uuid = Uuid();
     final now = DateTime.now().toUtc().toIso8601String();
     for (final category in DatabaseTables.defaultCategories) {
@@ -218,6 +483,7 @@ class DatabaseHelper {
       await db.insert(DatabaseTables.categories, {
         'id': categoryId,
         'user_id': userId,
+        'wallet_id': walletId ?? '',
         'name': category['name'],
         'type': category['type'],
         'icon': category['icon'],
@@ -226,7 +492,11 @@ class DatabaseHelper {
         'updated_at': now,
       });
     }
-    await _seedSubcategoriesForExistingCategories(db, userId);
+    await _seedSubcategoriesForExistingCategories(
+      db,
+      userId,
+      walletId: walletId,
+    );
   }
 
   Future<void> _seedMissingDefaultCategories(Database db, String userId) async {
@@ -255,13 +525,17 @@ class DatabaseHelper {
     await _seedSubcategoriesForExistingCategories(db, userId);
   }
 
-  Future<void> _seedSubcategoriesForExistingCategories(Database db, String userId) async {
+  Future<void> _seedSubcategoriesForExistingCategories(
+    Database db,
+    String userId, {
+    String? walletId,
+  }) async {
     const uuid = Uuid();
     final now = DateTime.now().toUtc().toIso8601String();
     final categories = await db.query(
       DatabaseTables.categories,
-      where: 'user_id = ?',
-      whereArgs: [userId],
+      where: walletId == null ? 'user_id = ?' : 'user_id = ? AND wallet_id = ?',
+      whereArgs: walletId == null ? [userId] : [userId, walletId],
     );
     for (final category in categories) {
       final names = DatabaseTables.defaultSubcategories[category['name']];
@@ -272,6 +546,7 @@ class DatabaseHelper {
           {
             'id': uuid.v4(),
             'user_id': userId,
+            'wallet_id': walletId ?? (category['wallet_id'] as String? ?? ''),
             'category_id': category['id'],
             'name': name,
             'is_synced': 0,
@@ -283,7 +558,10 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> _ensureEveryCategoryHasSubcategory(Database db, String userId) async {
+  Future<void> _ensureEveryCategoryHasSubcategory(
+    Database db,
+    String userId,
+  ) async {
     const uuid = Uuid();
     final now = DateTime.now().toUtc().toIso8601String();
     final categories = await db.query(
@@ -341,7 +619,9 @@ class DatabaseHelper {
   }
 
   Future<bool> isOnboardingComplete([String? userId]) async {
-    final key = userId != null ? 'onboarding_complete_$userId' : 'onboarding_complete';
+    final key = userId != null
+        ? 'onboarding_complete_$userId'
+        : 'onboarding_complete';
     final value = await getSetting(key);
     if (value == 'true') return true;
     if (userId != null) {
@@ -352,7 +632,9 @@ class DatabaseHelper {
   }
 
   Future<void> setOnboardingComplete(bool complete, [String? userId]) async {
-    final key = userId != null ? 'onboarding_complete_$userId' : 'onboarding_complete';
+    final key = userId != null
+        ? 'onboarding_complete_$userId'
+        : 'onboarding_complete';
     await setSetting(key, complete ? 'true' : 'false');
     await setSetting('onboarding_complete', complete ? 'true' : 'false');
   }
@@ -380,14 +662,18 @@ class DatabaseHelper {
   }
 
   Future<String?> getSelectedWalletId([String? userId]) async {
-    final key = userId != null ? 'selected_wallet_id_$userId' : 'selected_wallet_id';
+    final key = userId != null
+        ? 'selected_wallet_id_$userId'
+        : 'selected_wallet_id';
     final id = await getSetting(key);
     if (id != null && id.isNotEmpty) return id;
     return await getSetting('selected_wallet_id');
   }
 
   Future<void> setSelectedWalletId(String? walletId, [String? userId]) async {
-    final key = userId != null ? 'selected_wallet_id_$userId' : 'selected_wallet_id';
+    final key = userId != null
+        ? 'selected_wallet_id_$userId'
+        : 'selected_wallet_id';
     if (walletId == null || walletId.isEmpty) {
       await setSetting(key, '');
       await setSetting('selected_wallet_id', '');

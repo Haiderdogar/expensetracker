@@ -42,7 +42,7 @@ final class AppShellNavigationIndexProvider
 }
 
 String _$appShellNavigationIndexHash() =>
-    r'05b781c9493b39b8e633dcab7105d590ad00b7e4';
+    r'cc18ca49125613d16423bd61854a2d231f41daf5';
 
 abstract class _$AppShellNavigationIndex extends $Notifier<int> {
   int build();
@@ -95,7 +95,7 @@ final class AppShellVisitedIndexesProvider
 }
 
 String _$appShellVisitedIndexesHash() =>
-    r'de1fc654b8029b0580b2bad9b6dcf5b6bd8fcce4';
+    r'f1ae98e9209a544234e27440edbc68128eaee8ed';
 
 abstract class _$AppShellVisitedIndexes extends $Notifier<Set<int>> {
   Set<int> build();
@@ -148,7 +148,7 @@ final class AppShellLogoutInProgressProvider
 }
 
 String _$appShellLogoutInProgressHash() =>
-    r'b7e4e5d3c7e255b841d46d1e34bd942b948b96ab';
+    r'9538e82942438638dd724e2ebd94e8824b7bfc0e';
 
 abstract class _$AppShellLogoutInProgress extends $Notifier<bool> {
   bool build();
@@ -205,4 +205,4 @@ final class AppShellProfileProvider
   }
 }
 
-String _$appShellProfileHash() => r'e5fcf63abc9721f6bff4421ea1277fa6467da268';
+String _$appShellProfileHash() => r'ba96d08def88beb58a20f254d700ffee719c80e7';

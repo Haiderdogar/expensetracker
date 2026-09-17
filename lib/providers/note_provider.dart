@@ -5,6 +5,7 @@ import '../core/utils/error_handler.dart';
 import '../models/note_model.dart';
 import 'auth_provider.dart';
 import 'database_provider.dart';
+import 'wallet_provider.dart';
 
 part 'note_provider.g.dart';
 
@@ -17,8 +18,9 @@ class Notes extends _$Notes {
     try {
       ref.watch(localDataEpochProvider);
       final userId = ref.watch(currentUserIdProvider);
+      final walletId = ref.watch(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      return await syncRepo.getNotes(userId);
+      return await syncRepo.getNotes(userId, walletId: walletId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -36,13 +38,17 @@ class Notes extends _$Notes {
   }) async {
     try {
       final userId = ref.read(currentUserIdProvider);
+      final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
       final now = DateTime.now();
-      final existing = id == null ? null : await syncRepo.getNote(id, userId);
+      final existing = id == null
+          ? null
+          : await syncRepo.getNote(id, userId, walletId: walletId);
 
       final note = NoteModel(
         id: id ?? const Uuid().v4(),
         userId: userId,
+        walletId: walletId ?? '',
         title: title,
         content: content,
         createdAt: existing?.createdAt ?? now,

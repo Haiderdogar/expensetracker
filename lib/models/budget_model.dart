@@ -2,6 +2,7 @@ class BudgetModel {
   const BudgetModel({
     required this.id,
     this.userId = 'default_user',
+    this.walletId = '',
     required this.categoryId,
     required this.amount,
     required this.monthYear,
@@ -11,6 +12,7 @@ class BudgetModel {
 
   final String id;
   final String userId;
+  final String walletId;
   final String categoryId;
   final double amount;
   final String monthYear;
@@ -20,6 +22,7 @@ class BudgetModel {
   BudgetModel copyWith({
     String? id,
     String? userId,
+    String? walletId,
     String? categoryId,
     double? amount,
     String? monthYear,
@@ -29,6 +32,7 @@ class BudgetModel {
     return BudgetModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      walletId: walletId ?? this.walletId,
       categoryId: categoryId ?? this.categoryId,
       amount: amount ?? this.amount,
       monthYear: monthYear ?? this.monthYear,
@@ -40,6 +44,7 @@ class BudgetModel {
   Map<String, dynamic> toMap() => {
         'id': id,
         'user_id': userId,
+        'wallet_id': walletId,
         'category_id': categoryId,
         'amount': amount,
         'month_year': monthYear,
@@ -50,6 +55,7 @@ class BudgetModel {
   Map<String, dynamic> toFirestore() => {
         'id': id,
         'userId': userId,
+        'walletId': walletId,
         'categoryId': categoryId,
         'amount': amount,
         'monthYear': monthYear,
@@ -60,6 +66,7 @@ class BudgetModel {
     return BudgetModel(
       id: map['id'] as String,
       userId: (map['user_id'] as String?) ?? 'default_user',
+      walletId: (map['wallet_id'] as String?) ?? '',
       categoryId: map['category_id'] as String,
       amount: (map['amount'] as num).toDouble(),
       monthYear: map['month_year'] as String,
@@ -72,6 +79,7 @@ class BudgetModel {
     return BudgetModel(
       id: (data['id'] as String?) ?? docId,
       userId: (data['userId'] as String?) ?? 'default_user',
+      walletId: (data['walletId'] as String?) ?? '',
       categoryId: (data['categoryId'] as String?) ?? '',
       amount: ((data['amount'] as num?) ?? 0).toDouble(),
       monthYear: (data['monthYear'] as String?) ?? '',

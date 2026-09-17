@@ -59,7 +59,7 @@ final class AuthUiStateNotifierProvider
 }
 
 String _$authUiStateNotifierHash() =>
-    r'73f0a6bedbab0081b473053bcf10b99efe48355e';
+    r'7e1d677b504a464f3e753ca2f9bee61545219b8d';
 
 final class AuthUiStateNotifierFamily extends $Family
     with

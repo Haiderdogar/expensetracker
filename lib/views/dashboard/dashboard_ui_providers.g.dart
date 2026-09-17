@@ -42,7 +42,7 @@ final class RecentTransactionFilterProvider
 }
 
 String _$recentTransactionFilterHash() =>
-    r'cd608724d3d944921c718785c63ecf30c4517342';
+    r'fe648397837cd4a1ef6cbd6d6c7892c4797f8936';
 
 abstract class _$RecentTransactionFilter extends $Notifier<String> {
   String build();
@@ -95,7 +95,7 @@ final class DashboardBalanceHiddenProvider
 }
 
 String _$dashboardBalanceHiddenHash() =>
-    r'60bea79eec8bb6905c325aec7453c657bcb913d4';
+    r'e2e90f06643ff774f9adc5ddea46a0a9ca078296';
 
 abstract class _$DashboardBalanceHidden extends $Notifier<bool> {
   bool build();

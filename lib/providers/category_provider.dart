@@ -9,6 +9,7 @@ import '../models/subcategory_model.dart';
 import 'auth_provider.dart';
 import 'database_provider.dart';
 import 'transaction_provider.dart';
+import 'wallet_provider.dart';
 
 part 'category_provider.g.dart';
 
@@ -21,8 +22,9 @@ class Categories extends _$Categories {
     try {
       ref.watch(localDataEpochProvider);
       final userId = ref.watch(currentUserIdProvider);
+      final walletId = ref.watch(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      return await syncRepo.getCategories(userId);
+      return await syncRepo.getCategories(userId, walletId: walletId);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -41,13 +43,15 @@ class Categories extends _$Categories {
   Future<void> add(CategoryModel category) async {
     try {
       final userId = ref.read(currentUserIdProvider);
+      final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      final catToSave = category.copyWith(userId: userId);
+      final catToSave = category.copyWith(userId: userId, walletId: walletId);
       await syncRepo.saveCategory(catToSave);
 
       final sub = SubcategoryModel(
         id: const Uuid().v4(),
         userId: userId,
+        walletId: walletId ?? '',
         categoryId: category.id,
         name: 'General',
       );
@@ -67,9 +71,11 @@ class Categories extends _$Categories {
   }) async {
     const uuid = Uuid();
     final userId = ref.read(currentUserIdProvider);
+    final walletId = ref.read(activeWalletIdProvider);
     final category = CategoryModel(
       id: uuid.v4(),
       userId: userId,
+      walletId: walletId ?? '',
       name: name,
       type: type,
       icon: icon,
@@ -121,9 +127,11 @@ class Categories extends _$Categories {
     try {
       const uuid = Uuid();
       final userId = ref.read(currentUserIdProvider);
+      final walletId = ref.read(activeWalletIdProvider);
       final category = CategoryModel(
         id: uuid.v4(),
         userId: userId,
+        walletId: walletId ?? '',
         name: name.trim(),
         type: type,
         icon: icon,
@@ -135,6 +143,7 @@ class Categories extends _$Categories {
       final sub = SubcategoryModel(
         id: uuid.v4(),
         userId: userId,
+        walletId: walletId ?? '',
         categoryId: category.id,
         name: subcategoryName.trim(),
       );
@@ -150,8 +159,11 @@ class Categories extends _$Categories {
   Future<void> updateCategory(CategoryModel category) async {
     try {
       final userId = ref.read(currentUserIdProvider);
+      final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.saveCategory(category.copyWith(userId: userId));
+      await syncRepo.saveCategory(
+        category.copyWith(userId: userId, walletId: walletId),
+      );
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -161,16 +173,16 @@ class Categories extends _$Categories {
 
 @riverpod
 Future<List<CategoryModel>> incomeCategories(Ref ref) async {
-  return ref.watch(categoriesProvider.future).then(
-        (list) => list.where((c) => c.isIncome).toList(),
-      );
+  return ref
+      .watch(categoriesProvider.future)
+      .then((list) => list.where((c) => c.isIncome).toList());
 }
 
 @riverpod
 Future<List<CategoryModel>> expenseCategories(Ref ref) async {
-  return ref.watch(categoriesProvider.future).then(
-        (list) => list.where((c) => c.isExpense).toList(),
-      );
+  return ref
+      .watch(categoriesProvider.future)
+      .then((list) => list.where((c) => c.isExpense).toList());
 }
 
 @riverpod
@@ -178,5 +190,7 @@ Future<List<CategoryModel>> usedCategories(Ref ref, String? type) async {
   final all = await ref.watch(categoriesProvider.future);
   final txs = await ref.watch(transactionsProvider.future);
   final usedIds = txs.map((t) => t.categoryId).toSet();
-  return all.where((c) => usedIds.contains(c.id) && (type == null || c.type == type)).toList();
+  return all
+      .where((c) => usedIds.contains(c.id) && (type == null || c.type == type))
+      .toList();
 }

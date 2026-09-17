@@ -102,6 +102,47 @@ final class ActiveWalletNameProvider
 
 String _$activeWalletNameHash() => r'74f9e4cb4d4746ca755c6b2d773484479e75c746';
 
+@ProviderFor(activeWalletId)
+final activeWalletIdProvider = ActiveWalletIdProvider._();
+
+final class ActiveWalletIdProvider
+    extends $FunctionalProvider<String?, String?, String?>
+    with $Provider<String?> {
+  ActiveWalletIdProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'activeWalletIdProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$activeWalletIdHash();
+
+  @$internal
+  @override
+  $ProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  String? create(Ref ref) {
+    return activeWalletId(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$activeWalletIdHash() => r'420db00682086e723e2523fb62ac75268f93503b';
+
 @ProviderFor(Wallets)
 final walletsProvider = WalletsProvider._();
 
@@ -126,7 +167,7 @@ final class WalletsProvider
   Wallets create() => Wallets();
 }
 
-String _$walletsHash() => r'750359d556c0eeff246377cab76391a4bf4e75aa';
+String _$walletsHash() => r'7f399e89247be70959f9b39d636465747a549d61';
 
 abstract class _$Wallets extends $AsyncNotifier<List<WalletModel>> {
   FutureOr<List<WalletModel>> build();

@@ -66,7 +66,7 @@ final class SubcategoriesProvider
   }
 }
 
-String _$subcategoriesHash() => r'1a82bf7a25bfd900de29d77520cda3a46de221d9';
+String _$subcategoriesHash() => r'bd1546ea5685417ed8742024e9bb57824347f24e';
 
 final class SubcategoriesFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<SubcategoryModel>>, String> {

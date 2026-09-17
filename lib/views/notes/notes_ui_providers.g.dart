@@ -41,7 +41,7 @@ final class NotesSearchQueryProvider
   }
 }
 
-String _$notesSearchQueryHash() => r'401ecc130bacd785e89c399c92fede8a5f6fcc2a';
+String _$notesSearchQueryHash() => r'22ee9a49d447daa8ac1dd41f43a89f27d6d33ac1';
 
 abstract class _$NotesSearchQuery extends $Notifier<String> {
   String build();
@@ -112,7 +112,7 @@ final class NoteEditorDraftNotifierProvider
 }
 
 String _$noteEditorDraftNotifierHash() =>
-    r'edb01c3d335fa9bbb3c27f71c06613f01bd49394';
+    r'f4cc8f0222fb248f7d2d7613f9ace0fa4309c25a';
 
 final class NoteEditorDraftNotifierFamily extends $Family
     with

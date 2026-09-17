@@ -107,20 +107,20 @@ class AppBootstrap extends ConsumerWidget {
 }
 
 /// Runs once after a successful login or guest choice:
-/// welcome setup, then optional local app-lock setup, then the main app.
+/// wallet/currency setup, then optional local app-lock setup, then the main app.
 class _PostLoginFlow extends ConsumerWidget {
   const _PostLoginFlow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final welcomeAsync = ref.watch(welcomeSetupCompletedProvider);
-    return welcomeAsync.when(
+    final onboardingAsync = ref.watch(onboardingCompleteProvider);
+    return onboardingAsync.when(
       loading: () => const _BootstrapLoading(),
       error: (_, __) => _BootstrapError(
-        onRetry: () => ref.invalidate(welcomeSetupCompletedProvider),
+        onRetry: () => ref.invalidate(onboardingCompleteProvider),
       ),
-      data: (welcomeComplete) {
-        if (!welcomeComplete) return const OnboardingScreen();
+      data: (onboardingComplete) {
+        if (!onboardingComplete) return const OnboardingScreen();
 
         final lockPromptAsync = ref.watch(lockPromptCompletedProvider);
         return lockPromptAsync.when(

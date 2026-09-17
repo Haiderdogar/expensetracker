@@ -2,6 +2,7 @@ class CategoryModel {
   const CategoryModel({
     required this.id,
     this.userId = 'default_user',
+    this.walletId = '',
     required this.name,
     required this.type,
     required this.icon,
@@ -12,6 +13,7 @@ class CategoryModel {
 
   final String id;
   final String userId;
+  final String walletId;
   final String name;
   final String type;
   final String icon;
@@ -25,6 +27,7 @@ class CategoryModel {
   CategoryModel copyWith({
     String? id,
     String? userId,
+    String? walletId,
     String? name,
     String? type,
     String? icon,
@@ -35,6 +38,7 @@ class CategoryModel {
     return CategoryModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      walletId: walletId ?? this.walletId,
       name: name ?? this.name,
       type: type ?? this.type,
       icon: icon ?? this.icon,
@@ -47,6 +51,7 @@ class CategoryModel {
   Map<String, dynamic> toMap() => {
         'id': id,
         'user_id': userId,
+        'wallet_id': walletId,
         'name': name,
         'type': type,
         'icon': icon,
@@ -56,12 +61,8 @@ class CategoryModel {
       };
 
   Map<String, dynamic> toFirestore() => {
-        'id': id,
-        'userId': userId,
         'name': name,
         'type': type,
-        'icon': icon,
-        'color': color,
         'updatedAt': updatedAt ?? DateTime.now().toUtc().toIso8601String(),
       };
 
@@ -69,6 +70,7 @@ class CategoryModel {
     return CategoryModel(
       id: map['id'] as String,
       userId: (map['user_id'] as String?) ?? 'default_user',
+      walletId: (map['wallet_id'] as String?) ?? '',
       name: map['name'] as String,
       type: map['type'] as String,
       icon: map['icon'] as String,
@@ -80,8 +82,9 @@ class CategoryModel {
 
   factory CategoryModel.fromFirestore(Map<String, dynamic> data, String docId) {
     return CategoryModel(
-      id: (data['id'] as String?) ?? docId,
-      userId: (data['userId'] as String?) ?? 'default_user',
+      id: docId,
+      userId: 'default_user',
+      walletId: '',
       name: (data['name'] as String?) ?? '',
       type: (data['type'] as String?) ?? 'expense',
       icon: (data['icon'] as String?) ?? 'folder',

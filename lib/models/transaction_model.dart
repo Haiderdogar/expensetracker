@@ -57,32 +57,29 @@ class TransactionModel {
   }
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'user_id': userId,
-        'title': subcategory,
-        'subcategory': subcategory,
-        'amount': amount,
-        'type': type,
-        'category_id': categoryId,
-        'wallet_id': walletId,
-        'date': date,
-        'note': note,
-        'is_synced': isSynced ? 1 : 0,
-        'updated_at': updatedAt ?? DateTime.now().toUtc().toIso8601String(),
-      };
+    'id': id,
+    'user_id': userId,
+    'title': subcategory,
+    'subcategory': subcategory,
+    'amount': amount,
+    'type': type,
+    'category_id': categoryId,
+    'wallet_id': walletId,
+    'date': date,
+    'note': note,
+    'is_synced': isSynced ? 1 : 0,
+    'updated_at': updatedAt ?? DateTime.now().toUtc().toIso8601String(),
+  };
 
   Map<String, dynamic> toFirestore() => {
-        'id': id,
-        'userId': userId,
-        'subcategory': subcategory,
-        'amount': amount,
-        'type': type,
-        'categoryId': categoryId,
-        'walletId': walletId,
-        'date': date,
-        'note': note,
-        'updatedAt': updatedAt ?? DateTime.now().toUtc().toIso8601String(),
-      };
+    'subcategory': subcategory,
+    'amount': amount,
+    'type': type,
+    'categoryId': categoryId,
+    'date': date,
+    'note': note,
+    'updatedAt': updatedAt ?? DateTime.now().toUtc().toIso8601String(),
+  };
 
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
     return TransactionModel(
@@ -102,15 +99,18 @@ class TransactionModel {
     );
   }
 
-  factory TransactionModel.fromFirestore(Map<String, dynamic> data, String docId) {
+  factory TransactionModel.fromFirestore(
+    Map<String, dynamic> data,
+    String docId,
+  ) {
     return TransactionModel(
-      id: (data['id'] as String?) ?? docId,
-      userId: (data['userId'] as String?) ?? 'default_user',
+      id: docId,
+      userId: 'default_user',
       subcategory: (data['subcategory'] as String?) ?? '',
       amount: ((data['amount'] as num?) ?? 0).toDouble(),
       type: (data['type'] as String?) ?? 'expense',
       categoryId: (data['categoryId'] as String?) ?? '',
-      walletId: (data['walletId'] as String?) ?? '',
+      walletId: '',
       date: (data['date'] as String?) ?? DateTime.now().toIso8601String(),
       note: data['note'] as String?,
       isSynced: true,

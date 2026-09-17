@@ -30,6 +30,16 @@ String activeWalletName(Ref ref) {
   return 'Wallet';
 }
 
+@riverpod
+String? activeWalletId(Ref ref) {
+  final selectedId = ref.watch(selectedWalletIdProvider);
+  final wallets = ref.watch(walletsProvider).value ?? const <WalletModel>[];
+  if (selectedId != null && wallets.any((wallet) => wallet.id == selectedId)) {
+    return selectedId;
+  }
+  return wallets.isEmpty ? null : wallets.first.id;
+}
+
 @Riverpod(keepAlive: true)
 class Wallets extends _$Wallets {
   @override
@@ -53,11 +63,6 @@ class Wallets extends _$Wallets {
 
   Future<WalletModel> create({required String name, double balance = 0}) async {
     try {
-      final existing = await _fetchAll();
-      if (existing.isNotEmpty) {
-        throw Exception(
-            'Only one wallet is supported. Edit the existing wallet name from your profile.');
-      }
       const uuid = Uuid();
       final userId = ref.read(currentUserIdProvider);
       final wallet = WalletModel(
@@ -69,6 +74,9 @@ class Wallets extends _$Wallets {
       );
       final syncRepo = ref.read(syncRepositoryProvider);
       await syncRepo.saveWallet(wallet);
+      await ref
+          .read(databaseHelperProvider)
+          .ensureWalletDefaults(userId, wallet.id);
       await refresh();
       return wallet;
     } catch (e) {
@@ -80,7 +88,9 @@ class Wallets extends _$Wallets {
     try {
       final userId = ref.read(currentUserIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.saveWallet(wallet.copyWith(userId: userId, isSynced: false));
+      await syncRepo.saveWallet(
+        wallet.copyWith(userId: userId, isSynced: false),
+      );
       await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);

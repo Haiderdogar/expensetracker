@@ -15,6 +15,8 @@ import '../../providers/wallet_provider.dart';
 import '../auth/auth_screen.dart';
 import 'app_shell_providers.dart';
 
+enum _LogoutChoice { cancel, logout, upgrade }
+
 class AppShellLogoutButton extends ConsumerWidget {
   const AppShellLogoutButton({super.key});
 
@@ -100,30 +102,67 @@ class AppShellLogoutButton extends ConsumerWidget {
   }
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    final isGuest =
+        ref.read(authControllerProvider).value == AuthStatus.guest;
+
     // ── Step 1: Show confirmation dialog ──────────────────────────────────
-    final confirmed = await showDialog<bool>(
+    final choice = await showDialog<_LogoutChoice>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         title: const Text(AppStrings.logout),
-        content: const Text(AppStrings.logoutConfirmation),
+        content: Text(
+          isGuest
+              ? AppStrings.guestLogoutWarning
+              : AppStrings.logoutConfirmation,
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
+            onPressed: () =>
+                Navigator.pop(dialogContext, _LogoutChoice.cancel),
             child: const Text(AppStrings.cancel),
           ),
+          if (isGuest)
+            OutlinedButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, _LogoutChoice.upgrade),
+              child: const Text(AppStrings.signInWithGoogle),
+            ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(dialogContext).colorScheme.error,
             ),
-            onPressed: () => Navigator.pop(dialogContext, true),
+            onPressed: () =>
+                Navigator.pop(dialogContext, _LogoutChoice.logout),
             child: const Text(AppStrings.logout),
           ),
         ],
       ),
     );
 
-    if (confirmed != true || !context.mounted) return;
+    if (choice == _LogoutChoice.upgrade) {
+      ref.read(appShellLogoutInProgressProvider.notifier).state = true;
+      try {
+        final result = await ref
+            .read(authControllerProvider.notifier)
+            .signInWithGoogle();
+        if (result != GoogleSignInResult.success && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Google upgrade was not completed.')),
+          );
+        }
+        if (result == GoogleSignInResult.success) {
+          _invalidateAccountScopedProviders(ref);
+        }
+      } finally {
+        if (context.mounted) {
+          ref.read(appShellLogoutInProgressProvider.notifier).state = false;
+        }
+      }
+      return;
+    }
+
+    if (choice != _LogoutChoice.logout || !context.mounted) return;
 
     // ── Step 2: Identity verification (PIN / biometric) ───────────────────
     final storage = ref.read(secureStorageProvider);
@@ -177,20 +216,14 @@ class AppShellLogoutButton extends ConsumerWidget {
         await WidgetsBinding.instance.endOfFrame;
       }
 
-      ref.invalidate(transactionsProvider);
-      ref.invalidate(categoriesProvider);
-      ref.invalidate(walletsProvider);
-      ref.invalidate(budgetsProvider);
-      ref.invalidate(notesProvider);
-      ref.invalidate(backupServiceProvider);
-      ref.invalidate(selectedWalletIdProvider);
-      ref.invalidate(onboardingCompleteProvider);
-      ref.invalidate(currencySymbolProvider);
-      ref.invalidate(currencyCodeProvider);
-      ref.read(appShellNavigationIndexProvider.notifier).state = 0;
-      ref.read(appShellVisitedIndexesProvider.notifier).state = {0};
-
-      await ref.read(authControllerProvider.notifier).signOut();
+      _invalidateAccountScopedProviders(ref);
+      if (isGuest) {
+        await ref
+            .read(authControllerProvider.notifier)
+            .discardGuestDataAndSignOut();
+      } else {
+        await ref.read(authControllerProvider.notifier).signOut();
+      }
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -202,5 +235,20 @@ class AppShellLogoutButton extends ConsumerWidget {
         ref.read(appShellLogoutInProgressProvider.notifier).state = false;
       }
     }
+  }
+
+  void _invalidateAccountScopedProviders(WidgetRef ref) {
+    ref.invalidate(transactionsProvider);
+    ref.invalidate(categoriesProvider);
+    ref.invalidate(walletsProvider);
+    ref.invalidate(budgetsProvider);
+    ref.invalidate(notesProvider);
+    ref.invalidate(backupServiceProvider);
+    ref.invalidate(selectedWalletIdProvider);
+    ref.invalidate(onboardingCompleteProvider);
+    ref.invalidate(currencySymbolProvider);
+    ref.invalidate(currencyCodeProvider);
+    ref.read(appShellNavigationIndexProvider.notifier).state = 0;
+    ref.read(appShellVisitedIndexesProvider.notifier).state = {0};
   }
 }

@@ -8,12 +8,13 @@ abstract final class DatabaseTables {
   static const String notes = 'notes';
   static const String syncQueue = 'sync_queue';
 
-  static const int dbVersion = 7;
+  static const int dbVersion = 8;
 
   static const String createCategories = '''
     CREATE TABLE $categories (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
+      wallet_id TEXT NOT NULL DEFAULT '',
       name TEXT NOT NULL,
       type TEXT NOT NULL,
       icon TEXT NOT NULL,
@@ -57,6 +58,7 @@ abstract final class DatabaseTables {
     CREATE TABLE $subcategories (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
+      wallet_id TEXT NOT NULL DEFAULT '',
       category_id TEXT NOT NULL,
       name TEXT NOT NULL,
       is_synced INTEGER NOT NULL DEFAULT 0,
@@ -70,6 +72,7 @@ abstract final class DatabaseTables {
     CREATE TABLE $budgets (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
+      wallet_id TEXT NOT NULL DEFAULT '',
       category_id TEXT NOT NULL,
       amount REAL NOT NULL,
       month_year TEXT NOT NULL,
@@ -90,6 +93,7 @@ abstract final class DatabaseTables {
     CREATE TABLE $notes (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
+      wallet_id TEXT NOT NULL DEFAULT '',
       title TEXT NOT NULL,
       content TEXT NOT NULL,
       created_at TEXT NOT NULL,
@@ -103,6 +107,7 @@ abstract final class DatabaseTables {
       id TEXT PRIMARY KEY,
       table_name TEXT NOT NULL,
       record_id TEXT NOT NULL,
+      wallet_id TEXT NOT NULL DEFAULT '',
       operation TEXT NOT NULL,
       user_id TEXT NOT NULL,
       created_at TEXT NOT NULL

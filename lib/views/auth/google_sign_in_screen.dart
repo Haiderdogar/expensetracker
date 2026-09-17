@@ -328,10 +328,20 @@ class _SkipForNowButton extends ConsumerWidget {
         ),
         onPressed: isLoading
             ? null
-            : () {
-                ref
-                    .read(authControllerProvider.notifier)
-                    .continueAsGuest();
+            : () async {
+                try {
+                  await ref
+                      .read(authControllerProvider.notifier)
+                      .continueAsGuest();
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Could not start guest mode: $error'),
+                      ),
+                    );
+                  }
+                }
               },
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

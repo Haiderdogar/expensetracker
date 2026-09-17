@@ -8,10 +8,19 @@ part of 'transactions_ui_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// A generated provider-backed controller for the transaction search field.
+///
+/// The controller is disposed with the provider, keeping ephemeral widget input
+/// out of stateful widgets while still using Riverpod code generation.
 
 @ProviderFor(transactionSearchTextController)
 final transactionSearchTextControllerProvider =
     TransactionSearchTextControllerProvider._();
+
+/// A generated provider-backed controller for the transaction search field.
+///
+/// The controller is disposed with the provider, keeping ephemeral widget input
+/// out of stateful widgets while still using Riverpod code generation.
 
 final class TransactionSearchTextControllerProvider
     extends
@@ -21,6 +30,10 @@ final class TransactionSearchTextControllerProvider
           TextEditingController
         >
     with $Provider<TextEditingController> {
+  /// A generated provider-backed controller for the transaction search field.
+  ///
+  /// The controller is disposed with the provider, keeping ephemeral widget input
+  /// out of stateful widgets while still using Riverpod code generation.
   TransactionSearchTextControllerProvider._()
     : super(
         from: null,
@@ -33,8 +46,7 @@ final class TransactionSearchTextControllerProvider
       );
 
   @override
-  String debugGetCreateSourceHash() =>
-      _$transactionSearchTextControllerHash();
+  String debugGetCreateSourceHash() => _$transactionSearchTextControllerHash();
 
   @$internal
   @override
@@ -57,7 +69,7 @@ final class TransactionSearchTextControllerProvider
 }
 
 String _$transactionSearchTextControllerHash() =>
-    r'3b5be49790f68ef36f1f9abcb8412d7905b8877a';
+    r'6b225ea4601b0931938825020c13c732f6df2831';
 
 @ProviderFor(TransactionSearch)
 final transactionSearchProvider = TransactionSearchProvider._();
@@ -91,7 +103,7 @@ final class TransactionSearchProvider
   }
 }
 
-String _$transactionSearchHash() => r'b563518529423c5418a2f0e838014c60c2f99242';
+String _$transactionSearchHash() => r'34ce7b65c9a99cc09e29b4096719578e834c7446';
 
 abstract class _$TransactionSearch extends $Notifier<String> {
   String build();
@@ -144,7 +156,7 @@ final class TransactionTypeFilterProvider
 }
 
 String _$transactionTypeFilterHash() =>
-    r'3c5a178fd1383dba2fd5091660fdfcd3e8722469';
+    r'cdef3ff06ffdaaee2f3a753ea60d3244424d2421';
 
 abstract class _$TransactionTypeFilter extends $Notifier<String?> {
   String? build();
@@ -197,7 +209,7 @@ final class SelectedCategoryFiltersProvider
 }
 
 String _$selectedCategoryFiltersHash() =>
-    r'9267444da5d1cea0fc88d0ad3e1e32a32f79af5c';
+    r'1729f221096fb9fce4a8b8ab08459960b19a4900';
 
 abstract class _$SelectedCategoryFilters extends $Notifier<List<String>?> {
   List<String>? build();
@@ -251,7 +263,7 @@ final class TransactionCategoryFilterDraftProvider
 }
 
 String _$transactionCategoryFilterDraftHash() =>
-    r'e93d3ba25483042aff50a71de7277d06e79c756b';
+    r'73bb6775db76f9fd237bc6803769d4db41e9826a';
 
 abstract class _$TransactionCategoryFilterDraft
     extends $Notifier<List<String>> {
@@ -305,7 +317,7 @@ final class TransactionInitialTypeProvider
 }
 
 String _$transactionInitialTypeHash() =>
-    r'be7e115df4560b09b404f0f1ef01e83c1572aa59';
+    r'801ec7672d82d62046c5511450fb34fef19368fe';
 
 abstract class _$TransactionInitialType extends $Notifier<String> {
   String build();
@@ -376,7 +388,7 @@ final class TransactionFormNotifierProvider
 }
 
 String _$transactionFormNotifierHash() =>
-    r'e6ec14bcf8efc655d0850e8a032dfaa3fc960851';
+    r'0a3e1a413d70ee7768a9bf0add478e667effa237';
 
 final class TransactionFormNotifierFamily extends $Family
     with
