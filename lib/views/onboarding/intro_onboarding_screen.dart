@@ -42,7 +42,7 @@ class IntroOnboardingScreen extends StatelessWidget {
           children: [
             Expanded(child: _IntroPageView()),
             Padding(
-              padding: EdgeInsets.fromLTRB(24, 12, 24, 32),
+              padding: EdgeInsets.fromLTRB(24, 12, 24, 10),
               child: Column(
                 children: [
                   _IntroPageIndicators(),
