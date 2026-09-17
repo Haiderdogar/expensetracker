@@ -190,6 +190,7 @@ class _OnboardingSubmitButton extends ConsumerWidget {
           }
           await helper.setOnboardingComplete(true, userId);
           ref.invalidate(onboardingCompleteProvider);
+          ref.invalidate(walletsProvider);
           ref.invalidate(currencySymbolProvider);
           ref.invalidate(currencyCodeProvider);
         } catch (error) {

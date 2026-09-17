@@ -623,12 +623,7 @@ class DatabaseHelper {
         ? 'onboarding_complete_$userId'
         : 'onboarding_complete';
     final value = await getSetting(key);
-    if (value == 'true') return true;
-    if (userId != null) {
-      // Fallback to global onboarding flag if user flag not set yet
-      return (await getSetting('onboarding_complete')) == 'true';
-    }
-    return false;
+    return value == 'true';
   }
 
   Future<void> setOnboardingComplete(bool complete, [String? userId]) async {
@@ -636,7 +631,6 @@ class DatabaseHelper {
         ? 'onboarding_complete_$userId'
         : 'onboarding_complete';
     await setSetting(key, complete ? 'true' : 'false');
-    await setSetting('onboarding_complete', complete ? 'true' : 'false');
   }
 
   Future<String> getCurrencySymbol([String? userId]) async {
