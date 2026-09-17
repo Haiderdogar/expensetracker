@@ -14,12 +14,30 @@ class ProfileActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!draft.isGoogleAccount) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FilledButton.icon(
+            onPressed: () => _upgrade(context, ref),
+            icon: const Icon(Icons.login_rounded),
+            label: const Text('Sign in with Google'),
+          ),
+          const SizedBox(height: 12),
+          _editButton(context, ref),
+        ],
+      );
+    }
+    return _editButton(context, ref);
+  }
+
+  Widget _editButton(BuildContext context, WidgetRef ref) {
     if (!draft.isEditing) {
       return SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
-          onPressed: () => ref.read(profileDraftProvider.notifier).state =
-              draft.copyWith(isEditing: true),
+          onPressed: () => ref.read(profileDraftProvider.notifier).state = draft
+              .copyWith(isEditing: true),
           icon: const Icon(Icons.edit_outlined),
           label: const Text('Edit profile'),
           style: FilledButton.styleFrom(
@@ -39,10 +57,28 @@ class ProfileActions extends ConsumerWidget {
     );
   }
 
+  Future<void> _upgrade(BuildContext context, WidgetRef ref) async {
+    final result = await ref
+        .read(authControllerProvider.notifier)
+        .signInWithGoogle();
+    if (!context.mounted) return;
+    if (result == GoogleSignInResult.success) {
+      ref.read(profileDraftProvider.notifier).state = const ProfileDraft();
+      showSuccessSnackBar(context, 'Google account connected successfully');
+    } else if (result != GoogleSignInResult.cancelled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to connect your Google account')),
+      );
+    }
+  }
+
   Future<void> _save(BuildContext context, WidgetRef ref) async {
     final email = draft.email.trim();
-    if (email.isNotEmpty && !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid email')));
+    if (email.isNotEmpty &&
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a valid email')));
       return;
     }
     try {
@@ -51,7 +87,9 @@ class ProfileActions extends ConsumerWidget {
       final userId = ref.read(currentUserIdProvider);
       final helper = ref.read(databaseHelperProvider);
       await helper.setSetting('profile_name_$userId', name);
-      await helper.setSetting('profile_email_$userId', email);
+      if (!draft.isGoogleAccount) {
+        await helper.setSetting('profile_email_$userId', '');
+      }
       if (draft.walletId != null) {
         final wallets = await ref.read(walletsProvider.future);
         final wallet = wallets.where((w) => w.id == draft.walletId).firstOrNull;
@@ -76,7 +114,10 @@ class ProfileActions extends ConsumerWidget {
         showSuccessSnackBar(context, 'Profile updated successfully');
       }
     } catch (error) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      if (context.mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 }

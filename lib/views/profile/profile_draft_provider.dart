@@ -16,6 +16,7 @@ class ProfileDraft {
     this.savedEmail = '',
     this.savedWalletName = '',
     this.walletId,
+    this.isGoogleAccount = false,
     this.isEditing = false,
     this.isLoading = true,
     this.isInitialized = false,
@@ -28,6 +29,7 @@ class ProfileDraft {
   final String savedEmail;
   final String savedWalletName;
   final String? walletId;
+  final bool isGoogleAccount;
   final bool isEditing;
   final bool isLoading;
   final bool isInitialized;
@@ -43,6 +45,7 @@ class ProfileDraft {
     String? savedEmail,
     String? savedWalletName,
     String? walletId,
+    bool? isGoogleAccount,
     bool? isEditing,
     bool? isLoading,
     bool? isInitialized,
@@ -55,6 +58,7 @@ class ProfileDraft {
       savedEmail: savedEmail ?? this.savedEmail,
       savedWalletName: savedWalletName ?? this.savedWalletName,
       walletId: walletId ?? this.walletId,
+      isGoogleAccount: isGoogleAccount ?? this.isGoogleAccount,
       isEditing: isEditing ?? this.isEditing,
       isLoading: isLoading ?? this.isLoading,
       isInitialized: isInitialized ?? this.isInitialized,
@@ -79,17 +83,12 @@ Future<void> loadProfile(WidgetRef ref) async {
   final user = ref.read(currentUserProvider);
   final userId = ref.read(currentUserIdProvider);
   final database = ref.read(databaseHelperProvider);
-  final values = await Future.wait<String?>([
-    database.getSetting('profile_name_$userId'),
-    database.getSetting('profile_email_$userId'),
-  ]);
+  final savedName = await database.getSetting('profile_name_$userId');
 
-  final defaultName = values[0]?.isNotEmpty == true
-      ? values[0]!
+  final defaultName = savedName?.isNotEmpty == true
+      ? savedName!
       : (user?.displayName ?? '');
-  final defaultEmail = values[1]?.isNotEmpty == true
-      ? values[1]!
-      : (user?.email ?? '');
+  final defaultEmail = user?.email ?? '';
 
   final wallets = await ref.read(walletsProvider.future);
   final selectedId = ref.read(selectedWalletIdProvider);
@@ -104,6 +103,7 @@ Future<void> loadProfile(WidgetRef ref) async {
     savedEmail: defaultEmail,
     savedWalletName: wallet?.name ?? '',
     walletId: wallet?.id,
+    isGoogleAccount: user != null,
     isInitialized: true,
     isLoading: false,
   );

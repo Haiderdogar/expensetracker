@@ -32,9 +32,9 @@ class ProfileForm extends ConsumerWidget {
           label: 'Email address',
           value: draft.email,
           icon: Icons.email_outlined,
-          enabled: draft.isEditing,
+          enabled: false,
           keyboardType: TextInputType.emailAddress,
-          onChanged: (value) => _update(ref, draft.copyWith(email: value)),
+          onChanged: (_) {},
         ),
         const SizedBox(height: 14),
         ProfileTextField(
