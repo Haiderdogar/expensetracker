@@ -48,7 +48,6 @@ String currentUserId(Ref ref) {
 @Riverpod(keepAlive: true)
 class AuthController extends _$AuthController {
   DateTime? _backgroundedAt;
-  bool _pinUnlocked = false;
   bool _hasLoggedInThisSession = false;
 
   /// True only after the user has pressed Login successfully in this process.
@@ -59,7 +58,6 @@ class AuthController extends _$AuthController {
   Future<AuthStatus> build() async {
     final user = await ref.watch(authStateChangesProvider.future);
     if (user == null) {
-      _pinUnlocked = false;
       return AuthStatus.unauthenticated;
     }
 
@@ -69,13 +67,9 @@ class AuthController extends _$AuthController {
     syncRepo.initConnectivityListener(() => user.uid);
     unawaited(_reconcileAndRefresh(user.uid));
 
-    // Check optional local PIN lock
-    final storage = ref.read(secureStorageProvider);
-    final hasPin = await storage.hasConfiguredPinLock();
-    if (hasPin && !_pinUnlocked) {
-      return AuthStatus.pinLocked;
-    }
-
+    // A restored Firebase session still goes through the Google login gate.
+    // The configured local lock is checked after that successful login (or
+    // when the app resumes from the background).
     return AuthStatus.authenticated;
   }
 
@@ -91,7 +85,7 @@ class AuthController extends _$AuthController {
 
   Future<GoogleSignInResult> signInWithGoogle() async {
     final wasGuest = state.value == AuthStatus.guest;
-    state = const AsyncLoading();
+    state = const AsyncData(AuthStatus.loading);
     try {
       final GoogleSignInAccount googleUser = await GoogleSignIn.instance
           .authenticate()
@@ -110,13 +104,27 @@ class AuthController extends _$AuthController {
         if (wasGuest) {
           await ref.read(syncRepositoryProvider).migrateGuestData(user.uid);
         }
-        await ref.read(databaseHelperProvider).ensureUserInitialized(user.uid);
-        _pinUnlocked = true;
+        final database = ref.read(databaseHelperProvider);
+        await database.ensureUserInitialized(user.uid);
+        await database.saveGoogleProfile(
+          userId: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoUrl: user.photoURL,
+        );
+        // A Google session authenticates the account, but it must not bypass
+        // an existing local app lock. The lock screen is the next gate for
+        // returning users; first-time users have no configured lock yet.
+        final hasConfiguredLock = await ref
+            .read(secureStorageProvider)
+            .hasConfiguredPinLock();
         final syncRepo = ref.read(syncRepositoryProvider);
         syncRepo.initConnectivityListener(() => user.uid);
         unawaited(_reconcileAndRefresh(user.uid, preferLocal: wasGuest));
         _hasLoggedInThisSession = true;
-        state = const AsyncData(AuthStatus.authenticated);
+        state = AsyncData(
+          hasConfiguredLock ? AuthStatus.pinLocked : AuthStatus.authenticated,
+        );
         return GoogleSignInResult.success;
       }
 
@@ -178,8 +186,8 @@ class AuthController extends _$AuthController {
 
   Future<void> signOut() async {
     _backgroundedAt = null;
-    _pinUnlocked = false;
     _hasLoggedInThisSession = false;
+    ref.read(syncRepositoryProvider).dispose();
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}
@@ -198,7 +206,6 @@ class AuthController extends _$AuthController {
   Future<bool> verifyPin(String pin) async {
     final valid = await checkPin(pin);
     if (valid) {
-      _pinUnlocked = true;
       state = const AsyncData(AuthStatus.authenticated);
     }
     return valid;
@@ -209,7 +216,6 @@ class AuthController extends _$AuthController {
     await storage.savePinHash(pin);
     await storage.setPinEnabled(true);
     await storage.setLockPromptCompleted(true);
-    _pinUnlocked = true;
     ref.invalidate(pinEnabledProvider);
     ref.invalidate(lockPromptCompletedProvider);
     state = const AsyncData(AuthStatus.authenticated);
@@ -218,7 +224,6 @@ class AuthController extends _$AuthController {
   Future<void> skipLockSetup() async {
     final storage = ref.read(secureStorageProvider);
     await storage.setLockPromptCompleted(true);
-    _pinUnlocked = true;
     ref.invalidate(lockPromptCompletedProvider);
     state = const AsyncData(AuthStatus.authenticated);
   }
@@ -240,7 +245,6 @@ class AuthController extends _$AuthController {
 
   Future<void> lock() async {
     final storage = ref.read(secureStorageProvider);
-    _pinUnlocked = false;
     state = AsyncData(
       await storage.hasConfiguredPinLock()
           ? AuthStatus.pinLocked
@@ -261,7 +265,6 @@ class AuthController extends _$AuthController {
     if (user == null) return;
     final storage = ref.read(secureStorageProvider);
     if (await storage.hasConfiguredPinLock()) {
-      _pinUnlocked = false;
       state = const AsyncData(AuthStatus.pinLocked);
     }
   }
@@ -332,7 +335,6 @@ class AuthController extends _$AuthController {
 
     final success = await promptBiometric(reason: 'Unlock Expense Tracker');
     if (success) {
-      _pinUnlocked = true;
       state = const AsyncData(AuthStatus.authenticated);
     }
     return success;

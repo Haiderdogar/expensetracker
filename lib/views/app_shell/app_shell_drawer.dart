@@ -16,8 +16,9 @@ class AppShellDrawer extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Drawer(
-      backgroundColor:
-          isDark ? AppColors.deepForest : AppColors.lightBackground,
+      backgroundColor: isDark
+          ? AppColors.deepForest
+          : AppColors.lightBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.horizontal(right: Radius.circular(24)),
       ),
@@ -39,15 +40,15 @@ class AppShellDrawer extends StatelessWidget {
                 Container(
                   width: 30,
                   height: 30,
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryEmerald,
+                    color: AppColors.primaryEmerald.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.primaryEmerald.withValues(alpha: 0.2),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_rounded,
-                    color: Colors.white,
-                    size: 17,
-                  ),
+                  child: Image.asset('assets/icon.png', fit: BoxFit.cover),
                 ),
                 const SizedBox(width: 10),
                 Text(

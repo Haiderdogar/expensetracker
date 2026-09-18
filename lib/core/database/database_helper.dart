@@ -89,7 +89,6 @@ class DatabaseHelper {
       await db.execute(DatabaseTables.createCategories);
       await db.execute(DatabaseTables.createWallets);
       await db.execute(DatabaseTables.createTransactions);
-      await db.execute(DatabaseTables.createSubcategories);
       await db.execute(DatabaseTables.createBudgets);
       await db.execute(DatabaseTables.createSettings);
       await db.execute(DatabaseTables.createNotes);
@@ -120,9 +119,6 @@ class DatabaseHelper {
         'UPDATE ${DatabaseTables.transactions} SET subcategory = title WHERE subcategory = \'\'',
       );
     }
-    if (oldVersion < 4) {
-      await _seedSubcategoriesForExistingCategories(db, 'default_user');
-    }
     if (oldVersion < 5) {
       await db.insert(DatabaseTables.settings, {
         'key': _installationIdKey,
@@ -131,7 +127,6 @@ class DatabaseHelper {
     }
     if (oldVersion < 6) {
       await _seedMissingDefaultCategories(db, 'default_user');
-      await _ensureEveryCategoryHasSubcategory(db, 'default_user');
     }
     if (oldVersion < 7) {
       // Add sync queue table
@@ -249,7 +244,6 @@ class DatabaseHelper {
     if (oldVersion < 8) {
       for (final table in [
         DatabaseTables.categories,
-        DatabaseTables.subcategories,
         DatabaseTables.transactions,
         DatabaseTables.budgets,
         DatabaseTables.notes,
@@ -269,12 +263,17 @@ class DatabaseHelper {
         "TEXT NOT NULL DEFAULT ''",
       );
     }
+    if (oldVersion < 9) {
+      await db.execute(
+        'UPDATE ${DatabaseTables.transactions} SET title = subcategory WHERE subcategory IS NOT NULL AND TRIM(subcategory) <> \'\'',
+      );
+      await db.execute('DROP TABLE IF EXISTS ${DatabaseTables.subcategories}');
+    }
   }
 
   Future<void> _assignRecordsToFirstWallet(Database db) async {
     for (final table in [
       DatabaseTables.categories,
-      DatabaseTables.subcategories,
       DatabaseTables.transactions,
       DatabaseTables.budgets,
       DatabaseTables.notes,
@@ -318,7 +317,6 @@ class DatabaseHelper {
       await _seedDefaultCategories(db, userId);
     } else {
       await _seedMissingDefaultCategories(db, userId);
-      await _ensureEveryCategoryHasSubcategory(db, userId);
     }
 
     final existingWallets = await db.query(
@@ -366,7 +364,6 @@ class DatabaseHelper {
   ) async {
     for (final table in [
       DatabaseTables.categories,
-      DatabaseTables.subcategories,
       DatabaseTables.transactions,
       DatabaseTables.budgets,
       DatabaseTables.notes,
@@ -411,7 +408,6 @@ class DatabaseHelper {
         DatabaseTables.transactions,
         DatabaseTables.budgets,
         DatabaseTables.notes,
-        DatabaseTables.subcategories,
         DatabaseTables.categories,
         DatabaseTables.wallets,
       ]) {
@@ -447,7 +443,6 @@ class DatabaseHelper {
         DatabaseTables.transactions,
         DatabaseTables.budgets,
         DatabaseTables.notes,
-        DatabaseTables.subcategories,
         DatabaseTables.categories,
         DatabaseTables.wallets,
       ]) {
@@ -492,11 +487,6 @@ class DatabaseHelper {
         'updated_at': now,
       });
     }
-    await _seedSubcategoriesForExistingCategories(
-      db,
-      userId,
-      walletId: walletId,
-    );
   }
 
   Future<void> _seedMissingDefaultCategories(Database db, String userId) async {
@@ -521,72 +511,6 @@ class DatabaseHelper {
         'is_synced': 0,
         'updated_at': now,
       });
-    }
-    await _seedSubcategoriesForExistingCategories(db, userId);
-  }
-
-  Future<void> _seedSubcategoriesForExistingCategories(
-    Database db,
-    String userId, {
-    String? walletId,
-  }) async {
-    const uuid = Uuid();
-    final now = DateTime.now().toUtc().toIso8601String();
-    final categories = await db.query(
-      DatabaseTables.categories,
-      where: walletId == null ? 'user_id = ?' : 'user_id = ? AND wallet_id = ?',
-      whereArgs: walletId == null ? [userId] : [userId, walletId],
-    );
-    for (final category in categories) {
-      final names = DatabaseTables.defaultSubcategories[category['name']];
-      if (names == null) continue;
-      for (final name in names) {
-        await db.insert(
-          DatabaseTables.subcategories,
-          {
-            'id': uuid.v4(),
-            'user_id': userId,
-            'wallet_id': walletId ?? (category['wallet_id'] as String? ?? ''),
-            'category_id': category['id'],
-            'name': name,
-            'is_synced': 0,
-            'updated_at': now,
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
-      }
-    }
-  }
-
-  Future<void> _ensureEveryCategoryHasSubcategory(
-    Database db,
-    String userId,
-  ) async {
-    const uuid = Uuid();
-    final now = DateTime.now().toUtc().toIso8601String();
-    final categories = await db.query(
-      DatabaseTables.categories,
-      where: 'user_id = ?',
-      whereArgs: [userId],
-    );
-    for (final category in categories) {
-      final subcategories = await db.query(
-        DatabaseTables.subcategories,
-        columns: ['id'],
-        where: 'user_id = ? AND category_id = ?',
-        whereArgs: [userId, category['id']],
-        limit: 1,
-      );
-      if (subcategories.isEmpty) {
-        await db.insert(DatabaseTables.subcategories, {
-          'id': uuid.v4(),
-          'user_id': userId,
-          'category_id': category['id'],
-          'name': 'General',
-          'is_synced': 0,
-          'updated_at': now,
-        });
-      }
     }
   }
 
@@ -616,6 +540,27 @@ class DatabaseHelper {
     } catch (e) {
       throw ErrorHandler.from(e);
     }
+  }
+
+  Future<void> saveGoogleProfile({
+    required String userId,
+    required String? displayName,
+    required String? email,
+    required String? photoUrl,
+  }) async {
+    if (userId.isEmpty || userId == 'default_user') {
+      throw ArgumentError.value(
+        userId,
+        'userId',
+        'An authenticated user is required',
+      );
+    }
+    await Future.wait([
+      setSetting('profile_name_$userId', displayName?.trim() ?? ''),
+      setSetting('profile_email_$userId', email?.trim() ?? ''),
+      setSetting('profile_photo_url_$userId', photoUrl?.trim() ?? ''),
+      setSetting('auth_provider_$userId', 'google'),
+    ]);
   }
 
   Future<bool> isOnboardingComplete([String? userId]) async {

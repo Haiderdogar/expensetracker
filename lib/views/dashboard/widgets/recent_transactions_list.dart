@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/app_snackbars.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../models/category_model.dart';
 import '../../../models/transaction_model.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../providers/category_provider.dart';
 import '../../../providers/transaction_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../widgets/shimmer_loader.dart';
 import '../../transactions/add_transaction_screen.dart';
 import '../dashboard_ui_providers.dart';
-import 'recent_transaction_tile.dart';
+import '../../transactions/widgets/transaction_tile.dart';
 
 class RecentTransactionsList extends ConsumerWidget {
   const RecentTransactionsList({super.key});
@@ -23,19 +21,17 @@ class RecentTransactionsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(recentTransactionFilterProvider);
     final transactions = ref.watch(transactionsProvider);
-    final categories = ref.watch(categoriesProvider).value ?? const <CategoryModel>[];
-    final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
     final selectedWalletId = ref.watch(selectedWalletIdProvider);
 
     return transactions.when(
       loading: () => const SliverPadding(
-        padding: EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.zero,
         sliver: SliverToBoxAdapter(
           child: ShimmerList(itemCount: 4, itemHeight: 64),
         ),
       ),
       error: (error, _) => SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         sliver: SliverToBoxAdapter(
           child: Center(
             child: Text(
@@ -49,35 +45,39 @@ class RecentTransactionsList extends ConsumerWidget {
         final filteredByWallet = selectedWalletId == null
             ? items
             : items.where((t) => t.walletId == selectedWalletId).toList();
-        final filteredTransactions = filterRecentTransactions(filteredByWallet, filter);
+        final filteredTransactions = filterRecentTransactions(
+          filteredByWallet,
+          filter,
+        );
 
         if (filteredTransactions.isEmpty) {
           return SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverToBoxAdapter(
-              child: _buildEmptyState(context),
-            ),
+            padding: EdgeInsets.zero,
+            sliver: SliverToBoxAdapter(child: _buildEmptyState(context)),
           );
         }
 
+        final grouped = <String, List<TransactionModel>>{};
+        for (final transaction in filteredTransactions) {
+          final date = DateTime.tryParse(transaction.date);
+          if (date == null) continue;
+          final key = DateFormat('yyyy-MM-dd').format(date);
+          grouped.putIfAbsent(key, () => []).add(transaction);
+        }
+        final dateKeys = grouped.keys.toList();
+
         return SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverList.separated(
-            itemCount: filteredTransactions.length,
-            separatorBuilder: (context, index) => Divider(
-              height: 1,
-              thickness: 0.5,
-              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
-            ),
-            itemBuilder: (context, index) {
-              final transaction = filteredTransactions[index];
-              return RecentTransactionTile(
-                transaction: transaction,
-                category: _categoryFor(categories, transaction.categoryId),
-                symbol: symbol,
-                onTap: () => _openEditor(context, ref, transaction),
+          padding: EdgeInsets.zero,
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final date = DateTime.parse(dateKeys[index]);
+              return _DashboardDaySection(
+                date: date,
+                transactions: grouped[dateKeys[index]]!,
+                onTransactionTap: (transaction) =>
+                    _openEditor(context, ref, transaction),
               );
-            },
+            }, childCount: dateKeys.length),
           ),
         );
       },
@@ -139,19 +139,18 @@ class RecentTransactionsList extends ConsumerWidget {
     );
   }
 
-  CategoryModel? _categoryFor(List<CategoryModel> categories, String categoryId) {
-    for (final category in categories) {
-      if (category.id == categoryId) return category;
-    }
-    return null;
-  }
-
-  Future<void> _openEditor(BuildContext context, WidgetRef ref, TransactionModel transaction) async {
+  Future<void> _openEditor(
+    BuildContext context,
+    WidgetRef ref,
+    TransactionModel transaction,
+  ) async {
     if (transaction.type == 'transfer') {
       showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Row(
             children: [
               Icon(Icons.swap_horiz_rounded, color: Colors.blue),
@@ -163,11 +162,19 @@ class RecentTransactionsList extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(transaction.subcategory, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(
+                transaction.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
               const SizedBox(height: 8),
               Text('Amount: ${Formatters.currency(transaction.amount)}'),
               const SizedBox(height: 4),
-              Text('Date: ${Formatters.date(DateTime.parse(transaction.date))}'),
+              Text(
+                'Date: ${Formatters.date(DateTime.parse(transaction.date))}',
+              ),
               if (transaction.note != null && transaction.note!.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text('Note: ${transaction.note}'),
@@ -187,9 +194,12 @@ class RecentTransactionsList extends ConsumerWidget {
 
     try {
       final result = await Navigator.of(context).push<dynamic>(
-        MaterialPageRoute<dynamic>(builder: (_) => AddTransactionScreen(transaction: transaction)),
+        MaterialPageRoute<dynamic>(
+          builder: (_) => AddTransactionScreen(transaction: transaction),
+        ),
       );
-      if (result != 'saved' && result != 'created' && result != 'deleted') return;
+      if (result != 'saved' && result != 'created' && result != 'deleted')
+        return;
 
       await ref.read(transactionsProvider.notifier).refresh();
       if (!context.mounted) return;
@@ -203,11 +213,73 @@ class RecentTransactionsList extends ConsumerWidget {
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ErrorHandler.message(error))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(ErrorHandler.message(error))));
       }
     }
+  }
+}
+
+class _DashboardDaySection extends StatelessWidget {
+  const _DashboardDaySection({
+    required this.date,
+    required this.transactions,
+    required this.onTransactionTap,
+  });
+
+  final DateTime date;
+  final List<TransactionModel> transactions;
+  final ValueChanged<TransactionModel> onTransactionTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    double dailyNet = 0;
+    for (final transaction in transactions) {
+      dailyNet += transaction.isIncome
+          ? transaction.amount
+          : -transaction.amount;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                Formatters.smartDate(date),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurfaceVariant,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              Text(
+                '${dailyNet >= 0 ? '+' : '-'}${Formatters.currency(dailyNet.abs())}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: dailyNet >= 0
+                      ? Colors.green.shade600
+                      : Colors.red.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        ...transactions.map(
+          (transaction) => TransactionTile(
+            transaction: transaction,
+            onTap: () => onTransactionTap(transaction),
+          ),
+        ),
+      ],
+    );
   }
 }
 

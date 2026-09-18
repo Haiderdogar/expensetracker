@@ -17,6 +17,7 @@ import 'app_shell_providers.dart';
 
 enum _LogoutChoice { cancel, logout, upgrade }
 
+
 class AppShellLogoutButton extends ConsumerWidget {
   const AppShellLogoutButton({super.key});
 
@@ -47,14 +48,19 @@ class AppShellLogoutButton extends ConsumerWidget {
               borderRadius: BorderRadius.circular(14),
               splashColor: colors.error.withValues(alpha: 0.08),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Container(
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: colors.error.withValues(alpha: isDark ? 0.25 : 0.15),
+                        color: colors.error.withValues(
+                          alpha: isDark ? 0.25 : 0.15,
+                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: busy
@@ -102,8 +108,7 @@ class AppShellLogoutButton extends ConsumerWidget {
   }
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {
-    final isGuest =
-        ref.read(authControllerProvider).value == AuthStatus.guest;
+    final isGuest = ref.read(authControllerProvider).value == AuthStatus.guest;
 
     // ── Step 1: Show confirmation dialog ──────────────────────────────────
     final choice = await showDialog<_LogoutChoice>(
@@ -118,8 +123,7 @@ class AppShellLogoutButton extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, _LogoutChoice.cancel),
+            onPressed: () => Navigator.pop(dialogContext, _LogoutChoice.cancel),
             child: const Text(AppStrings.cancel),
           ),
           if (isGuest)
@@ -132,8 +136,7 @@ class AppShellLogoutButton extends ConsumerWidget {
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(dialogContext).colorScheme.error,
             ),
-            onPressed: () =>
-                Navigator.pop(dialogContext, _LogoutChoice.logout),
+            onPressed: () => Navigator.pop(dialogContext, _LogoutChoice.logout),
             child: const Text(AppStrings.logout),
           ),
         ],
@@ -192,10 +195,8 @@ class AppShellLogoutButton extends ConsumerWidget {
         // AppBar) returns `null`/`false` — we treat that as cancelled.
         final pinResult = await Navigator.of(context).push<bool>(
           MaterialPageRoute(
-            builder: (_) => const AuthScreen(
-              verifyOnly: true,
-              isLogoutConfirmation: true,
-            ),
+            builder: (_) =>
+                const AuthScreen(verifyOnly: true, isLogoutConfirmation: true),
           ),
         );
         if (pinResult != true || !context.mounted) {
@@ -226,9 +227,9 @@ class AppShellLogoutButton extends ConsumerWidget {
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
       }
     } finally {
       if (context.mounted) {
@@ -248,6 +249,7 @@ class AppShellLogoutButton extends ConsumerWidget {
     ref.invalidate(onboardingCompleteProvider);
     ref.invalidate(currencySymbolProvider);
     ref.invalidate(currencyCodeProvider);
+    ref.invalidate(appShellProfileProvider);
     ref.read(appShellNavigationIndexProvider.notifier).state = 0;
     ref.read(appShellVisitedIndexesProvider.notifier).state = {0};
   }

@@ -10,6 +10,8 @@ class DefaultFirebaseOptions {
   /// `flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=...apps.googleusercontent.com`
   static const googleServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue:
+        '26459435888-8abike6aklbtmo74sur4ra590aom7kms.apps.googleusercontent.com',
   );
 
   static const FirebaseOptions currentPlatform = android;
@@ -21,5 +23,4 @@ class DefaultFirebaseOptions {
     projectId: 'expensetracker-c93d4',
     storageBucket: 'expensetracker-c93d4.firebasestorage.app',
   );
-
 }

@@ -26,7 +26,6 @@ class BackupService extends _$BackupService {
 
       for (final table in [
         DatabaseTables.categories,
-        DatabaseTables.subcategories,
         DatabaseTables.wallets,
         DatabaseTables.transactions,
         DatabaseTables.budgets,
@@ -66,7 +65,6 @@ class BackupService extends _$BackupService {
           DatabaseTables.transactions,
           DatabaseTables.budgets,
           DatabaseTables.notes,
-          DatabaseTables.subcategories,
           DatabaseTables.wallets,
           DatabaseTables.categories,
         ]) {
@@ -79,7 +77,6 @@ class BackupService extends _$BackupService {
 
         for (final table in [
           DatabaseTables.categories,
-          DatabaseTables.subcategories,
           DatabaseTables.wallets,
           DatabaseTables.transactions,
           DatabaseTables.budgets,
@@ -90,6 +87,10 @@ class BackupService extends _$BackupService {
             final mapped = Map<String, dynamic>.from(row as Map);
             mapped['user_id'] = userId;
             mapped['is_synced'] = 0;
+            if (table == DatabaseTables.transactions) {
+              mapped['title'] ??= mapped['subcategory'] ?? '';
+              mapped.remove('subcategory');
+            }
             await txn.insert(table, mapped);
           }
         }

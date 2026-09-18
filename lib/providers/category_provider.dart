@@ -1,11 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
-
 import '../core/database/database_tables.dart';
 import '../core/utils/error_handler.dart';
 import '../models/category_model.dart';
-import '../models/subcategory_model.dart';
 import 'auth_provider.dart';
 import 'database_provider.dart';
 import 'transaction_provider.dart';
@@ -47,15 +45,6 @@ class Categories extends _$Categories {
       final syncRepo = ref.read(syncRepositoryProvider);
       final catToSave = category.copyWith(userId: userId, walletId: walletId);
       await syncRepo.saveCategory(catToSave);
-
-      final sub = SubcategoryModel(
-        id: const Uuid().v4(),
-        userId: userId,
-        walletId: walletId ?? '',
-        categoryId: category.id,
-        name: 'General',
-      );
-      await syncRepo.saveSubcategory(sub);
 
       await refresh();
     } catch (e) {
@@ -112,45 +101,6 @@ class Categories extends _$Categories {
       final syncRepo = ref.read(syncRepositoryProvider);
       await syncRepo.deleteCategory(id, userId);
       await refresh();
-    } catch (e) {
-      throw ErrorHandler.from(e);
-    }
-  }
-
-  Future<CategoryModel> createWithSubcategory({
-    required String name,
-    required String subcategoryName,
-    required String type,
-    required String icon,
-    required String color,
-  }) async {
-    try {
-      const uuid = Uuid();
-      final userId = ref.read(currentUserIdProvider);
-      final walletId = ref.read(activeWalletIdProvider);
-      final category = CategoryModel(
-        id: uuid.v4(),
-        userId: userId,
-        walletId: walletId ?? '',
-        name: name.trim(),
-        type: type,
-        icon: icon,
-        color: color,
-      );
-      final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.saveCategory(category);
-
-      final sub = SubcategoryModel(
-        id: uuid.v4(),
-        userId: userId,
-        walletId: walletId ?? '',
-        categoryId: category.id,
-        name: subcategoryName.trim(),
-      );
-      await syncRepo.saveSubcategory(sub);
-
-      await refresh();
-      return category;
     } catch (e) {
       throw ErrorHandler.from(e);
     }

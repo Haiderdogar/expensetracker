@@ -115,7 +115,7 @@ class Transactions extends _$Transactions {
   }
 
   Future<TransactionModel> create({
-    required String subcategory,
+    required String title,
     required double amount,
     required String type,
     required String categoryId,
@@ -128,7 +128,7 @@ class Transactions extends _$Transactions {
     final transaction = TransactionModel(
       id: uuid.v4(),
       userId: userId,
-      subcategory: subcategory,
+      title: title,
       amount: amount,
       type: type,
       categoryId: categoryId,
@@ -191,7 +191,7 @@ class Transactions extends _$Transactions {
       final outTx = TransactionModel(
         id: uuid.v4(),
         userId: userId,
-        subcategory: 'Transfer to ${toWallet.name}',
+        title: 'Transfer to ${toWallet.name}',
         amount: amount,
         type: 'transfer',
         categoryId: fallbackCatId,
@@ -202,7 +202,7 @@ class Transactions extends _$Transactions {
       final inTx = TransactionModel(
         id: uuid.v4(),
         userId: userId,
-        subcategory: 'Transfer from ${fromWallet.name}',
+        title: 'Transfer from ${fromWallet.name}',
         amount: amount,
         type: 'transfer',
         categoryId: fallbackCatId,
@@ -271,7 +271,7 @@ Future<List<TransactionModel>> filteredTransactions(
       return false;
     }
     if (search != null && search.isNotEmpty) {
-      if (!t.subcategory.toLowerCase().contains(search.toLowerCase()))
+      if (!t.title.toLowerCase().contains(search.toLowerCase()))
         return false;
     }
     if (month != null) {

@@ -39,7 +39,7 @@ class RecentTransactionTile extends StatelessWidget {
         backgroundColor: color.withValues(alpha: 0.15),
         child: Icon(icon, color: color, size: 20),
       ),
-      title: Text(transaction.subcategory),
+      title: Text(transaction.title),
       subtitle: Text(Formatters.date(DateTime.parse(transaction.date))),
       trailing: Text(
         '$prefix${Formatters.currency(transaction.amount, symbol: symbol)}',

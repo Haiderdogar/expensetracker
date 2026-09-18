@@ -10,6 +10,23 @@ abstract final class Formatters {
 
   static String dateTime(DateTime date) => DateFormat.yMMMd().add_jm().format(date);
 
+  static String smartDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final checkDate = DateTime(date.year, date.month, date.day);
+
+    if (checkDate == today) {
+      return 'Today, ${DateFormat('MMM d').format(date)}';
+    } else if (checkDate == yesterday) {
+      return 'Yesterday, ${DateFormat('MMM d').format(date)}';
+    } else if (date.year == now.year) {
+      return DateFormat('EEEE, MMM d').format(date);
+    } else {
+      return DateFormat('MMM d, yyyy').format(date);
+    }
+  }
+
   static String monthYear(DateTime date) => DateFormat('yyyy-MM').format(date);
 
   static String monthYearLabel(DateTime date) => DateFormat.yMMMM().format(date);

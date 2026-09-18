@@ -27,21 +27,40 @@ service cloud.firestore {
                 && request.resource.data.updatedAt is string)
               || (collection == 'transactions'
                 && request.resource.data.keys().hasOnly([
-                  'amount', 'categoryId', 'date', 'note', 'subcategory', 'type', 'updatedAt'
+                  'title', 'amount', 'categoryId', 'date', 'note', 'type', 'updatedAt'
                 ])
+                && request.resource.data.title is string
                 && request.resource.data.amount is number
                 && request.resource.data.categoryId is string
                 && request.resource.data.date is string
                 && (request.resource.data.note == null
                     || request.resource.data.note is string)
-                && request.resource.data.subcategory is string
                 && request.resource.data.type is string
                 && request.resource.data.updatedAt is string)
-              || (collection != 'categories'
-                && collection != 'subcategories'
-                && collection != 'transactions'
+              || (collection == 'budgets'
+                && request.resource.data.keys().hasOnly([
+                  'id', 'userId', 'walletId', 'categoryId', 'amount',
+                  'monthYear', 'updatedAt'
+                ])
+                && request.resource.data.id == documentId
                 && request.resource.data.userId == userId
-                && request.resource.data.walletId == walletId)
+                && request.resource.data.walletId == walletId
+                && request.resource.data.categoryId is string
+                && request.resource.data.amount is number
+                && request.resource.data.monthYear is string
+                && request.resource.data.updatedAt is string)
+              || (collection == 'notes'
+                && request.resource.data.keys().hasOnly([
+                  'id', 'userId', 'walletId', 'title', 'content',
+                  'createdAt', 'updatedAt'
+                ])
+                && request.resource.data.id == documentId
+                && request.resource.data.userId == userId
+                && request.resource.data.walletId == walletId
+                && request.resource.data.title is string
+                && request.resource.data.content is string
+                && request.resource.data.createdAt is string
+                && request.resource.data.updatedAt is string)
             );
         allow delete: if request.auth != null && request.auth.uid == userId;
       }

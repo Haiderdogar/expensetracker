@@ -77,15 +77,15 @@ class TransactionTile extends ConsumerWidget {
                 ),
                 const SizedBox(width: 14),
 
-                // ── Subcategory / Category / Wallet info ───────────────────
+                // ── Title / Category / Wallet info ─────────────────────────
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        transaction.subcategory.isNotEmpty
-                            ? transaction.subcategory
+                        transaction.title.isNotEmpty
+                            ? transaction.title
                             : (category?.name ?? 'Transaction'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -99,8 +99,7 @@ class TransactionTile extends ConsumerWidget {
                       Row(
                         children: [
                           if (category != null &&
-                              transaction.subcategory.isNotEmpty &&
-                              transaction.subcategory != category.name) ...[
+                              transaction.title.isNotEmpty) ...[
                             Flexible(
                               child: Text(
                                 category.name,

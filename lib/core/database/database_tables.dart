@@ -2,13 +2,13 @@ abstract final class DatabaseTables {
   static const String categories = 'categories';
   static const String wallets = 'wallets';
   static const String transactions = 'transactions';
-  static const String subcategories = 'subcategories';
   static const String budgets = 'budgets';
   static const String settings = 'settings';
   static const String notes = 'notes';
   static const String syncQueue = 'sync_queue';
+  static const String subcategories = 'subcategories';
 
-  static const int dbVersion = 8;
+  static const int dbVersion = 9;
 
   static const String createCategories = '''
     CREATE TABLE $categories (
@@ -40,7 +40,6 @@ abstract final class DatabaseTables {
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
       title TEXT NOT NULL,
-      subcategory TEXT NOT NULL DEFAULT '',
       amount REAL NOT NULL,
       type TEXT NOT NULL,
       category_id TEXT NOT NULL,
@@ -54,19 +53,6 @@ abstract final class DatabaseTables {
     )
   ''';
 
-  static const String createSubcategories = '''
-    CREATE TABLE $subcategories (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      wallet_id TEXT NOT NULL DEFAULT '',
-      category_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      is_synced INTEGER NOT NULL DEFAULT 0,
-      updated_at TEXT NOT NULL,
-      UNIQUE(user_id, category_id, name),
-      FOREIGN KEY (category_id) REFERENCES $categories(id) ON DELETE CASCADE
-    )
-  ''';
 
   static const String createBudgets = '''
     CREATE TABLE $budgets (
@@ -114,6 +100,21 @@ abstract final class DatabaseTables {
     )
   ''';
 
+  // Used only when upgrading databases created before subcategories were removed.
+  static const String createSubcategories = '''
+    CREATE TABLE $subcategories (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      wallet_id TEXT NOT NULL DEFAULT '',
+      category_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      is_synced INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      UNIQUE(user_id, category_id, name),
+      FOREIGN KEY (category_id) REFERENCES $categories(id) ON DELETE CASCADE
+    )
+  ''';
+
   static const List<Map<String, dynamic>> defaultCategories = [
     {'name': 'Salary', 'type': 'income', 'icon': 'work', 'color': '#10B981'},
     {'name': 'Freelance', 'type': 'income', 'icon': 'laptop', 'color': '#34D399'},
@@ -133,22 +134,4 @@ abstract final class DatabaseTables {
     {'name': 'Personal care', 'type': 'expense', 'icon': 'spa', 'color': '#D946EF'},
   ];
 
-  static const Map<String, List<String>> defaultSubcategories = {
-    'Salary': ['Monthly salary', 'Bonus'],
-    'Freelance': ['Client work', 'Project payment'],
-    'Investments': ['Dividends', 'Capital gains', 'Interest'],
-    'Rental income': ['Monthly rent', 'Parking income'],
-    'Business': ['Product sales', 'Service income'],
-    'Food': ['Breakfast', 'Lunch', 'Dinner', 'Party with friends'],
-    'Transport': ['Fuel', 'Public transport', 'Taxi'],
-    'Shopping': ['Clothing', 'Groceries', 'Electronics'],
-    'Bills': ['Electricity bill', 'Gas bill', 'Water bill'],
-    'Entertainment': ['Movies', 'Games', 'Subscriptions'],
-    'Health': ['Medicine', 'Doctor visit', 'Fitness'],
-    'Housing': ['Rent', 'Repairs', 'Home supplies'],
-    'Education': ['Tuition', 'Books', 'Courses'],
-    'Insurance': ['Health insurance', 'Vehicle insurance', 'Life insurance'],
-    'Travel': ['Flights', 'Accommodation', 'Local transport'],
-    'Personal care': ['Salon', 'Skincare', 'Gym'],
-  };
 }

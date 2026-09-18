@@ -7,9 +7,14 @@ import '../../providers/database_provider.dart';
 part 'app_shell_providers.g.dart';
 
 class AppShellProfile {
-  const AppShellProfile({required this.name, required this.email});
+  const AppShellProfile({
+    required this.name,
+    required this.email,
+    this.photoUrl,
+  });
   final String name;
   final String email;
+  final String? photoUrl;
 }
 
 @riverpod
@@ -45,16 +50,17 @@ class AppShellLogoutInProgress extends _$AppShellLogoutInProgress {
 Future<AppShellProfile> appShellProfile(Ref ref) async {
   final user = ref.watch(currentUserProvider);
   final userId = ref.watch(currentUserIdProvider);
-  if (user != null && user.displayName != null && user.displayName!.isNotEmpty) {
-    return AppShellProfile(
-      name: user.displayName ?? '',
-      email: user.email ?? '',
-    );
-  }
   final database = ref.watch(databaseHelperProvider);
   final settings = await Future.wait([
     database.getSetting('profile_name_$userId'),
     database.getSetting('profile_email_$userId'),
+    database.getSetting('profile_photo_url_$userId'),
   ]);
-  return AppShellProfile(name: settings[0] ?? '', email: settings[1] ?? '');
+  return AppShellProfile(
+    name: settings[0]?.isNotEmpty == true
+        ? settings[0]!
+        : (user?.displayName ?? ''),
+    email: settings[1]?.isNotEmpty == true ? settings[1]! : (user?.email ?? ''),
+    photoUrl: settings[2]?.isNotEmpty == true ? settings[2] : user?.photoURL,
+  );
 }

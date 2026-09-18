@@ -147,7 +147,7 @@ class _DaySection extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _formatSmartDate(date),
+                Formatters.smartDate(date),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -234,22 +234,6 @@ class _DaySection extends ConsumerWidget {
     }
   }
 
-  static String _formatSmartDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final checkDate = DateTime(date.year, date.month, date.day);
-
-    if (checkDate == today) {
-      return 'Today, ${DateFormat('MMM d').format(date)}';
-    } else if (checkDate == yesterday) {
-      return 'Yesterday, ${DateFormat('MMM d').format(date)}';
-    } else if (date.year == now.year) {
-      return DateFormat('EEEE, MMM d').format(date);
-    } else {
-      return DateFormat('MMM d, yyyy').format(date);
-    }
-  }
 }
 
 class _EmptyState extends StatelessWidget {

@@ -18,7 +18,7 @@ class DashboardStatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(14),
@@ -27,17 +27,24 @@ class DashboardStatChip extends StatelessWidget {
             width: 1,
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 14, color: color),
-                  const SizedBox(width: 4),
-                ],
-                Expanded(
-                  child: Text(
+            if (icon != null)
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, size: 18, color: color),
+              ),
+            if (icon != null) const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -47,18 +54,18 @@ class DashboardStatChip extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 5),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
+                  const SizedBox(height: 3),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

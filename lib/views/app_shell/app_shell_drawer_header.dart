@@ -21,6 +21,7 @@ class AppShellDrawerHeader extends ConsumerWidget {
 
     final name = profile?.name ?? '';
     final email = profile?.email ?? '';
+    final photoUrl = profile?.photoUrl;
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -36,9 +37,7 @@ class AppShellDrawerHeader extends ConsumerWidget {
             ? colors.surfaceContainerHighest.withValues(alpha: 0.6)
             : colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: colors.outlineVariant.withValues(alpha: 0.4),
-        ),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,15 +58,22 @@ class AppShellDrawerHeader extends ConsumerWidget {
                 ),
                 child: CircleAvatar(
                   radius: 24,
-                  backgroundColor: AppColors.primaryEmerald.withValues(alpha: 0.12),
-                  child: Text(
-                    initials,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primaryEmerald,
-                    ),
+                  backgroundImage: photoUrl == null
+                      ? null
+                      : NetworkImage(photoUrl),
+                  backgroundColor: AppColors.primaryEmerald.withValues(
+                    alpha: 0.12,
                   ),
+                  child: photoUrl == null
+                      ? Text(
+                          initials,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryEmerald,
+                          ),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(width: 12),

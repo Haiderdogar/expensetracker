@@ -2,11 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
-import '../../core/utils/app_snackbars.dart';
 import '../../providers/auth_provider.dart';
 
-class GoogleSignInScreen extends StatelessWidget {
+class GoogleSignInScreen extends ConsumerStatefulWidget {
   const GoogleSignInScreen({super.key});
+
+  @override
+  ConsumerState<GoogleSignInScreen> createState() => _GoogleSignInScreenState();
+}
+
+class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
+  bool _attemptStarted = false;
+  GoogleSignInResult? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startSignIn());
+  }
+
+  Future<void> _startSignIn() async {
+    if (!mounted || _attemptStarted) return;
+    _attemptStarted = true;
+    setState(() => _result = null);
+    final result = await ref
+        .read(authControllerProvider.notifier)
+        .signInWithGoogle();
+    if (!mounted) return;
+    setState(() {
+      _result = result;
+      _attemptStarted = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,9 +189,26 @@ class GoogleSignInScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 28),
 
-                          const _GoogleSignInButton(),
-                          const SizedBox(height: 12),
-                          const _SkipForNowButton(),
+                          _GoogleSignInButton(
+                            onRetry: _startSignIn,
+                            result: _result,
+                          ),
+                          if (_result != null &&
+                              _result != GoogleSignInResult.success) ...[
+                            const SizedBox(height: 10),
+                            Text(
+                              _result == GoogleSignInResult.cancelled
+                                  ? 'Sign-in was cancelled.'
+                                  : _result ==
+                                        GoogleSignInResult.configurationError
+                                  ? 'Google Sign-In is not configured for this app.'
+                                  : 'Sign-in failed. Check your connection and try again.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colors.error,
+                              ),
+                            ),
+                          ],
 
                           const SizedBox(height: 22),
                           Row(
@@ -201,7 +245,13 @@ class GoogleSignInScreen extends StatelessWidget {
 }
 
 class _GoogleSignInButton extends ConsumerWidget {
-  const _GoogleSignInButton();
+  const _GoogleSignInButton({
+    required this.onRetry,
+    required this.result,
+  });
+
+  final VoidCallback onRetry;
+  final GoogleSignInResult? result;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -224,42 +274,7 @@ class _GoogleSignInButton extends ConsumerWidget {
             borderRadius: BorderRadius.circular(17),
           ),
         ),
-        onPressed: isLoading
-            ? null
-            : () async {
-                final result = await ref
-                    .read(authControllerProvider.notifier)
-                    .signInWithGoogle();
-
-                if (!context.mounted) return;
-
-                switch (result) {
-                  case GoogleSignInResult.success:
-                    showSuccessSnackBar(context, 'Login successful');
-                    break;
-                  case GoogleSignInResult.cancelled:
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Sign-in was cancelled.')),
-                    );
-                    break;
-                  case GoogleSignInResult.configurationError:
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Google Sign-In is not configured. Please contact support.',
-                        ),
-                      ),
-                    );
-                    break;
-                  case GoogleSignInResult.failed:
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Sign-in failed. Please try again.'),
-                      ),
-                    );
-                    break;
-                }
-              },
+        onPressed: isLoading ? null : onRetry,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           child: isLoading
@@ -289,8 +304,10 @@ class _GoogleSignInButton extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 11),
-                    const Text(
-                      'Continue with Google',
+                    Text(
+                      result == null
+                          ? 'Continue with Google'
+                          : 'Try Google Sign-In again',
                       style: TextStyle(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w700,
@@ -298,68 +315,6 @@ class _GoogleSignInButton extends ConsumerWidget {
                     ),
                   ],
                 ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SkipForNowButton extends ConsumerWidget {
-  const _SkipForNowButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(authControllerProvider).isLoading;
-    final colors = Theme.of(context).colorScheme;
-
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: colors.onSurface,
-          side: BorderSide(
-            color: colors.onSurface.withValues(alpha: 0.13),
-          ),
-          backgroundColor: colors.surface.withValues(alpha: 0.35),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(17),
-          ),
-        ),
-        onPressed: isLoading
-            ? null
-            : () async {
-                try {
-                  await ref
-                      .read(authControllerProvider.notifier)
-                      .continueAsGuest();
-                } catch (error) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Could not start guest mode: $error'),
-                      ),
-                    );
-                  }
-                }
-              },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.arrow_forward_rounded,
-              size: 19,
-              color: colors.onSurface.withValues(alpha: 0.7),
-            ),
-            const SizedBox(width: 9),
-            const Text(
-              'Continue as Guest',
-              style: TextStyle(
-                fontSize: 15.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ),
       ),
     );

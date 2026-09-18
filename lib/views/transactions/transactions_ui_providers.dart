@@ -107,22 +107,22 @@ class TransactionCategoryFilterDraft extends _$TransactionCategoryFilterDraft {
 class TypeDraft {
   const TypeDraft({
     this.categoryId,
-    this.subcategory,
+    this.title,
     this.amount = '',
   });
 
   final String? categoryId;
-  final String? subcategory;
+  final String? title;
   final String amount;
 
   TypeDraft copyWith({
     String? categoryId,
-    String? subcategory,
+    String? title,
     String? amount,
   }) {
     return TypeDraft(
       categoryId: categoryId ?? this.categoryId,
-      subcategory: subcategory ?? this.subcategory,
+      title: title ?? this.title,
       amount: amount ?? this.amount,
     );
   }
@@ -152,16 +152,16 @@ class TransactionFormDraft {
     final catId = transaction?.categoryId.isNotEmpty == true
         ? transaction!.categoryId
         : null;
-    final sub = transaction?.subcategory.isNotEmpty == true
-        ? transaction!.subcategory
+    final title = transaction?.title.isNotEmpty == true
+        ? transaction!.title
         : null;
     final amt = transaction?.amount.toString() ?? '';
 
     final expenseDraft = activeType == 'expense'
-        ? TypeDraft(categoryId: catId, subcategory: sub, amount: amt)
+        ? TypeDraft(categoryId: catId, title: title, amount: amt)
         : const TypeDraft();
     final incomeDraft = activeType == 'income'
-        ? TypeDraft(categoryId: catId, subcategory: sub, amount: amt)
+        ? TypeDraft(categoryId: catId, title: title, amount: amt)
         : const TypeDraft();
 
     return TransactionFormDraft(
@@ -183,7 +183,7 @@ class TransactionFormDraft {
   TypeDraft get _active => type == 'income' ? incomeDraft : expenseDraft;
 
   String? get categoryId => _active.categoryId;
-  String? get subcategory => _active.subcategory;
+  String? get title => _active.title;
   String get amount => _active.amount;
 
   TransactionFormDraft _withActive(TypeDraft updated) {
@@ -211,7 +211,7 @@ class TransactionFormDraft {
   TransactionFormDraft copyWith({
     String? type,
     String? categoryId,
-    String? subcategory,
+    String? title,
     String? amount,
     DateTime? date,
     String? note,
@@ -223,7 +223,7 @@ class TransactionFormDraft {
     }
     var active = draft._active;
     if (categoryId != null) active = active.copyWith(categoryId: categoryId);
-    if (subcategory != null) active = active.copyWith(subcategory: subcategory);
+    if (title != null) active = active.copyWith(title: title);
     if (amount != null) active = active.copyWith(amount: amount);
     return draft._withActive(active).copyWith2(
       date: date,

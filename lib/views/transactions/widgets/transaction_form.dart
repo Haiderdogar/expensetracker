@@ -4,11 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/category_model.dart';
-import '../../../models/subcategory_model.dart';
 import '../../../models/transaction_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/category_provider.dart';
-import '../../../providers/subcategory_provider.dart';
 import '../../../providers/transaction_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../widgets/custom_button.dart';
@@ -25,82 +23,78 @@ class TransactionForm extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final draft = ref.watch(transactionFormProvider(transaction));
     return Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Only allow switching type when creating a new transaction.
-              // When editing, the type is locked to the original transaction type.
-              if (transaction == null) ...[ 
-                _TypeSelector(
-                  draft: draft,
-                  onChanged: (type) => _changeType(ref, draft, type),
-                ),
-                const SizedBox(height: 16),
-              ],
-              _CategorySelector(transaction: transaction, draft: draft),
-              if (draft.categoryId != null) ...[
-                const SizedBox(height: 12),
-                _SubcategorySelector(transaction: transaction, draft: draft),
-              ],
-              const SizedBox(height: 16),
-              // Key on amount ensures the field rebuilds with the correct
-              // per-tab initialValue whenever the user switches expense/income.
-              CustomTextField(
-                key: ValueKey('amount_${draft.type}'),
-                initialValue: draft.amount,
-                label: AppStrings.amount,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                prefix: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  child: Text(ref.watch(currencySymbolProvider).value ?? '\$'),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Required';
-                  if (double.tryParse(value) == null) return 'Invalid amount';
-                  return null;
-                },
-                onChanged: (value) => _updateDraft(ref, draft.copyWith(amount: value)),
-              ),
-              CustomTextField(
-                initialValue: draft.note,
-                label: AppStrings.note,
-                hint: draft.type == 'income'
-                    ? 'Add details of your income'
-                    : 'Add details of your expense',
-                maxLines: 3,
-                onChanged: (value) => _updateDraft(ref, draft.copyWith(note: value)),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text('${AppStrings.date} & Time'),
-                subtitle: Text(Formatters.dateTime(draft.date)),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () => _pickDateTime(context, ref, draft),
-              ),
-              const SizedBox(height: 24),
-              CustomButton(
-                label: AppStrings.save,
-                isLoading: draft.isSaving,
-                onPressed: () => _save(context, ref, draft),
-              ),
-            ],
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Only allow switching type when creating a new transaction.
+          // When editing, the type is locked to the original transaction type.
+          if (transaction == null) ...[
+            _TypeSelector(
+              draft: draft,
+              onChanged: (type) => _changeType(ref, draft, type),
+            ),
+            const SizedBox(height: 16),
+          ],
+          _CategorySelector(transaction: transaction, draft: draft),
+          const SizedBox(height: 12),
+          _TitleField(transaction: transaction, draft: draft),
+          const SizedBox(height: 16),
+          // Key on amount ensures the field rebuilds with the correct
+          // per-tab initialValue whenever the user switches expense/income.
+          CustomTextField(
+            key: ValueKey('amount_${draft.type}'),
+            initialValue: draft.amount,
+            label: AppStrings.amount,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            prefix: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Text(ref.watch(currencySymbolProvider).value ?? '\$'),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Required';
+              if (double.tryParse(value) == null) return 'Invalid amount';
+              return null;
+            },
+            onChanged: (value) =>
+                _updateDraft(ref, draft.copyWith(amount: value)),
           ),
-        );
+          CustomTextField(
+            initialValue: draft.note,
+            label: AppStrings.note,
+            hint: draft.type == 'income'
+                ? 'Add details of your income'
+                : 'Add details of your expense',
+            maxLines: 3,
+            onChanged: (value) =>
+                _updateDraft(ref, draft.copyWith(note: value)),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('${AppStrings.date} & Time'),
+            subtitle: Text(Formatters.dateTime(draft.date)),
+            trailing: const Icon(Icons.calendar_today),
+            onTap: () => _pickDateTime(context, ref, draft),
+          ),
+          const SizedBox(height: 24),
+          CustomButton(
+            label: AppStrings.save,
+            isLoading: draft.isSaving,
+            onPressed: () => _save(context, ref, draft),
+          ),
+        ],
+      ),
+    );
   }
 
   void _updateDraft(WidgetRef ref, TransactionFormDraft draft) {
     ref.read(transactionFormProvider(transaction).notifier).state = draft;
   }
 
-  void _changeType(
-    WidgetRef ref,
-    TransactionFormDraft draft,
-    String type,
-  ) {
+  void _changeType(WidgetRef ref, TransactionFormDraft draft, String type) {
     // switchType() swaps the active tab while preserving each tab's own
-    // categoryId, subcategory, and amount independently.
+    // categoryId, title, and amount independently.
     _updateDraft(ref, draft.switchType(type));
   }
 
@@ -124,7 +118,13 @@ class TransactionForm extends ConsumerWidget {
     _updateDraft(
       ref,
       draft.copyWith(
-        date: DateTime(date.year, date.month, date.day, selectedTime.hour, selectedTime.minute),
+        date: DateTime(
+          date.year,
+          date.month,
+          date.day,
+          selectedTime.hour,
+          selectedTime.minute,
+        ),
       ),
     );
   }
@@ -139,8 +139,8 @@ class TransactionForm extends ConsumerWidget {
       _showMessage(context, 'Select category');
       return;
     }
-    if (draft.subcategory == null || draft.subcategory!.trim().isEmpty) {
-      _showMessage(context, 'Select or add a subcategory');
+    if (draft.title == null || draft.title!.trim().isEmpty) {
+      _showMessage(context, 'Enter a title');
       return;
     }
     _updateDraft(ref, draft.copyWith(isSaving: true));
@@ -155,7 +155,7 @@ class TransactionForm extends ConsumerWidget {
       final notifier = ref.read(transactionsProvider.notifier);
       if (transaction == null) {
         await notifier.create(
-          subcategory: draft.subcategory!.trim(),
+          title: draft.title!.trim(),
           amount: double.parse(draft.amount),
           type: draft.type,
           categoryId: draft.categoryId!,
@@ -166,7 +166,7 @@ class TransactionForm extends ConsumerWidget {
       } else {
         await notifier.updateTransaction(
           transaction!.copyWith(
-            subcategory: draft.subcategory!.trim(),
+            title: draft.title!.trim(),
             amount: double.parse(draft.amount),
             type: draft.type,
             categoryId: draft.categoryId,
@@ -175,7 +175,8 @@ class TransactionForm extends ConsumerWidget {
           ),
         );
       }
-      if (context.mounted) Navigator.of(context).pop(transaction == null ? 'created' : 'saved');
+      if (context.mounted)
+        Navigator.of(context).pop(transaction == null ? 'created' : 'saved');
     } catch (error) {
       if (context.mounted) _showMessage(context, error.toString());
     } finally {
@@ -184,7 +185,9 @@ class TransactionForm extends ConsumerWidget {
   }
 
   void _showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -226,9 +229,9 @@ class _CategorySelector extends ConsumerWidget {
           children: [
             Text(
               AppStrings.category,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
             TextButton.icon(
               onPressed: () => _addCategory(context, ref),
@@ -237,7 +240,10 @@ class _CategorySelector extends ConsumerWidget {
               style: TextButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
             ),
           ],
@@ -250,7 +256,9 @@ class _CategorySelector extends ConsumerWidget {
           ),
           error: (error, _) => Text(error.toString()),
           data: (items) {
-            final visible = items.where((category) => category.type == draft.type).toList();
+            final visible = items
+                .where((category) => category.type == draft.type)
+                .toList();
             final sorted = _sortCategories(visible, transactions);
             final isSelectedValid = sorted.any((c) => c.id == draft.categoryId);
 
@@ -272,8 +280,11 @@ class _CategorySelector extends ConsumerWidget {
               }).toList(),
               onSelected: (value) {
                 if (value != null) {
-                  ref.read(transactionFormProvider(transaction).notifier).state =
-                      draft.selectCategory(value);
+                  ref
+                      .read(transactionFormProvider(transaction).notifier)
+                      .state = draft.selectCategory(
+                    value,
+                  );
                 }
               },
             );
@@ -333,176 +344,68 @@ class _CategorySelector extends ConsumerWidget {
   Future<void> _addCategory(BuildContext context, WidgetRef ref) async {
     final name = await _askForName(context, 'Add category', 'Category name');
     if (name == null) return;
-    final category = await ref.read(categoriesProvider.notifier).createWithSubcategory(
-      name: name,
-      subcategoryName: 'General',
-      type: draft.type,
-      icon: draft.type == 'income' ? 'work' : 'shopping_bag',
-      color: draft.type == 'income' ? '#2ECC71' : '#FF6B6B',
-    );
-    ref.read(transactionFormProvider(transaction).notifier).state =
-        draft.selectCategory(category.id);
+    final category = await ref
+        .read(categoriesProvider.notifier)
+        .create(
+          name: name,
+          type: draft.type,
+          icon: draft.type == 'income' ? 'work' : 'shopping_bag',
+          color: draft.type == 'income' ? '#2ECC71' : '#FF6B6B',
+        );
+    ref.read(transactionFormProvider(transaction).notifier).state = draft
+        .selectCategory(category.id);
   }
 }
 
-Future<String?> _askForName(BuildContext context, String title, String hint) async {
+Future<String?> _askForName(
+  BuildContext context,
+  String title,
+  String hint,
+) async {
   return showDialog<String>(
     context: context,
     builder: (dialogContext) {
       final controller = TextEditingController();
       return AlertDialog(
         title: Text(title),
-        content: TextField(controller: controller, autofocus: true, decoration: InputDecoration(hintText: hint)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(hintText: hint),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()), child: const Text('Save')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('Save'),
+          ),
         ],
       );
     },
   ).then((value) => value == null || value.isEmpty ? null : value);
 }
 
-class _SubcategorySelector extends ConsumerWidget {
-  const _SubcategorySelector({required this.transaction, required this.draft});
+class _TitleField extends ConsumerWidget {
+  const _TitleField({required this.transaction, required this.draft});
 
   final TransactionModel? transaction;
   final TransactionFormDraft draft;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categoryId = draft.categoryId!;
-    final transactions = ref.watch(transactionsProvider).value ?? const [];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Subcategory',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            TextButton.icon(
-              onPressed: () => _addSubcategory(context, ref, categoryId),
-              icon: const Icon(Icons.add_rounded, size: 16),
-              label: const Text('Add Subcategory'),
-              style: TextButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ref.watch(subcategoriesProvider(categoryId)).when(
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: LinearProgressIndicator(),
-          ),
-          error: (error, _) => Text(error.toString()),
-          data: (items) {
-            final sorted = _sortSubcategories(items, categoryId, transactions);
-            final isSelectedValid = sorted.any((s) => s.name == draft.subcategory);
-
-            return DropdownMenu<String>(
-              key: ValueKey('${categoryId}_${draft.subcategory}'),
-              expandedInsets: EdgeInsets.zero,
-              requestFocusOnTap: false,
-              enableSearch: false,
-              hintText: 'Select subcategory',
-              initialSelection: isSelectedValid ? draft.subcategory : null,
-              trailingIcon: const Icon(Icons.keyboard_arrow_down_rounded),
-              selectedTrailingIcon: const Icon(Icons.keyboard_arrow_up_rounded),
-              menuHeight: 250,
-              dropdownMenuEntries: sorted.map((sub) {
-                return DropdownMenuEntry<String>(
-                  value: sub.name,
-                  label: sub.name,
-                );
-              }).toList(),
-              onSelected: (value) {
-                if (value != null) {
-                  ref.read(transactionFormProvider(transaction).notifier).state =
-                      draft.copyWith(subcategory: value);
-                }
-              },
-            );
-          },
-        ),
-      ],
+    return CustomTextField(
+      initialValue: draft.title ?? '',
+      label: AppStrings.title,
+      hint: 'What was this transaction for?',
+      validator: (value) =>
+          value == null || value.trim().isEmpty ? 'Required' : null,
+      onChanged: (value) =>
+          ref.read(transactionFormProvider(transaction).notifier).state = draft
+              .copyWith(title: value),
     );
-  }
-
-  List<SubcategoryModel> _sortSubcategories(
-    List<SubcategoryModel> subcategories,
-    String categoryId,
-    List<TransactionModel> transactions,
-  ) {
-    final usageCounts = <String, int>{};
-    for (final tx in transactions) {
-      if (tx.categoryId == categoryId && tx.subcategory.isNotEmpty) {
-        final key = tx.subcategory.toLowerCase().trim();
-        usageCounts[key] = (usageCounts[key] ?? 0) + 1;
-      }
-    }
-
-    const priorityKeywords = [
-      'general',
-      'groceries',
-      'grocery',
-      'restaurant',
-      'dining',
-      'food',
-      'fuel',
-      'gas',
-      'petrol',
-      'bus',
-      'metro',
-      'train',
-      'taxi',
-      'uber',
-      'electricity',
-      'water',
-      'internet',
-      'wifi',
-      'phone',
-      'rent',
-      'maintenance',
-      'clothing',
-      'clothes',
-      'coffee',
-      'snacks',
-    ];
-
-    int score(SubcategoryModel s) {
-      final name = s.name.toLowerCase().trim();
-      final count = usageCounts[name] ?? 0;
-      final idx = priorityKeywords.indexWhere((k) => name.contains(k));
-      int pts = count * 1000;
-      if (idx != -1) {
-        pts += (100 - idx);
-      }
-      return pts;
-    }
-
-    final sorted = List<SubcategoryModel>.from(subcategories);
-    sorted.sort((a, b) => score(b).compareTo(score(a)));
-    return sorted;
-  }
-
-  Future<void> _addSubcategory(BuildContext context, WidgetRef ref, String categoryId) async {
-    final name = await _askForName(context, 'Add subcategory', 'Subcategory name');
-    if (name == null || !context.mounted) return;
-    try {
-      final subcategory = await addSubcategory(ref, categoryId: categoryId, name: name);
-      ref.read(transactionFormProvider(transaction).notifier).state =
-          draft.copyWith(subcategory: subcategory.name);
-    } catch (error) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
-    }
   }
 }

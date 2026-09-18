@@ -2,14 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/app_snackbars.dart';
-import '../../../core/utils/category_utils.dart';
-import '../../../core/utils/error_handler.dart';
 import '../../../models/category_model.dart';
 import '../../../providers/category_provider.dart';
-import '../../../providers/subcategory_provider.dart';
-import '../../../providers/transaction_provider.dart';
 import 'category_management_dialogs.dart';
-import 'subcategory_tile.dart';
 
 class CategoryTile extends ConsumerWidget {
   const CategoryTile({super.key, required this.category});
@@ -18,12 +13,10 @@ class CategoryTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final subcategories = ref.watch(subcategoriesProvider(category.id));
-    final transactions = ref.watch(transactionsProvider).value ?? const [];
     final color = _color(category.color);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: ExpansionTile(
+      child: ListTile(
         leading: CircleAvatar(
           backgroundColor: color.withValues(alpha: .16),
           child: Icon(_icon(category.icon), color: color),
@@ -40,30 +33,6 @@ class CategoryTile extends ConsumerWidget {
             PopupMenuItem(value: 'delete', child: Text('Delete')),
           ],
         ),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 12, 12),
-        children: [
-          subcategories.when(
-            loading: () => const LinearProgressIndicator(),
-            error: (error, _) => Text(ErrorHandler.message(error)),
-            data: (items) {
-              final sorted = sortSubcategories(
-                items,
-                category.id,
-                transactions,
-              );
-              return Column(
-                children: [
-                  ...sorted.map((item) => SubcategoryTile(subcategory: item)),
-                  TextButton.icon(
-                    onPressed: () => _addSubcategory(context, ref),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Add subcategory'),
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
       ),
     );
   }
@@ -95,7 +64,7 @@ class CategoryTile extends ConsumerWidget {
     final ok = await confirmDelete(
       context,
       'Delete ${category.name}?',
-      'Its subcategories will also be removed.',
+      'Transactions and budgets using this category cannot be deleted.',
     );
     if (!ok || !context.mounted) return;
     try {
@@ -108,18 +77,6 @@ class CategoryTile extends ConsumerWidget {
     }
   }
 
-  Future<void> _addSubcategory(BuildContext context, WidgetRef ref) async {
-    final name = await showNameDialog(context, 'Add subcategory');
-    if (name == null || !context.mounted) return;
-    try {
-      await addSubcategory(ref, categoryId: category.id, name: name);
-      if (context.mounted) {
-        showSuccessSnackBar(context, 'Subcategory added successfully');
-      }
-    } catch (error) {
-      if (context.mounted) showError(context, error);
-    }
-  }
 }
 
 Color _color(String value) => Color(

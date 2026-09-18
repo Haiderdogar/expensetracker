@@ -14,16 +14,20 @@ import 'views/onboarding/intro_onboarding_screen.dart';
 import 'views/onboarding/onboarding_screen.dart';
 
 class ExpenseTrackerApp extends StatelessWidget {
-  const ExpenseTrackerApp({super.key});
+  const ExpenseTrackerApp({super.key, this.startupError});
+
+  final String? startupError;
 
   @override
   Widget build(BuildContext context) {
-    return const _AppThemeWrapper();
+    return _AppThemeWrapper(startupError: startupError);
   }
 }
 
 class _AppThemeWrapper extends ConsumerWidget {
-  const _AppThemeWrapper();
+  const _AppThemeWrapper({this.startupError});
+
+  final String? startupError;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,13 +44,15 @@ class _AppThemeWrapper extends ConsumerWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
-      home: const AppBootstrap(),
+      home: AppBootstrap(startupError: startupError),
     );
   }
 }
 
 class AppBootstrap extends ConsumerWidget {
-  const AppBootstrap({super.key});
+  const AppBootstrap({super.key, this.startupError});
+
+  final String? startupError;
 
   static bool _nativeSplashRemoved = false;
 
@@ -60,12 +66,20 @@ class AppBootstrap extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (startupError != null) {
+      _removeNativeSplash();
+      return _BootstrapError(
+        message: startupError!,
+        onRetry: () => ref.invalidate(authControllerProvider),
+      );
+    }
     final introSeenAsync = ref.watch(introOnboardingSeenProvider);
     return introSeenAsync.when(
       loading: () => const _BootstrapLoading(),
       error: (_, __) {
         _removeNativeSplash();
         return _BootstrapError(
+          message: 'Unable to load onboarding. Please try again.',
           onRetry: () {
             ref.invalidate(introOnboardingSeenProvider);
             ref.invalidate(authControllerProvider);
@@ -76,18 +90,22 @@ class AppBootstrap extends ConsumerWidget {
         _removeNativeSplash();
         // This secure-storage flag is the source of truth for whether the
         // first-run experience has finished.  It intentionally does not
-        // depend on a Firebase user or the local database, so guests and
-        // signed-in users get the same one-time onboarding behaviour.
+        // depend on a Firebase user or the local database, so every install
+        // gets the same one-time onboarding behaviour.
         if (!hasSeenIntro) return const IntroOnboardingScreen();
 
         final authAsync = ref.watch(authControllerProvider);
         return authAsync.when(
           loading: () => const _BootstrapLoading(),
           error: (_, __) => _BootstrapError(
+            message: 'Unable to restore authentication. Please try again.',
             onRetry: () => ref.invalidate(authControllerProvider),
           ),
           data: (status) {
             if (status == AuthStatus.pinLocked) return const AuthScreen();
+            if (status == AuthStatus.loading) {
+              return const GoogleSignInScreen();
+            }
             if (status == AuthStatus.authenticated &&
                 ref
                     .read(authControllerProvider.notifier)
@@ -117,15 +135,25 @@ class _PostLoginFlow extends ConsumerWidget {
     return onboardingAsync.when(
       loading: () => const _BootstrapLoading(),
       error: (_, __) => _BootstrapError(
+        message: 'Unable to load your account setup. Please try again.',
         onRetry: () => ref.invalidate(onboardingCompleteProvider),
       ),
       data: (onboardingComplete) {
         if (!onboardingComplete) return const OnboardingScreen();
 
+        // A fresh Google login for an existing account authenticates the
+        // account first, then requires the configured local lock before the
+        // dashboard is exposed.
+        final authAsync = ref.watch(authControllerProvider);
+        if (authAsync.value == AuthStatus.pinLocked) {
+          return const AuthScreen();
+        }
+
         final lockPromptAsync = ref.watch(lockPromptCompletedProvider);
         return lockPromptAsync.when(
           loading: () => const _BootstrapLoading(),
           error: (_, __) => _BootstrapError(
+            message: 'Unable to load security settings. Please try again.',
             onRetry: () => ref.invalidate(lockPromptCompletedProvider),
           ),
           data: (lockPromptComplete) => lockPromptComplete
@@ -147,8 +175,9 @@ class _BootstrapLoading extends StatelessWidget {
 }
 
 class _BootstrapError extends StatelessWidget {
-  const _BootstrapError({required this.onRetry});
+  const _BootstrapError({required this.message, required this.onRetry});
 
+  final String message;
   final VoidCallback onRetry;
 
   @override
@@ -162,8 +191,8 @@ class _BootstrapError extends StatelessWidget {
             children: [
               const Icon(Icons.error_outline_rounded, size: 48),
               const SizedBox(height: 16),
-              const Text(
-                'Unable to start the app. Please try again.',
+              Text(
+                message,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),

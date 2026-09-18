@@ -2,7 +2,7 @@ class TransactionModel {
   const TransactionModel({
     required this.id,
     this.userId = 'default_user',
-    required this.subcategory,
+    required this.title,
     required this.amount,
     required this.type,
     required this.categoryId,
@@ -15,7 +15,7 @@ class TransactionModel {
 
   final String id;
   final String userId;
-  final String subcategory;
+  final String title;
   final double amount;
   final String type;
   final String categoryId;
@@ -31,7 +31,7 @@ class TransactionModel {
   TransactionModel copyWith({
     String? id,
     String? userId,
-    String? subcategory,
+    String? title,
     double? amount,
     String? type,
     String? categoryId,
@@ -44,7 +44,7 @@ class TransactionModel {
     return TransactionModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
-      subcategory: subcategory ?? this.subcategory,
+      title: title ?? this.title,
       amount: amount ?? this.amount,
       type: type ?? this.type,
       categoryId: categoryId ?? this.categoryId,
@@ -59,8 +59,7 @@ class TransactionModel {
   Map<String, dynamic> toMap() => {
     'id': id,
     'user_id': userId,
-    'title': subcategory,
-    'subcategory': subcategory,
+    'title': title,
     'amount': amount,
     'type': type,
     'category_id': categoryId,
@@ -72,7 +71,7 @@ class TransactionModel {
   };
 
   Map<String, dynamic> toFirestore() => {
-    'subcategory': subcategory,
+    'title': title,
     'amount': amount,
     'type': type,
     'categoryId': categoryId,
@@ -85,9 +84,7 @@ class TransactionModel {
     return TransactionModel(
       id: map['id'] as String,
       userId: (map['user_id'] as String?) ?? 'default_user',
-      subcategory: (map['subcategory'] as String?)?.trim().isNotEmpty == true
-          ? map['subcategory'] as String
-          : (map['title'] as String?) ?? '',
+      title: (map['title'] as String?) ?? (map['subcategory'] as String?) ?? '',
       amount: (map['amount'] as num).toDouble(),
       type: map['type'] as String,
       categoryId: map['category_id'] as String,
@@ -106,7 +103,7 @@ class TransactionModel {
     return TransactionModel(
       id: docId,
       userId: 'default_user',
-      subcategory: (data['subcategory'] as String?) ?? '',
+      title: (data['title'] as String?) ?? (data['subcategory'] as String?) ?? '',
       amount: ((data['amount'] as num?) ?? 0).toDouble(),
       type: (data['type'] as String?) ?? 'expense',
       categoryId: (data['categoryId'] as String?) ?? '',

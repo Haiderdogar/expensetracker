@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -9,7 +10,6 @@ import 'package:uuid/uuid.dart';
 import '../../models/budget_model.dart';
 import '../../models/category_model.dart';
 import '../../models/note_model.dart';
-import '../../models/subcategory_model.dart';
 import '../../models/transaction_model.dart';
 import '../../models/wallet_model.dart';
 import '../database/database_helper.dart';
@@ -34,6 +34,7 @@ class SyncRepository {
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isSyncing = false;
+  bool _syncRequested = false;
 
   Future<bool> isOnline() async {
     try {
@@ -60,6 +61,8 @@ class SyncRepository {
 
   void dispose() {
     _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
+    _syncRequested = false;
   }
 
   CollectionReference<Map<String, dynamic>> _col(
@@ -90,6 +93,9 @@ class SyncRepository {
     required Map<String, dynamic> firestoreData,
   }) async {
     _validateLocalUserRecord(userId, sqliteRow['user_id']);
+    if (userId != 'default_user') {
+      _validateAuthenticatedUserId(userId);
+    }
     final db = await _dbHelper.database;
     await db.insert(
       table,
@@ -100,7 +106,6 @@ class SyncRepository {
     // Guest data is intentionally local-only.
     if (userId == 'default_user') return;
     if (table != DatabaseTables.categories &&
-        table != DatabaseTables.subcategories &&
         table != DatabaseTables.transactions) {
       _validateRemoteUserRecord(userId, firestoreData['userId']);
     }
@@ -121,8 +126,9 @@ class SyncRepository {
         where: 'id = ? AND user_id = ?',
         whereArgs: [id, userId],
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('[SyncRepository] Immediate push failed ($table/$id): $e');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 
@@ -132,6 +138,9 @@ class SyncRepository {
     required String id,
   }) async {
     _validateLocalUserId(userId);
+    if (userId != 'default_user') {
+      _validateAuthenticatedUserId(userId);
+    }
     final db = await _dbHelper.database;
     final existing = await db.query(
       table,
@@ -143,6 +152,8 @@ class SyncRepository {
     final walletId = existing.isEmpty
         ? null
         : existing.first['wallet_id'] as String?;
+    if (existing.isEmpty) return;
+
     await db.delete(
       table,
       where: 'id = ? AND user_id = ?',
@@ -173,8 +184,9 @@ class SyncRepository {
         where: 'table_name = ? AND record_id = ? AND user_id = ?',
         whereArgs: [table, id, userId],
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('[SyncRepository] Immediate delete failed ($table/$id): $e');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 
@@ -241,6 +253,10 @@ class SyncRepository {
         'userId',
         'An authenticated user is required',
       );
+    }
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null || firebaseUser.uid != userId) {
+      throw StateError('The active Firebase user does not match the local account');
     }
   }
 
@@ -312,11 +328,18 @@ class SyncRepository {
     String userId,
     double delta,
   ) async {
+    _validateLocalUserId(userId);
+    if (userId != 'default_user') {
+      _validateAuthenticatedUserId(userId);
+    }
     final db = await _dbHelper.database;
-    await db.rawUpdate(
+    final updated = await db.rawUpdate(
       'UPDATE ${DatabaseTables.wallets} SET balance = balance + ?, is_synced = 0, updated_at = ? WHERE id = ? AND user_id = ?',
       [delta, DateTime.now().toUtc().toIso8601String(), walletId, userId],
     );
+    if (updated != 1) {
+      throw StateError('Wallet $walletId was not found for the active account');
+    }
 
     if (!await isOnline()) return;
     try {
@@ -338,8 +361,9 @@ class SyncRepository {
         where: 'id = ? AND user_id = ?',
         whereArgs: [walletId, userId],
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('[SyncRepository] Wallet balance push failed: $e');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 
@@ -388,39 +412,6 @@ class SyncRepository {
     );
   }
 
-  Future<List<SubcategoryModel>> getSubcategories(
-    String userId, [
-    String? categoryId,
-    String? walletId,
-  ]) async {
-    final rows = await _queryUser(
-      DatabaseTables.subcategories,
-      userId,
-      extraWhere:
-          [
-            if (categoryId != null) 'category_id = ?',
-            if (walletId != null) 'wallet_id = ?',
-          ].isEmpty
-          ? null
-          : [
-              if (categoryId != null) 'category_id = ?',
-              if (walletId != null) 'wallet_id = ?',
-            ].join(' AND '),
-      extraArgs: [
-        if (categoryId != null) categoryId,
-        if (walletId != null) walletId,
-      ],
-      orderBy: 'name ASC',
-    );
-    // A subcategory is selected by name in the transaction form, so duplicate
-    // local/remote IDs with the same normalized name would otherwise render
-    // the same option more than once.
-    return _uniqueBy(
-      rows.map(SubcategoryModel.fromMap),
-      (subcategory) => _normalizedName(subcategory.name),
-    );
-  }
-
   List<T> _uniqueBy<T>(Iterable<T> values, String Function(T value) keyOf) {
     final seen = <String>{};
     return [
@@ -430,56 +421,6 @@ class SyncRepository {
   }
 
   String _normalizedName(String value) => value.trim().toLowerCase();
-
-  Future<void> saveSubcategory(SubcategoryModel sub) async {
-    final model = sub.copyWith(
-      isSynced: false,
-      updatedAt: DateTime.now().toUtc().toIso8601String(),
-    );
-    await _upsertLocalThenPush(
-      table: DatabaseTables.subcategories,
-      userId: model.userId,
-      id: model.id,
-      sqliteRow: model.toMap(),
-      firestoreData: model.toFirestore(),
-    );
-  }
-
-  Future<void> deleteSubcategory(String id, String userId) {
-    return _deleteLocalThenPush(
-      table: DatabaseTables.subcategories,
-      userId: userId,
-      id: id,
-    );
-  }
-
-  Future<void> renameSubcategory({
-    required SubcategoryModel subcategory,
-    required String newName,
-  }) async {
-    final updated = subcategory.copyWith(
-      name: newName.trim(),
-      isSynced: false,
-      updatedAt: DateTime.now().toUtc().toIso8601String(),
-    );
-    await saveSubcategory(updated);
-
-    final db = await _dbHelper.database;
-    await db.update(
-      DatabaseTables.transactions,
-      {
-        'subcategory': updated.name,
-        'is_synced': 0,
-        'updated_at': updated.updatedAt,
-      },
-      where: 'category_id = ? AND subcategory = ? AND user_id = ?',
-      whereArgs: [subcategory.categoryId, subcategory.name, subcategory.userId],
-    );
-
-    if (await isOnline()) {
-      await syncPending(subcategory.userId);
-    }
-  }
 
   /// Uploads the guest partition under an authenticated UID before changing
   /// local ownership. Existing documents with the same IDs are intentionally
@@ -498,13 +439,6 @@ class SyncRepository {
       userId,
       DatabaseTables.categories,
       (row) => CategoryModel.fromMap({...row, 'user_id': userId}).toFirestore(),
-    );
-    await _migrateTable(
-      db,
-      userId,
-      DatabaseTables.subcategories,
-      (row) =>
-          SubcategoryModel.fromMap({...row, 'user_id': userId}).toFirestore(),
     );
     await _migrateTable(
       db,
@@ -646,9 +580,13 @@ class SyncRepository {
   // ── Sync engine ───────────────────────────────────────────────────────────
 
   Future<void> syncPending(String userId) async {
-    if (_isSyncing) return;
-    if (!await isOnline()) return;
+    if (_isSyncing) {
+      _syncRequested = true;
+      return;
+    }
     if (userId.isEmpty || userId == 'default_user') return;
+    _validateAuthenticatedUserId(userId);
+    if (!await isOnline()) return;
 
     _isSyncing = true;
     try {
@@ -666,14 +604,19 @@ class SyncRepository {
         final walletId = row['wallet_id'] as String?;
         final qId = row['id'] as String;
         try {
-          await _col(userId, table, walletId: walletId).doc(recordId).delete();
+          await _col(
+            userId,
+            table,
+            walletId: walletId,
+          ).doc(recordId).delete().timeout(const Duration(seconds: 15));
           await db.delete(
             DatabaseTables.syncQueue,
             where: 'id = ?',
             whereArgs: [qId],
           );
-        } catch (e) {
+        } catch (e, stackTrace) {
           debugPrint('[SyncRepository] Queued delete failed: $e');
+          debugPrintStack(stackTrace: stackTrace);
         }
       }
 
@@ -682,12 +625,6 @@ class SyncRepository {
         userId,
         DatabaseTables.categories,
         (row) => CategoryModel.fromMap(row).toFirestore(),
-      );
-      await _pushUnsynced(
-        db,
-        userId,
-        DatabaseTables.subcategories,
-        (row) => SubcategoryModel.fromMap(row).toFirestore(),
       );
       await _pushUnsynced(
         db,
@@ -713,10 +650,15 @@ class SyncRepository {
         DatabaseTables.notes,
         (row) => NoteModel.fromMap(row).toFirestore(),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('[SyncRepository] Sync pending failed: $e');
+      debugPrintStack(stackTrace: stackTrace);
     } finally {
       _isSyncing = false;
+      if (_syncRequested) {
+        _syncRequested = false;
+        unawaited(syncPending(userId));
+      }
     }
   }
 
@@ -745,8 +687,9 @@ class SyncRepository {
           where: 'id = ? AND user_id = ?',
           whereArgs: [id, userId],
         );
-      } catch (e) {
+      } catch (e, stackTrace) {
         debugPrint('[SyncRepository] Push $table/$id failed: $e');
+        debugPrintStack(stackTrace: stackTrace);
       }
     }
   }
@@ -757,8 +700,9 @@ class SyncRepository {
     String userId, {
     bool preferLocal = false,
   }) async {
-    if (!await isOnline()) return;
     if (userId.isEmpty || userId == 'default_user') return;
+    _validateAuthenticatedUserId(userId);
+    if (!await isOnline()) return;
 
     try {
       await _mergeRemote(
@@ -780,13 +724,6 @@ class SyncRepository {
           userId,
           DatabaseTables.categories,
           (data, id) => CategoryModel.fromFirestore(data, id).toMap(),
-          walletId: walletId,
-          preferLocal: preferLocal,
-        );
-        await _mergeRemote(
-          userId,
-          DatabaseTables.subcategories,
-          (data, id) => SubcategoryModel.fromFirestore(data, id).toMap(),
           walletId: walletId,
           preferLocal: preferLocal,
         );
@@ -827,8 +764,13 @@ class SyncRepository {
     String? walletId,
     bool preferLocal = false,
   }) async {
-    final snap = await _col(userId, table, walletId: walletId).get();
+    final snap = await _col(
+      userId,
+      table,
+      walletId: walletId,
+    ).get().timeout(const Duration(seconds: 20));
     final db = await _dbHelper.database;
+    final remoteIds = snap.docs.map((doc) => doc.id).toSet();
 
     for (final doc in snap.docs) {
       // Ownership is established by the authenticated nested path. Legacy
@@ -883,6 +825,32 @@ class SyncRepository {
         remoteRow,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+    }
+
+    // A successful full collection read is authoritative for already-synced
+    // rows. Keep unsynced local edits so an offline delete/update can still
+    // be uploaded on the next sync.
+    final localRows = await db.query(
+      table,
+      columns: ['id'],
+      where: walletId == null
+          ? 'user_id = ? AND is_synced = 1'
+          : 'user_id = ? AND wallet_id = ? AND is_synced = 1',
+      whereArgs: walletId == null ? [userId] : [userId, walletId],
+    );
+    for (final localRow in localRows) {
+      final localId = localRow['id'] as String;
+      if (!remoteIds.contains(localId)) {
+        await db.delete(
+          table,
+          where: walletId == null
+              ? 'id = ? AND user_id = ? AND is_synced = 1'
+              : 'id = ? AND user_id = ? AND wallet_id = ? AND is_synced = 1',
+          whereArgs: walletId == null
+              ? [localId, userId]
+              : [localId, userId, walletId],
+        );
+      }
     }
   }
 }
