@@ -5,13 +5,14 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'core/constants/app_strings.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
-import 'providers/auth_provider.dart';
+import 'features/authentication/session/auth_provider.dart';
+import 'providers/wallet_provider.dart';
 import 'views/app_shell.dart';
-import 'views/auth/auth_screen.dart';
-import 'views/auth/google_sign_in_screen.dart';
-import 'views/auth/lock_setup_screen.dart';
-import 'views/onboarding/intro_onboarding_screen.dart';
-import 'views/onboarding/onboarding_screen.dart';
+import 'features/authentication/google/google_sign_in_screen.dart';
+import 'features/authentication/lock/auth_screen.dart';
+import 'features/authentication/lock/lock_setup_screen.dart';
+import 'features/intro_onboarding/intro_onboarding_screen.dart';
+import 'features/wallet_setup/wallet_setup_screen.dart';
 
 class ExpenseTrackerApp extends StatelessWidget {
   const ExpenseTrackerApp({super.key, this.startupError});
@@ -96,20 +97,16 @@ class AppBootstrap extends ConsumerWidget {
 
         final authAsync = ref.watch(authControllerProvider);
         return authAsync.when(
-          loading: () => const _BootstrapLoading(),
+          // Once intro onboarding is complete, the only valid destination
+          // before account state resolves is the Google login screen.
+          loading: () => const GoogleSignInScreen(),
           error: (_, __) => _BootstrapError(
             message: 'Unable to restore authentication. Please try again.',
             onRetry: () => ref.invalidate(authControllerProvider),
           ),
           data: (status) {
             if (status == AuthStatus.pinLocked) return const AuthScreen();
-            if (status == AuthStatus.loading) {
-              return const GoogleSignInScreen();
-            }
-            if (status == AuthStatus.authenticated &&
-                ref
-                    .read(authControllerProvider.notifier)
-                    .hasLoggedInThisSession) {
+            if (status == AuthStatus.authenticated) {
               return const _PostLoginFlow();
             }
             if (status == AuthStatus.guest) return const _PostLoginFlow();
@@ -131,19 +128,22 @@ class _PostLoginFlow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final onboardingAsync = ref.watch(onboardingCompleteProvider);
-    return onboardingAsync.when(
-      loading: () => const _BootstrapLoading(),
+    final walletsAsync = ref.watch(walletsProvider);
+    return walletsAsync.when(
+      // Wallet setup is the required next step after a successful login when
+      // the wallet query has not completed yet.
+      loading: () => const OnboardingScreen(),
       error: (_, __) => _BootstrapError(
         message: 'Unable to load your account setup. Please try again.',
-        onRetry: () => ref.invalidate(onboardingCompleteProvider),
+        onRetry: () => ref.invalidate(walletsProvider),
       ),
-      data: (onboardingComplete) {
-        if (!onboardingComplete) return const OnboardingScreen();
+      data: (wallets) {
+        // A wallet is created only by the Get Started action. The existence
+        // of a wallet is therefore the durable completion signal for this
+        // part of the navigation architecture.
+        if (wallets.isEmpty) return const OnboardingScreen();
 
-        // A fresh Google login for an existing account authenticates the
-        // account first, then requires the configured local lock before the
-        // dashboard is exposed.
+        // Wallet setup must complete before app-lock handling.
         final authAsync = ref.watch(authControllerProvider);
         if (authAsync.value == AuthStatus.pinLocked) {
           return const AuthScreen();
@@ -151,14 +151,13 @@ class _PostLoginFlow extends ConsumerWidget {
 
         final lockPromptAsync = ref.watch(lockPromptCompletedProvider);
         return lockPromptAsync.when(
-          loading: () => const _BootstrapLoading(),
+          loading: () => const LockSetupScreen(),
           error: (_, __) => _BootstrapError(
             message: 'Unable to load security settings. Please try again.',
             onRetry: () => ref.invalidate(lockPromptCompletedProvider),
           ),
-          data: (lockPromptComplete) => lockPromptComplete
-              ? const AppShell()
-              : const LockSetupScreen(),
+          data: (lockPromptComplete) =>
+              lockPromptComplete ? const AppShell() : const LockSetupScreen(),
         );
       },
     );
@@ -170,7 +169,8 @@ class _BootstrapLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: ColoredBox(color: Colors.transparent));
+    // Keep the native splash visible while local app state is being read.
+    return const SizedBox.shrink();
   }
 }
 
@@ -191,10 +191,7 @@ class _BootstrapError extends StatelessWidget {
             children: [
               const Icon(Icons.error_outline_rounded, size: 48),
               const SizedBox(height: 16),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-              ),
+              Text(message, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: onRetry,
@@ -224,10 +221,7 @@ class AuthGate extends ConsumerWidget {
       data: (status) {
         if (status == AuthStatus.pinLocked) return const AuthScreen();
         if (status == AuthStatus.guest) return const _PostLoginFlow();
-        if (status == AuthStatus.authenticated &&
-            ref
-                .read(authControllerProvider.notifier)
-                .hasLoggedInThisSession) {
+        if (status == AuthStatus.authenticated) {
           return const _PostLoginFlow();
         }
         return const GoogleSignInScreen();

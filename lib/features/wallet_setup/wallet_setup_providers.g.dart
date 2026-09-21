@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'onboarding_ui_providers.dart';
+part of 'wallet_setup_providers.dart';
 
 // **************************************************************************
 // RiverpodGenerator

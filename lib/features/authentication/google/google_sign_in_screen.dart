@@ -1,39 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
-import '../../core/constants/app_colors.dart';
-import '../../providers/auth_provider.dart';
+import '../../../core/constants/app_colors.dart';
+import '../session/auth_provider.dart';
 
-class GoogleSignInScreen extends ConsumerStatefulWidget {
+class GoogleSignInScreen extends StatelessWidget {
   const GoogleSignInScreen({super.key});
-
-  @override
-  ConsumerState<GoogleSignInScreen> createState() => _GoogleSignInScreenState();
-}
-
-class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
-  bool _attemptStarted = false;
-  GoogleSignInResult? _result;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startSignIn());
-  }
-
-  Future<void> _startSignIn() async {
-    if (!mounted || _attemptStarted) return;
-    _attemptStarted = true;
-    setState(() => _result = null);
-    final result = await ref
-        .read(authControllerProvider.notifier)
-        .signInWithGoogle();
-    if (!mounted) return;
-    setState(() {
-      _result = result;
-      _attemptStarted = false;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +48,6 @@ class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Large app icon
                           Container(
                             width: 150,
                             height: 150,
@@ -111,9 +83,9 @@ class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
                               ),
                             ),
                           ),
+
                           const SizedBox(height: 30),
 
-                          // App name
                           Text(
                             'Expense Tracker',
                             textAlign: TextAlign.center,
@@ -123,6 +95,7 @@ class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
                               letterSpacing: -0.8,
                             ),
                           ),
+
                           const SizedBox(height: 10),
 
                           Text(
@@ -133,9 +106,9 @@ class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
                               color: colors.onSurface.withValues(alpha: 0.62),
                             ),
                           ),
+
                           const SizedBox(height: 34),
 
-                          // App features
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(18),
@@ -187,30 +160,16 @@ class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
                               ],
                             ),
                           ),
+
                           const SizedBox(height: 28),
 
-                          _GoogleSignInButton(
-                            onRetry: _startSignIn,
-                            result: _result,
-                          ),
-                          if (_result != null &&
-                              _result != GoogleSignInResult.success) ...[
-                            const SizedBox(height: 10),
-                            Text(
-                              _result == GoogleSignInResult.cancelled
-                                  ? 'Sign-in was cancelled.'
-                                  : _result ==
-                                        GoogleSignInResult.configurationError
-                                  ? 'Google Sign-In is not configured for this app.'
-                                  : 'Sign-in failed. Check your connection and try again.',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colors.error,
-                              ),
-                            ),
-                          ],
+                          /*
+                           * Only the login button is reactive.
+                           */
+                          const _GoogleSignInButton(),
 
                           const SizedBox(height: 22),
+
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -223,8 +182,9 @@ class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
                               Text(
                                 'Your data is handled securely',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color:
-                                      colors.onSurface.withValues(alpha: 0.48),
+                                  color: colors.onSurface.withValues(
+                                    alpha: 0.48,
+                                  ),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -244,19 +204,160 @@ class _GoogleSignInScreenState extends ConsumerState<GoogleSignInScreen> {
   }
 }
 
-class _GoogleSignInButton extends ConsumerWidget {
-  const _GoogleSignInButton({
-    required this.onRetry,
-    required this.result,
-  });
-
-  final VoidCallback onRetry;
-  final GoogleSignInResult? result;
+/*
+ * Only this widget manages the sign-in interaction.
+ *
+ * The complete GoogleSignInScreen does not rebuild when authentication
+ * state changes.
+ */
+class _GoogleSignInButton extends ConsumerStatefulWidget {
+  const _GoogleSignInButton();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
+  ConsumerState<_GoogleSignInButton> createState() =>
+      _GoogleSignInButtonState();
+}
+
+class _GoogleSignInButtonState
+    extends ConsumerState<_GoogleSignInButton> {
+  bool _isSigningIn = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isLoading = _isSigningIn;
+
+    Future<void> handleGoogleSignIn() async {
+      if (_isSigningIn) {
+        return;
+      }
+
+      setState(() {
+        _isSigningIn = true;
+      });
+
+      try {
+        /*
+         * First check REAL internet access.
+         *
+         * connectivity_plus only tells us whether an interface such
+         * as Wi-Fi/mobile is available. It does not guarantee actual
+         * internet access.
+         */
+        final hasInternet =
+            await InternetConnection().hasInternetAccess;
+
+        if (!hasInternet) {
+          if (!context.mounted) {
+            return;
+          }
+
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'No internet connection. Please connect to Wi-Fi or mobile data and try again.',
+                ),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+
+          return;
+        }
+
+        /*
+         * Start Google authentication.
+         *
+         * The native Google account chooser will appear here.
+         */
+        final result = await ref
+            .read(authControllerProvider.notifier)
+            .signInWithGoogle();
+
+        if (!context.mounted) {
+          return;
+        }
+
+        /*
+         * Success.
+         *
+         * AuthController has already:
+         *
+         * 1. Authenticated Firebase
+         * 2. Created/initialized the local user
+         * 3. Saved the Google profile
+         * 4. Saved the local login session
+         * 5. Changed AuthStatus to authenticated
+         *
+         * AppBootstrap will now move to _PostLoginFlow.
+         */
+        if (result == GoogleSignInResult.success) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('Google Sign-In successful.'),
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(milliseconds: 900),
+              ),
+            );
+
+          return;
+        }
+
+        String message;
+
+        switch (result) {
+          case GoogleSignInResult.cancelled:
+            message = 'Google Sign-In was cancelled.';
+
+          case GoogleSignInResult.configurationError:
+            message =
+                'Google Sign-In configuration error. Please check your Firebase and OAuth configuration.';
+
+          case GoogleSignInResult.noInternet:
+            message = 'No internet connection. Please check your network.';
+
+          case GoogleSignInResult.failed:
+            message =
+                ref.read(authControllerProvider.notifier).lastGoogleSignInError ??
+                'Google Sign-In failed. Please try again.';
+
+          case GoogleSignInResult.success:
+            message = 'Google Sign-In successful.';
+        }
+
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(message),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      } catch (error) {
+        if (!context.mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                'Unable to start Google Sign-In. Please try again. ($error)',
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isSigningIn = false;
+          });
+        }
+      }
+    }
 
     return SizedBox(
       width: double.infinity,
@@ -265,8 +366,9 @@ class _GoogleSignInButton extends ConsumerWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryEmerald,
           foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              AppColors.primaryEmerald.withValues(alpha: 0.55),
+          disabledBackgroundColor: AppColors.primaryEmerald.withValues(
+            alpha: 0.55,
+          ),
           disabledForegroundColor: Colors.white.withValues(alpha: 0.85),
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -274,7 +376,7 @@ class _GoogleSignInButton extends ConsumerWidget {
             borderRadius: BorderRadius.circular(17),
           ),
         ),
-        onPressed: isLoading ? null : onRetry,
+        onPressed: isLoading ? null : handleGoogleSignIn,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           child: isLoading
@@ -287,27 +389,14 @@ class _GoogleSignInButton extends ConsumerWidget {
                     color: Colors.white,
                   ),
                 )
-              : Row(
-                  key: const ValueKey('login'),
+              : const Row(
+                  key: ValueKey('login'),
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.login_rounded,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 11),
+                    Icon(Icons.account_circle_rounded, size: 25),
+                    SizedBox(width: 11),
                     Text(
-                      result == null
-                          ? 'Continue with Google'
-                          : 'Try Google Sign-In again',
+                      'Continue with Google',
                       style: TextStyle(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w700,
@@ -329,11 +418,7 @@ class _FeatureDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(
-        left: 52,
-        top: 14,
-        bottom: 14,
-      ),
+      padding: const EdgeInsets.only(left: 52, top: 14, bottom: 14),
       child: Divider(
         height: 1,
         thickness: 1,
@@ -361,6 +446,7 @@ class _FeatureRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     final colors = theme.colorScheme;
 
     return Row(
@@ -372,15 +458,9 @@ class _FeatureRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(13),
-            border: Border.all(
-              color: color.withValues(alpha: 0.08),
-            ),
+            border: Border.all(color: color.withValues(alpha: 0.08)),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 21,
-          ),
+          child: Icon(icon, color: color, size: 21),
         ),
         const SizedBox(width: 13),
         Expanded(

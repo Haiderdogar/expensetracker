@@ -14,7 +14,7 @@ import '../../providers/currency_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
-import '../auth/auth_screen.dart';
+import '../../features/authentication/lock/auth_screen.dart';
 
 class SettingsActions {
   const SettingsActions._();

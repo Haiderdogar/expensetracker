@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'auth_flow.dart';
-import 'auth_ui_providers.dart';
-import 'widgets/auth_header.dart';
-import 'widgets/auth_keypad.dart';
-import 'widgets/auth_pin_input.dart';
+import 'package:expensetracker/features/authentication/lock/auth_flow.dart';
+import 'package:expensetracker/features/authentication/lock/auth_ui_providers.dart';
+import 'package:expensetracker/features/authentication/lock/widgets/auth_header.dart';
+import 'package:expensetracker/features/authentication/lock/widgets/auth_keypad.dart';
+import 'package:expensetracker/features/authentication/lock/widgets/auth_pin_input.dart';
 
 class AuthScreen extends StatelessWidget {
   const AuthScreen({

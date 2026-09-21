@@ -167,7 +167,7 @@ final class WalletsProvider
   Wallets create() => Wallets();
 }
 
-String _$walletsHash() => r'7f399e89247be70959f9b39d636465747a549d61';
+String _$walletsHash() => r'2bbb79d9c60cfab758596dcfe4efc3e24518507d';
 
 abstract class _$Wallets extends $AsyncNotifier<List<WalletModel>> {
   FutureOr<List<WalletModel>> build();

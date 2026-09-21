@@ -9,7 +9,7 @@ import '../../providers/database_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
-import 'onboarding_ui_providers.dart';
+import 'wallet_setup_providers.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});

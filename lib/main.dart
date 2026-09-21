@@ -2,9 +2,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 import 'app.dart';
+import 'core/auth/google_sign_in_service.dart';
 import 'core/database/database_helper.dart';
 import 'core/security/secure_storage_service.dart';
 import 'firebase_options.dart';
@@ -24,14 +24,7 @@ void main() async {
   }
 
   try {
-    // google_sign_in 7.x must be initialized exactly once. Once the Firebase
-    // config is regenerated it reads the Web OAuth client from
-    // google-services.json; the define is a supported explicit fallback.
-    await GoogleSignIn.instance.initialize(
-      serverClientId: DefaultFirebaseOptions.googleServerClientId.isEmpty
-          ? null
-          : DefaultFirebaseOptions.googleServerClientId,
-    );
+    await GoogleSignInService.ensureInitialized();
   } catch (e) {
     debugPrint('Google Sign-In initialization warning: $e');
     startupError ??=

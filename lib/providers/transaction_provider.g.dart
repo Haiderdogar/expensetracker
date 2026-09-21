@@ -33,7 +33,7 @@ final class TransactionsProvider
   Transactions create() => Transactions();
 }
 
-String _$transactionsHash() => r'b0e299c6008f5352cf5859dcc40dbf5acbac25be';
+String _$transactionsHash() => r'ed5110abde98062d35247997de6503b9b527a833';
 
 abstract class _$Transactions extends $AsyncNotifier<List<TransactionModel>> {
   FutureOr<List<TransactionModel>> build();
@@ -243,7 +243,7 @@ final class FilteredTransactionsProvider
 }
 
 String _$filteredTransactionsHash() =>
-    r'29a96ea3c101d9cd1c4f061f96f7cf442c8fb814';
+    r'9efa81b4d81cc3ce4f0edc5c774b0cafcb9544ec';
 
 final class FilteredTransactionsFamily extends $Family
     with

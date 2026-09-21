@@ -18,6 +18,57 @@ class SecureStorageService {
   static const String installationIdKey = 'installation_id';
   static const String introOnboardingSeenKey = 'intro_onboarding_seen';
   static const String welcomeSetupCompletedKey = 'welcome_setup_completed';
+  static const String loginUserIdKey = 'login_user_id';
+  static const String loginEmailKey = 'login_email';
+  static const String loginAtKey = 'login_at';
+
+  static const Duration loginValidity = Duration(days: 30);
+
+  Future<void> saveLoginSession({
+    required String userId,
+    required String? email,
+  }) async {
+    try {
+      await Future.wait([
+        _storage.write(key: loginUserIdKey, value: userId),
+        _storage.write(key: loginEmailKey, value: email?.trim() ?? ''),
+        _storage.write(
+          key: loginAtKey,
+          value: DateTime.now().toUtc().toIso8601String(),
+        ),
+      ]);
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<bool> hasValidLoginSession(String userId) async {
+    try {
+      final storedUserId = await _storage.read(key: loginUserIdKey);
+      final rawLoginAt = await _storage.read(key: loginAtKey);
+      if (storedUserId != userId || rawLoginAt == null) return false;
+
+      final loginAt = DateTime.tryParse(rawLoginAt);
+      if (loginAt == null ||
+          DateTime.now().toUtc().difference(loginAt) >= loginValidity) {
+        await clearLoginSession();
+        return false;
+      }
+      return true;
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
+  Future<void> clearLoginSession() async {
+    try {
+      await _storage.delete(key: loginUserIdKey);
+      await _storage.delete(key: loginEmailKey);
+      await _storage.delete(key: loginAtKey);
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
 
   Future<bool> hasSeenIntroOnboarding() async {
     try {

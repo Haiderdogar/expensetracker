@@ -205,4 +205,4 @@ final class AppShellProfileProvider
   }
 }
 
-String _$appShellProfileHash() => r'ba96d08def88beb58a20f254d700ffee719c80e7';
+String _$appShellProfileHash() => r'7341ebd62e05cd2256506aab15e6922ec2bb4f8b';

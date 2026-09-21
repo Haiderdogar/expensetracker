@@ -8,12 +8,27 @@ part of 'intro_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Manages the current onboarding page.
+///
+/// 0 = first page
+/// 1 = second page
+/// 2 = third page
 
 @ProviderFor(IntroPageIndex)
 final introPageIndexProvider = IntroPageIndexProvider._();
 
+/// Manages the current onboarding page.
+///
+/// 0 = first page
+/// 1 = second page
+/// 2 = third page
 final class IntroPageIndexProvider
     extends $NotifierProvider<IntroPageIndex, int> {
+  /// Manages the current onboarding page.
+  ///
+  /// 0 = first page
+  /// 1 = second page
+  /// 2 = third page
   IntroPageIndexProvider._()
     : super(
         from: null,
@@ -41,7 +56,13 @@ final class IntroPageIndexProvider
   }
 }
 
-String _$introPageIndexHash() => r'ee6d8c33fa61437c30c20aede7fb5cd894c29e41';
+String _$introPageIndexHash() => r'c7ae5891c6af6da39b1177c2a84bbcc1f407839f';
+
+/// Manages the current onboarding page.
+///
+/// 0 = first page
+/// 1 = second page
+/// 2 = third page
 
 abstract class _$IntroPageIndex extends $Notifier<int> {
   int build();
@@ -61,11 +82,18 @@ abstract class _$IntroPageIndex extends $Notifier<int> {
   }
 }
 
+/// Manages the loading state while onboarding
+/// completion is being saved.
+
 @ProviderFor(IntroCompleting)
 final introCompletingProvider = IntroCompletingProvider._();
 
+/// Manages the loading state while onboarding
+/// completion is being saved.
 final class IntroCompletingProvider
     extends $NotifierProvider<IntroCompleting, bool> {
+  /// Manages the loading state while onboarding
+  /// completion is being saved.
   IntroCompletingProvider._()
     : super(
         from: null,
@@ -93,7 +121,10 @@ final class IntroCompletingProvider
   }
 }
 
-String _$introCompletingHash() => r'07d57392c89726b89efe5ab407602a3651ad688f';
+String _$introCompletingHash() => r'1e6740ca7f79f682b077c33ab899ce20bba80c9e';
+
+/// Manages the loading state while onboarding
+/// completion is being saved.
 
 abstract class _$IntroCompleting extends $Notifier<bool> {
   bool build();
@@ -113,12 +144,26 @@ abstract class _$IntroCompleting extends $Notifier<bool> {
   }
 }
 
+/// Provides the PageController used by the onboarding PageView.
+///
+/// The controller is disposed automatically when the
+/// generated provider is disposed.
+
 @ProviderFor(introPageController)
 final introPageControllerProvider = IntroPageControllerProvider._();
+
+/// Provides the PageController used by the onboarding PageView.
+///
+/// The controller is disposed automatically when the
+/// generated provider is disposed.
 
 final class IntroPageControllerProvider
     extends $FunctionalProvider<PageController, PageController, PageController>
     with $Provider<PageController> {
+  /// Provides the PageController used by the onboarding PageView.
+  ///
+  /// The controller is disposed automatically when the
+  /// generated provider is disposed.
   IntroPageControllerProvider._()
     : super(
         from: null,

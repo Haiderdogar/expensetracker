@@ -303,7 +303,10 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> ensureUserInitialized(String userId) async {
+  Future<void> ensureUserInitialized(
+    String userId, {
+    bool createInitialWallet = false,
+  }) async {
     final db = await database;
     final existingCategories = await db.query(
       DatabaseTables.categories,
@@ -327,7 +330,7 @@ class DatabaseHelper {
       limit: 1,
     );
 
-    if (existingWallets.isEmpty) {
+    if (existingWallets.isEmpty && createInitialWallet) {
       const uuid = Uuid();
       final now = DateTime.now().toUtc().toIso8601String();
       await db.insert(DatabaseTables.wallets, {

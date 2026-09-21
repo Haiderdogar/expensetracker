@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_strings.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../widgets/custom_button.dart';
+import '../../../../core/constants/app_strings.dart';
+import '../../session/auth_provider.dart';
+import '../../../../widgets/custom_button.dart';
 import '../auth_screen.dart';
 
 class LockSetupActions extends ConsumerWidget {

@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'onboarding_ui_providers.g.dart';
+part 'wallet_setup_providers.g.dart';
 
 class OnboardingDraft {
   const OnboardingDraft({

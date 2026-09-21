@@ -12,7 +12,7 @@ import '../../providers/database_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/wallet_provider.dart';
-import '../auth/auth_screen.dart';
+import '../../features/authentication/lock/auth_screen.dart';
 import 'app_shell_providers.dart';
 
 enum _LogoutChoice { cancel, logout, upgrade }
