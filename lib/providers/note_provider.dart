@@ -5,7 +5,7 @@ import '../core/utils/error_handler.dart';
 import '../models/note_model.dart';
 import 'auth_provider.dart';
 import 'database_provider.dart';
-import 'wallet_provider.dart';
+import 'package:expensetracker/features/wallet_currency/providers/wallet_provider.dart';
 
 part 'note_provider.g.dart';
 

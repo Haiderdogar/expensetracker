@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../session/auth_provider.dart';
-import '../auth_flow.dart';
-import '../auth_ui_providers.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../google_sign_in/providers/auth_provider.dart';
+import '../providers/auth_flow.dart';
+import '../providers/auth_ui_providers.dart';
 import 'pin_pad_button.dart';
 
 class AuthKeypad extends ConsumerWidget {

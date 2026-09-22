@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/app_snackbars.dart';
-import '../add_transaction_screen.dart';
+import '../../../core/router/app_router.dart';
 
 class TransactionsAddButton extends StatelessWidget {
   const TransactionsAddButton({super.key});
@@ -16,9 +17,7 @@ class TransactionsAddButton extends StatelessWidget {
   }
 
   Future<void> _addTransaction(BuildContext context) async {
-    final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const AddTransactionScreen()),
-    );
+    final result = await context.push<String>(AppRoutes.transactionEditor);
     if (result == 'created' && context.mounted) {
       showSuccessSnackBar(context, 'Transaction added successfully');
     }

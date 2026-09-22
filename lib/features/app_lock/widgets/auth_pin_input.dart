@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../auth_flow.dart';
-import '../auth_ui_providers.dart';
+import '../../../core/constants/app_colors.dart';
+import '../providers/auth_flow.dart';
+import '../providers/auth_ui_providers.dart';
 
 class AuthPinInput extends ConsumerWidget {
   const AuthPinInput({super.key, required this.config});

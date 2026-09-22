@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/app_snackbars.dart';
+import '../../../core/router/app_router.dart';
 import '../../../models/note_model.dart';
 import '../../../providers/note_provider.dart';
-import '../note_editor_screen.dart';
 import '../notes_ui_providers.dart';
 import 'note_list_widgets.dart';
 
@@ -89,9 +90,7 @@ class _NotesContent extends StatelessWidget {
   }
 
   Future<void> _openEditor(BuildContext context, NoteModel note) async {
-    final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => NoteEditorScreen(note: note)),
-    );
+    final result = await context.push<String>(AppRoutes.noteEditor, extra: note);
     if (result == 'updated' && context.mounted) {
       showSuccessSnackBar(context, 'Note updated successfully');
     }

@@ -16,9 +16,7 @@ enum AuthStatus {
   loading,
   unauthenticated,
   authenticated,
-  guest,
   pinLocked,
-  needsPinSetup,
 }
 
 enum GoogleSignInResult {
@@ -67,23 +65,43 @@ String currentUserId(Ref ref) {
 class AuthController extends _$AuthController {
   DateTime? _backgroundedAt;
 
-  bool _hasLoggedInThisSession = false;
-
   bool _isGoogleSignInInProgress = false;
 
   String? _lastGoogleSignInError;
 
   String? get lastGoogleSignInError => _lastGoogleSignInError;
 
+  String _activeUserId() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null || userId.isEmpty) {
+      throw StateError('A signed-in Google user is required.');
+    }
+    return userId;
+  }
+
   @override
   Future<AuthStatus> build() async {
-    final user = await ref.read(authStateChangesProvider.future);
+    final storage = ref.read(secureStorageProvider);
+    User? user;
+
+    try {
+      // Firebase normally restores this persisted credential itself. Reading
+      // currentUser first avoids waiting on a stream event during bootstrap.
+      user = FirebaseAuth.instance.currentUser;
+    } catch (e) {
+      debugPrint('[AuthController] Unable to read Firebase session: $e');
+    }
+
+    // If Firebase has not reconstructed its session yet, use the local login
+    // record only to attempt a non-interactive Google restore. The result is
+    // always validated against the locally stored Firebase UID below.
+    if (user == null && await storage.hasSavedLoginSession()) {
+      user = await _restoreFirebaseSessionFromGoogle();
+    }
 
     if (user == null) {
       return AuthStatus.unauthenticated;
     }
-
-    final storage = ref.read(secureStorageProvider);
 
     final hasValidSession = await storage.hasValidLoginSession(user.uid);
 
@@ -103,19 +121,51 @@ class AuthController extends _$AuthController {
       return AuthStatus.unauthenticated;
     }
 
-    await ref.read(databaseHelperProvider).ensureUserInitialized(user.uid);
+    // Capture the non-null UID before using it from callbacks. Dart does not
+    // promote a nullable variable inside a closure because it could change.
+    final userId = user.uid;
+
+    await storage.migrateLegacySecurityForUser(userId);
+
+    await ref.read(databaseHelperProvider).ensureUserInitialized(userId);
 
     final syncRepo = ref.read(syncRepositoryProvider);
 
-    syncRepo.initConnectivityListener(() => user.uid);
+    syncRepo.initConnectivityListener(() => userId);
 
-    unawaited(_reconcileAndRefresh(user.uid));
+    unawaited(_reconcileAndRefresh(userId));
 
-    if (_hasLoggedInThisSession) {
-      return AuthStatus.authenticated;
+    if (await storage.hasConfiguredPinLock(userId)) {
+      return AuthStatus.pinLocked;
     }
 
-    return AuthStatus.unauthenticated;
+    // A valid local login session restores the Google login on app launch.
+    // The post-login flow will then decide whether wallet setup is still
+    // required for this user.
+    return AuthStatus.authenticated;
+  }
+
+  Future<User?> _restoreFirebaseSessionFromGoogle() async {
+    try {
+      await GoogleSignInService.ensureInitialized();
+      final restoreAttempt = GoogleSignIn.instance
+          .attemptLightweightAuthentication();
+      final googleUser = restoreAttempt == null ? null : await restoreAttempt;
+      final idToken = googleUser?.authentication.idToken;
+
+      if (idToken == null || idToken.isEmpty) return null;
+
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final result = await FirebaseAuth.instance
+          .signInWithCredential(credential)
+          .timeout(const Duration(seconds: 15));
+      return result.user;
+    } catch (e) {
+      // A silent restore is best-effort. The user can still use the normal
+      // Google sign-in button if the Google session no longer exists.
+      debugPrint('[AuthController] Silent session restore failed: $e');
+      return null;
+    }
   }
 
   Future<void> _reconcileAndRefresh(
@@ -191,6 +241,23 @@ class AuthController extends _$AuthController {
       );
 
       /*
+       * Persist the successful login before any optional profile or sync work.
+       * This is the credential record consulted during the next app launch,
+       * including when the user closes the app while wallet setup is open.
+       */
+      final storage = ref.read(secureStorageProvider);
+      final previousUserId = await storage.readSavedLoginUserId();
+      if (previousUserId != null && previousUserId != user.uid) {
+        // Legacy lock keys had no account scope. They cannot safely cross an
+        // account switch, so discard them rather than exposing account A's
+        // PIN/biometric preference to account B.
+        await storage.clearLegacySecurity();
+      } else if (previousUserId == user.uid) {
+        await storage.migrateLegacySecurityForUser(user.uid);
+      }
+      await storage.saveLoginSession(userId: user.uid, email: user.email);
+
+      /*
        * Make sure the local database has the user's partition.
        */
       final database = ref.read(databaseHelperProvider);
@@ -207,17 +274,11 @@ class AuthController extends _$AuthController {
         photoUrl: user.photoURL,
       );
 
-      /*
-       * Store the login session on the local device.
-       *
-       * Your SecureStorageService stores:
-       * - user ID
-       * - email
-       * - login timestamp
-       */
-      await ref
-          .read(secureStorageProvider)
-          .saveLoginSession(userId: user.uid, email: user.email);
+      // The app can have evaluated user-scoped providers while the login
+      // screen was visible. Refresh the identity providers before routing to
+      // the post-login flow so wallet setup is checked for this UID.
+      ref.invalidate(currentUserProvider);
+      ref.invalidate(currentUserIdProvider);
 
       /*
        * Initialize sync after successful authentication.
@@ -231,11 +292,9 @@ class AuthController extends _$AuthController {
       /*
        * Mark this process as successfully authenticated.
        */
-      _hasLoggedInThisSession = true;
-
       /*
-       * This state change is what causes AppBootstrap to move
-       * from GoogleSignInScreen -> _PostLoginFlow.
+       * Startup listens to this authentication state and selects the next
+       * account-specific flow.
        */
       state = const AsyncData(AuthStatus.authenticated);
 
@@ -352,26 +411,8 @@ class AuthController extends _$AuthController {
     }
   }
 
-  Future<void> continueAsGuest() async {
-    state = const AsyncLoading();
-
-    try {
-      await ref
-          .read(databaseHelperProvider)
-          .ensureUserInitialized('default_user');
-
-      state = const AsyncData(AuthStatus.guest);
-    } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
-
-      rethrow;
-    }
-  }
-
   Future<void> signOut() async {
     _backgroundedAt = null;
-    _hasLoggedInThisSession = false;
-
     ref.read(syncRepositoryProvider).dispose();
 
     await ref.read(secureStorageProvider).clearLoginSession();
@@ -393,12 +434,13 @@ class AuthController extends _$AuthController {
 
   Future<bool> checkPin(String pin) async {
     final storage = ref.read(secureStorageProvider);
+    final userId = _activeUserId();
 
-    if (!await storage.hasConfiguredPinLock()) {
+    if (!await storage.hasConfiguredPinLock(userId)) {
       return false;
     }
 
-    return storage.verifyPin(pin);
+    return storage.verifyPin(pin, userId);
   }
 
   Future<bool> verifyPin(String pin) async {
@@ -413,40 +455,45 @@ class AuthController extends _$AuthController {
 
   Future<void> setupPin(String pin) async {
     final storage = ref.read(secureStorageProvider);
+    final userId = _activeUserId();
 
-    await storage.savePinHash(pin);
-    await storage.setPinEnabled(true);
-    await storage.setLockPromptCompleted(true);
+    await storage.savePinHash(pin, userId);
+    await storage.setPinEnabled(true, userId);
+    await storage.setLockPromptCompleted(true, userId);
+    await storage.setSecuritySetupPending(userId, false);
 
     ref.invalidate(pinEnabledProvider);
-    ref.invalidate(lockPromptCompletedProvider);
+    ref.invalidate(biometricEnabledProvider);
 
     state = const AsyncData(AuthStatus.authenticated);
   }
 
   Future<void> skipLockSetup() async {
     final storage = ref.read(secureStorageProvider);
+    final userId = _activeUserId();
 
-    await storage.setLockPromptCompleted(true);
+    await storage.setLockPromptCompleted(true, userId);
+    await storage.setSecuritySetupPending(userId, false);
 
-    ref.invalidate(lockPromptCompletedProvider);
+    ref.invalidate(pinEnabledProvider);
 
     state = const AsyncData(AuthStatus.authenticated);
   }
 
   Future<bool> disablePin({String? currentPin}) async {
     final storage = ref.read(secureStorageProvider);
+    final userId = _activeUserId();
 
     if (currentPin != null) {
-      final valid = await storage.verifyPin(currentPin);
+      final valid = await storage.verifyPin(currentPin, userId);
 
       if (!valid) {
         return false;
       }
     }
 
-    await storage.deletePin();
-    await storage.setBiometricEnabled(false);
+    await storage.deletePin(userId);
+    await storage.setBiometricEnabled(false, userId);
 
     ref.invalidate(pinEnabledProvider);
     ref.invalidate(biometricEnabledProvider);
@@ -458,8 +505,9 @@ class AuthController extends _$AuthController {
 
   Future<void> lock() async {
     final storage = ref.read(secureStorageProvider);
+    final userId = _activeUserId();
 
-    final hasLock = await storage.hasConfiguredPinLock();
+    final hasLock = await storage.hasConfiguredPinLock(userId);
 
     state = AsyncData(
       hasLock ? AuthStatus.pinLocked : AuthStatus.authenticated,
@@ -491,26 +539,12 @@ class AuthController extends _$AuthController {
 
     final storage = ref.read(secureStorageProvider);
 
-    if (await storage.hasConfiguredPinLock()) {
+    if (await storage.hasConfiguredPinLock(user.uid)) {
       state = const AsyncData(AuthStatus.pinLocked);
     }
   }
 
   Future<void> logout() async {
-    await signOut();
-  }
-
-  Future<void> logoutAndReset() async {
-    if (state.value == AuthStatus.guest) {
-      await ref.read(databaseHelperProvider).clearGuestData();
-    }
-
-    await signOut();
-  }
-
-  Future<void> discardGuestDataAndSignOut() async {
-    await ref.read(databaseHelperProvider).clearGuestData();
-
     await signOut();
   }
 
@@ -576,8 +610,9 @@ class AuthController extends _$AuthController {
 
   Future<bool> authenticateWithBiometric() async {
     final storage = ref.read(secureStorageProvider);
+    final userId = _activeUserId();
 
-    if (!await storage.hasConfiguredBiometricLock()) {
+    if (!await storage.hasConfiguredBiometricLock(userId)) {
       return false;
     }
 
@@ -592,8 +627,9 @@ class AuthController extends _$AuthController {
 
   Future<bool> enableBiometricUnlock() async {
     final storage = ref.read(secureStorageProvider);
+    final userId = _activeUserId();
 
-    if (!await storage.hasConfiguredPinLock()) {
+    if (!await storage.hasConfiguredPinLock(userId)) {
       return false;
     }
 
@@ -603,7 +639,7 @@ class AuthController extends _$AuthController {
       return false;
     }
 
-    await storage.setBiometricEnabled(true);
+    await storage.setBiometricEnabled(true, userId);
 
     ref.invalidate(biometricEnabledProvider);
 
@@ -612,30 +648,17 @@ class AuthController extends _$AuthController {
 }
 
 @riverpod
-Future<bool> lockPromptCompleted(Ref ref) async {
-  return ref.read(secureStorageProvider).isLockPromptCompleted();
-}
-
-@riverpod
-Future<bool> introOnboardingSeen(Ref ref) async {
-  return ref.read(secureStorageProvider).hasSeenIntroOnboarding();
-}
-
-@riverpod
 Future<bool> pinEnabled(Ref ref) async {
-  return ref.read(secureStorageProvider).hasConfiguredPinLock();
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == 'default_user') return false;
+  return ref.read(secureStorageProvider).hasConfiguredPinLock(userId);
 }
 
 @riverpod
 Future<bool> biometricEnabled(Ref ref) async {
-  return ref.read(secureStorageProvider).hasConfiguredBiometricLock();
-}
-
-@riverpod
-Future<bool> onboardingComplete(Ref ref) async {
   final userId = ref.watch(currentUserIdProvider);
-
-  return ref.read(databaseHelperProvider).isOnboardingComplete(userId);
+  if (userId == 'default_user') return false;
+  return ref.read(secureStorageProvider).hasConfiguredBiometricLock(userId);
 }
 
 @riverpod

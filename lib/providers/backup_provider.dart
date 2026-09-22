@@ -51,7 +51,12 @@ class BackupService extends _$BackupService {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/expense_tracker_backup.json');
     await file.writeAsString(json);
-    await Share.shareXFiles([XFile(file.path)], text: 'Expense Tracker Backup');
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path)],
+        text: 'Expense Tracker Backup',
+      ),
+    );
   }
 
   Future<void> importFromJson(String json) async {

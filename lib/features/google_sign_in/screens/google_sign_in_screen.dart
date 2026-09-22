@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
-
 import '../../../core/constants/app_colors.dart';
-import '../session/auth_provider.dart';
+import 'package:expensetracker/app/app_startup.dart';
+import 'package:expensetracker/features/google_sign_in/providers/auth_provider.dart';
 
 class GoogleSignInScreen extends StatelessWidget {
   const GoogleSignInScreen({super.key});
@@ -289,19 +289,12 @@ class _GoogleSignInButtonState
          * 4. Saved the local login session
          * 5. Changed AuthStatus to authenticated
          *
-         * AppBootstrap will now move to _PostLoginFlow.
+         * Open wallet and currency setup immediately after authentication.
          */
         if (result == GoogleSignInResult.success) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              const SnackBar(
-                content: Text('Google Sign-In successful.'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(milliseconds: 900),
-              ),
-            );
-
+          // Authentication has persisted successfully. The startup controller
+          // now checks this Firebase user's wallet before choosing a screen.
+          ref.invalidate(appStartupControllerProvider);
           return;
         }
 

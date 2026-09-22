@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/app_snackbars.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/database_provider.dart';
-import '../../../providers/wallet_provider.dart';
+import '../../../features/wallet_currency/providers/wallet_provider.dart';
 import '../profile_draft_provider.dart';
 
 class ProfileActions extends ConsumerWidget {

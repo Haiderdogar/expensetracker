@@ -9,7 +9,10 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: ExpenseTrackerApp()),
     );
-    await tester.pumpAndSettle();
+    // Startup performs secure-storage and Firebase restoration asynchronously.
+    // A progress indicator is intentionally animated while that work runs, so
+    // settling is neither required nor appropriate for this smoke test.
+    await tester.pump();
 
     expect(find.byType(MaterialApp), findsOneWidget);
   });

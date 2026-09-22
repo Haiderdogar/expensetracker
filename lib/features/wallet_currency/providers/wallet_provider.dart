@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
-import '../core/utils/error_handler.dart';
-import '../models/wallet_model.dart';
-import 'auth_provider.dart';
-import 'database_provider.dart';
+import 'package:expensetracker/core/utils/error_handler.dart';
+import 'package:expensetracker/models/wallet_model.dart';
+import 'package:expensetracker/features/google_sign_in/providers/auth_provider.dart';
+import 'package:expensetracker/providers/database_provider.dart';
 
 part 'wallet_provider.g.dart';
 

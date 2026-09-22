@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
-import 'widgets/lock_setup_actions.dart';
-import 'widgets/lock_setup_content.dart';
+import 'package:expensetracker/core/constants/app_colors.dart';
+import 'package:expensetracker/core/constants/app_strings.dart';
+import 'package:expensetracker/features/app_lock/widgets/lock_setup_actions.dart';
+import 'package:expensetracker/features/app_lock/widgets/lock_setup_content.dart';
 
 class LockSetupScreen extends StatelessWidget {
   const LockSetupScreen({super.key});

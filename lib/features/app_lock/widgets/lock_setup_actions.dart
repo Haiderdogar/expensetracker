@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/constants/app_strings.dart';
-import '../../session/auth_provider.dart';
-import '../../../../widgets/custom_button.dart';
-import '../auth_screen.dart';
+import 'package:expensetracker/core/constants/app_strings.dart';
+import 'package:expensetracker/core/router/app_router.dart';
+import 'package:expensetracker/app/app_startup.dart';
+import 'package:expensetracker/features/google_sign_in/providers/auth_provider.dart';
+import 'package:expensetracker/widgets/custom_button.dart';
+import 'package:go_router/go_router.dart';
 
 class LockSetupActions extends ConsumerWidget {
   const LockSetupActions({super.key});
@@ -17,14 +19,7 @@ class LockSetupActions extends ConsumerWidget {
         CustomButton(
           label: AppStrings.setupAppLock,
           icon: Icons.lock_outline,
-          onPressed: () => Navigator.of(context).push<bool>(
-            MaterialPageRoute<bool>(
-              builder: (_) => const AuthScreen(
-                isSetup: true,
-                offerBiometricAfterSetup: true,
-              ),
-            ),
-          ),
+          onPressed: () => context.push<bool>(AppRoutes.pinSetup),
         ),
         const SizedBox(height: 12),
         CustomButton(
@@ -33,6 +28,7 @@ class LockSetupActions extends ConsumerWidget {
           onPressed: () async {
             try {
               await ref.read(authControllerProvider.notifier).skipLockSetup();
+              ref.invalidate(appStartupControllerProvider);
             } catch (_) {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

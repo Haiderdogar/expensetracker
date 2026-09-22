@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../models/wallet_model.dart';
-import '../../providers/wallet_provider.dart';
+import '../../features/wallet_currency/providers/wallet_provider.dart';
 import 'app_shell_providers.dart';
 
 class AppShellDrawerHeader extends ConsumerWidget {

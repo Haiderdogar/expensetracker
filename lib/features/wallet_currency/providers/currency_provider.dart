@@ -1,7 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'auth_provider.dart';
-import 'database_provider.dart';
+import 'package:expensetracker/features/google_sign_in/providers/auth_provider.dart';
+import 'package:expensetracker/providers/database_provider.dart';
 
 part 'currency_provider.g.dart';
 

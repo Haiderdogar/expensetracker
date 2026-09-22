@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_strings.dart';
+import '../../core/router/app_router.dart';
 import '../../core/utils/global_keys.dart';
+import '../../app/app_startup.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/backup_provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/category_provider.dart';
-import '../../providers/currency_provider.dart';
+import '../../features/wallet_currency/providers/currency_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../providers/transaction_provider.dart';
-import '../../providers/wallet_provider.dart';
-import '../../features/authentication/lock/auth_screen.dart';
+import '../../features/wallet_currency/providers/wallet_provider.dart';
 import 'app_shell_providers.dart';
 
-enum _LogoutChoice { cancel, logout, upgrade }
+enum _LogoutChoice { cancel, logout }
 
 
 class AppShellLogoutButton extends ConsumerWidget {
@@ -108,30 +110,18 @@ class AppShellLogoutButton extends ConsumerWidget {
   }
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {
-    final isGuest = ref.read(authControllerProvider).value == AuthStatus.guest;
-
     // ── Step 1: Show confirmation dialog ──────────────────────────────────
     final choice = await showDialog<_LogoutChoice>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         title: const Text(AppStrings.logout),
-        content: Text(
-          isGuest
-              ? AppStrings.guestLogoutWarning
-              : AppStrings.logoutConfirmation,
-        ),
+        content: const Text(AppStrings.logoutConfirmation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, _LogoutChoice.cancel),
             child: const Text(AppStrings.cancel),
           ),
-          if (isGuest)
-            OutlinedButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, _LogoutChoice.upgrade),
-              child: const Text(AppStrings.signInWithGoogle),
-            ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(dialogContext).colorScheme.error,
@@ -143,34 +133,13 @@ class AppShellLogoutButton extends ConsumerWidget {
       ),
     );
 
-    if (choice == _LogoutChoice.upgrade) {
-      ref.read(appShellLogoutInProgressProvider.notifier).state = true;
-      try {
-        final result = await ref
-            .read(authControllerProvider.notifier)
-            .signInWithGoogle();
-        if (result != GoogleSignInResult.success && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Google upgrade was not completed.')),
-          );
-        }
-        if (result == GoogleSignInResult.success) {
-          _invalidateAccountScopedProviders(ref);
-        }
-      } finally {
-        if (context.mounted) {
-          ref.read(appShellLogoutInProgressProvider.notifier).state = false;
-        }
-      }
-      return;
-    }
-
     if (choice != _LogoutChoice.logout || !context.mounted) return;
 
     // ── Step 2: Identity verification (PIN / biometric) ───────────────────
     final storage = ref.read(secureStorageProvider);
-    final pinOn = await storage.hasConfiguredPinLock();
-    final biometricOn = await storage.hasConfiguredBiometricLock();
+    final userId = ref.read(currentUserIdProvider);
+    final pinOn = await storage.hasConfiguredPinLock(userId);
+    final biometricOn = await storage.hasConfiguredBiometricLock(userId);
     final needsVerification = pinOn || biometricOn;
 
     if (needsVerification && context.mounted) {
@@ -193,12 +162,7 @@ class AppShellLogoutButton extends ConsumerWidget {
         if (!context.mounted) return;
         // Push PIN verification screen. Pressing the back button (hardware or
         // AppBar) returns `null`/`false` — we treat that as cancelled.
-        final pinResult = await Navigator.of(context).push<bool>(
-          MaterialPageRoute(
-            builder: (_) =>
-                const AuthScreen(verifyOnly: true, isLogoutConfirmation: true),
-          ),
-        );
+        final pinResult = await context.push<bool>(AppRoutes.logoutVerify);
         if (pinResult != true || !context.mounted) {
           // User cancelled — do nothing, they're already back at the main screen.
           return;
@@ -218,13 +182,8 @@ class AppShellLogoutButton extends ConsumerWidget {
       }
 
       _invalidateAccountScopedProviders(ref);
-      if (isGuest) {
-        await ref
-            .read(authControllerProvider.notifier)
-            .discardGuestDataAndSignOut();
-      } else {
-        await ref.read(authControllerProvider.notifier).signOut();
-      }
+      await ref.read(authControllerProvider.notifier).signOut();
+      ref.invalidate(appStartupControllerProvider);
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(
@@ -246,7 +205,6 @@ class AppShellLogoutButton extends ConsumerWidget {
     ref.invalidate(notesProvider);
     ref.invalidate(backupServiceProvider);
     ref.invalidate(selectedWalletIdProvider);
-    ref.invalidate(onboardingCompleteProvider);
     ref.invalidate(currencySymbolProvider);
     ref.invalidate(currencyCodeProvider);
     ref.invalidate(appShellProfileProvider);

@@ -6,7 +6,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../models/wallet_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/transaction_provider.dart';
-import '../../../providers/wallet_provider.dart';
+import '../../../features/wallet_currency/providers/wallet_provider.dart';
 import '../../../widgets/shimmer_loader.dart';
 import '../dashboard_ui_providers.dart';
 import 'dashboard_stat_chip.dart';

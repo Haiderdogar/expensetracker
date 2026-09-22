@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_snackbars.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/router/app_router.dart';
 import '../../../models/transaction_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/transaction_provider.dart';
 import '../../../widgets/shimmer_loader.dart';
-import '../add_transaction_screen.dart';
 import '../transactions_ui_providers.dart';
 import 'transaction_tile.dart';
 
@@ -191,11 +192,7 @@ class _DaySection extends ConsumerWidget {
     BuildContext context,
     TransactionModel transaction,
   ) async {
-    final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (_) => AddTransactionScreen(transaction: transaction),
-      ),
-    );
+    final result = await context.push<String>(AppRoutes.transactionEditor, extra: transaction);
     if (result == 'saved' && context.mounted) {
       showSuccessSnackBar(context, 'Transaction updated successfully');
     } else if (result == 'deleted' && context.mounted) {
@@ -306,11 +303,7 @@ class _EmptyState extends StatelessWidget {
             else
               FilledButton.icon(
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const AddTransactionScreen(),
-                    ),
-                  );
+                  context.push<void>(AppRoutes.transactionEditor);
                 },
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('Add transaction'),

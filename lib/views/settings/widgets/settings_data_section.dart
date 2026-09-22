@@ -19,12 +19,6 @@ class SettingsDataSection extends ConsumerWidget {
           accentColor: colors.primary.withValues(alpha: 0.10),
           onTap: () => SettingsActions.exportData(context, ref),
         ),
-        SettingsTile(
-          icon: Icons.download_outlined,
-          title: AppStrings.importData,
-          accentColor: colors.secondaryContainer,
-          onTap: () => SettingsActions.importData(context, ref),
-        ),
       ],
     );
   }

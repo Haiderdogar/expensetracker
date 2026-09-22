@@ -93,7 +93,6 @@ abstract final class AppStrings {
       'Guest data is stored only on this device and will be deleted if you log out. Sign in with Google to keep this wallet and its history.';
   static const String signInWithGoogle = 'Sign in with Google';
   static const String exportData = 'Export data';
-  static const String importData = 'Import data';
   static const String backupSuccess = 'Backup exported successfully';
   static const String importSuccess = 'Data imported successfully';
 

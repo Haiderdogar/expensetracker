@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/app_snackbars.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/router/app_router.dart';
 import '../../../models/transaction_model.dart';
 import '../../../providers/transaction_provider.dart';
-import '../../../providers/wallet_provider.dart';
+import '../../../features/wallet_currency/providers/wallet_provider.dart';
 import '../../../widgets/shimmer_loader.dart';
-import '../../transactions/add_transaction_screen.dart';
 import '../dashboard_ui_providers.dart';
 import '../../transactions/widgets/transaction_tile.dart';
 
@@ -121,11 +122,7 @@ class RecentTransactionsList extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push<dynamic>(
-              MaterialPageRoute<dynamic>(
-                builder: (_) => const AddTransactionScreen(),
-              ),
-            ),
+            onPressed: () => context.push<dynamic>(AppRoutes.transactionEditor),
             icon: const Icon(Icons.add, size: 18),
             label: const Text('Add Transaction'),
             style: OutlinedButton.styleFrom(
@@ -193,11 +190,7 @@ class RecentTransactionsList extends ConsumerWidget {
     }
 
     try {
-      final result = await Navigator.of(context).push<dynamic>(
-        MaterialPageRoute<dynamic>(
-          builder: (_) => AddTransactionScreen(transaction: transaction),
-        ),
-      );
+      final result = await context.push<dynamic>(AppRoutes.transactionEditor, extra: transaction);
       if (result != 'saved' && result != 'created' && result != 'deleted')
         return;
 

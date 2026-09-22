@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_strings.dart';
-import '../../core/utils/app_currency_picker.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/currency_provider.dart';
-import '../../providers/database_provider.dart';
-import '../../providers/wallet_provider.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
-import 'wallet_setup_providers.dart';
+import 'package:expensetracker/core/constants/app_strings.dart';
+import 'package:expensetracker/app/app_startup.dart';
+import 'package:expensetracker/core/utils/app_currency_picker.dart';
+import 'package:expensetracker/features/google_sign_in/providers/auth_provider.dart';
+import 'package:expensetracker/features/wallet_currency/providers/currency_provider.dart';
+import 'package:expensetracker/features/wallet_currency/providers/wallet_provider.dart';
+import 'package:expensetracker/features/wallet_currency/providers/wallet_setup_providers.dart';
+import 'package:expensetracker/providers/database_provider.dart';
+import 'package:expensetracker/widgets/custom_button.dart';
+import 'package:expensetracker/widgets/custom_text_field.dart';
 
-class OnboardingScreen extends StatelessWidget {
-  const OnboardingScreen({super.key});
+/// Account setup shown after login. This is deliberately separate from the
+/// introductory onboarding carousel shown on first launch.
+class WalletCurrencySetupScreen extends StatelessWidget {
+  const WalletCurrencySetupScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(24),
@@ -32,7 +35,7 @@ class OnboardingScreen extends StatelessWidget {
               SizedBox(height: 24),
               _CurrencySelector(),
               Spacer(),
-              _OnboardingSubmitButton(),
+              const _OnboardingSubmitButton(),
             ],
           ),
         ),
@@ -179,20 +182,13 @@ class _OnboardingSubmitButton extends ConsumerWidget {
           await helper.setCurrencySymbol(draft.currencySymbol, userId);
           await helper.setSetting('currency_code_$userId', draft.currencyCode);
           await helper.setSetting('currency_code', draft.currencyCode);
-          final wallets = await ref.read(walletsProvider.future);
           final walletName = draft.walletName.trim();
-          if (wallets.isEmpty) {
-            await ref.read(walletsProvider.notifier).create(name: walletName);
-          } else {
-            await ref
-                .read(walletsProvider.notifier)
-                .updateWallet(wallets.first.copyWith(name: walletName));
-          }
-          await helper.setOnboardingComplete(true, userId);
-          ref.invalidate(onboardingCompleteProvider);
+          await ref.read(walletsProvider.notifier).create(name: walletName);
+          await ref.read(secureStorageProvider).setSecuritySetupPending(userId, true);
           ref.invalidate(walletsProvider);
           ref.invalidate(currencySymbolProvider);
           ref.invalidate(currencyCodeProvider);
+          ref.invalidate(appStartupControllerProvider);
         } catch (error) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

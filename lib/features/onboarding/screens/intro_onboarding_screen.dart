@@ -1,12 +1,12 @@
 
-import 'package:expensetracker/features/authentication/google/google_sign_in_screen.dart';
+import 'package:expensetracker/app/app_startup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_strings.dart';
-import '../../providers/database_provider.dart';
-import 'intro_providers.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_strings.dart';
+import '../../../providers/database_provider.dart';
+import '../providers/intro_providers.dart';
 
 class IntroOnboardingScreen extends StatelessWidget {
   const IntroOnboardingScreen({super.key});
@@ -237,12 +237,8 @@ class _IntroAdvanceButton
       return;
     }
 
-    // Navigate to Login
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const GoogleSignInScreen(),
-      ),
-    );
+    // Persist first, then let the single startup controller select Login.
+    ref.invalidate(appStartupControllerProvider);
   } catch (error) {
     if (!context.mounted) {
       return;

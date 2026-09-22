@@ -1,3 +1,3 @@
 // Compatibility export for shared data providers.
-// Authentication ownership lives under features/authentication/session.
-export '../features/authentication/session/auth_provider.dart';
+// Compatibility export for app-wide authentication state.
+export '../features/google_sign_in/providers/auth_provider.dart';

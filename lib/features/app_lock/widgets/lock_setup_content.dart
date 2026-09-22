@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_strings.dart';
+import '../../../core/constants/app_strings.dart';
 
 class LockSetupContent extends StatelessWidget {
   const LockSetupContent({super.key});

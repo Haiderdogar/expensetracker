@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/global_keys.dart';
-import '../../../providers/wallet_provider.dart';
+import '../../../features/wallet_currency/providers/wallet_provider.dart';
 
 class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
   const DashboardAppBar({super.key});

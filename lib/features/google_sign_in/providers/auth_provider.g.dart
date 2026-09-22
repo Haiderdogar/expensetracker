@@ -147,7 +147,7 @@ final class AuthControllerProvider
   AuthController create() => AuthController();
 }
 
-String _$authControllerHash() => r'bc1330224451d892fa1c4044671f1bcb18d4e84c';
+String _$authControllerHash() => r'0dff9b9d6908f64cbf3f028ac5a03357794018e2';
 
 abstract class _$AuthController extends $AsyncNotifier<AuthStatus> {
   FutureOr<AuthStatus> build();
@@ -166,74 +166,6 @@ abstract class _$AuthController extends $AsyncNotifier<AuthStatus> {
     return element.handleCreate(ref, build);
   }
 }
-
-@ProviderFor(lockPromptCompleted)
-final lockPromptCompletedProvider = LockPromptCompletedProvider._();
-
-final class LockPromptCompletedProvider
-    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
-    with $FutureModifier<bool>, $FutureProvider<bool> {
-  LockPromptCompletedProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'lockPromptCompletedProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$lockPromptCompletedHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<bool> create(Ref ref) {
-    return lockPromptCompleted(ref);
-  }
-}
-
-String _$lockPromptCompletedHash() =>
-    r'b305306a6c53daadf563b999aeb138adb2f6f9df';
-
-@ProviderFor(introOnboardingSeen)
-final introOnboardingSeenProvider = IntroOnboardingSeenProvider._();
-
-final class IntroOnboardingSeenProvider
-    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
-    with $FutureModifier<bool>, $FutureProvider<bool> {
-  IntroOnboardingSeenProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'introOnboardingSeenProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$introOnboardingSeenHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<bool> create(Ref ref) {
-    return introOnboardingSeen(ref);
-  }
-}
-
-String _$introOnboardingSeenHash() =>
-    r'cfca47a1db4596943fcbce2c04263335b9b0fe27';
 
 @ProviderFor(pinEnabled)
 final pinEnabledProvider = PinEnabledProvider._();
@@ -266,7 +198,7 @@ final class PinEnabledProvider
   }
 }
 
-String _$pinEnabledHash() => r'6b52d2962f08df9ffb052f12d84233abba0d6c91';
+String _$pinEnabledHash() => r'3ed81d13b56a623abdeada9e71799463280ec27a';
 
 @ProviderFor(biometricEnabled)
 final biometricEnabledProvider = BiometricEnabledProvider._();
@@ -299,41 +231,7 @@ final class BiometricEnabledProvider
   }
 }
 
-String _$biometricEnabledHash() => r'80c1f22cec1a5ca4c18efcd5726ad82941e9e1a4';
-
-@ProviderFor(onboardingComplete)
-final onboardingCompleteProvider = OnboardingCompleteProvider._();
-
-final class OnboardingCompleteProvider
-    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
-    with $FutureModifier<bool>, $FutureProvider<bool> {
-  OnboardingCompleteProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'onboardingCompleteProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$onboardingCompleteHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<bool> create(Ref ref) {
-    return onboardingComplete(ref);
-  }
-}
-
-String _$onboardingCompleteHash() =>
-    r'6be2fbc5584f1dbb5a89c0a282aa95b234a98973';
+String _$biometricEnabledHash() => r'c7b8a1f1faaec879f4d7995915dd42d3060964fe';
 
 @ProviderFor(currencySymbol)
 final currencySymbolProvider = CurrencySymbolProvider._();

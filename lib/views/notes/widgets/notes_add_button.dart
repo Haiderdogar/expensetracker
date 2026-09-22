@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/app_snackbars.dart';
-import '../note_editor_screen.dart';
+import '../../../core/router/app_router.dart';
 
 class NotesAddButton extends StatelessWidget {
   const NotesAddButton({super.key});
@@ -16,7 +17,7 @@ class NotesAddButton extends StatelessWidget {
   }
 
   Future<void> _openEditor(BuildContext context) async {
-    final result = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const NoteEditorScreen()));
+    final result = await context.push<String>(AppRoutes.noteEditor);
     if (result == 'created' && context.mounted) {
       showSuccessSnackBar(context, 'Note added successfully');
     }

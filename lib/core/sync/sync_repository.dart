@@ -309,6 +309,20 @@ class SyncRepository {
     return rows.map(WalletModel.fromMap).toList();
   }
 
+  /// Lightweight account-scoped wallet existence check for startup routing.
+  Future<bool> hasWalletForUser(String userId) async {
+    _validateAuthenticatedUserId(userId);
+    final db = await _dbHelper.database;
+    final rows = await db.query(
+      DatabaseTables.wallets,
+      columns: const ['id'],
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
   Future<void> saveWallet(WalletModel wallet) async {
     final model = wallet.copyWith(
       isSynced: false,

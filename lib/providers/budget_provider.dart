@@ -12,7 +12,7 @@ import 'auth_provider.dart';
 import 'category_provider.dart';
 import 'database_provider.dart';
 import 'transaction_provider.dart';
-import 'wallet_provider.dart';
+import 'package:expensetracker/features/wallet_currency/providers/wallet_provider.dart';
 
 part 'budget_provider.g.dart';
 

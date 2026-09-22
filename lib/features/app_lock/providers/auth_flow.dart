@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
 
+import 'package:expensetracker/app/app_startup.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
-import '../session/auth_provider.dart';
+import '../../google_sign_in/providers/auth_provider.dart';
 import 'auth_ui_providers.dart';
 
 class AuthFlow {
@@ -84,6 +85,7 @@ class AuthFlow {
           return;
         }
         await ref.read(authControllerProvider.notifier).setupPin(state.pin);
+        ref.invalidate(appStartupControllerProvider);
         if (!context.mounted) return;
         if (config.offerBiometricAfterSetup) await offerBiometric(context, ref, config);
         if (!context.mounted) return;
@@ -93,6 +95,7 @@ class AuthFlow {
       final verified = await ref.read(authControllerProvider.notifier).verifyPin(state.pin);
       if (!context.mounted) return;
       if (verified) {
+        ref.invalidate(appStartupControllerProvider);
         finish(context);
       } else {
         await wrongPin(context, ref, config);
@@ -138,6 +141,7 @@ class AuthFlow {
     final success = await ref.read(authControllerProvider.notifier).authenticateWithBiometric();
     if (!context.mounted) return;
     if (success) {
+      ref.invalidate(appStartupControllerProvider);
       finish(context);
     } else {
       state = ref.read(authUiStateProvider(config));

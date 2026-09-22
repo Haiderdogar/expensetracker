@@ -8,7 +8,7 @@ import '../../../models/transaction_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/category_provider.dart';
 import '../../../providers/transaction_provider.dart';
-import '../../../providers/wallet_provider.dart';
+import '../../../features/wallet_currency/providers/wallet_provider.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
 import '../transactions_ui_providers.dart';

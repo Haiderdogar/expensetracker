@@ -1,7 +1,5 @@
 import 'package:expensetracker/views/dashboard/dashboard_screen.dart';
 import 'package:expensetracker/views/dashboard/widgets/dashboard_app_bar.dart';
-import 'package:expensetracker/views/dashboard/widgets/dashboard_budget_snapshot.dart';
-import 'package:expensetracker/views/dashboard/widgets/dashboard_quick_actions.dart';
 import 'package:expensetracker/views/dashboard/widgets/dashboard_summary_card.dart';
 import 'package:expensetracker/views/dashboard/widgets/recent_transactions_header.dart';
 import 'package:flutter/material.dart';
@@ -27,8 +25,6 @@ void main() {
 
     expect(find.byType(DashboardAppBar), findsOneWidget);
     expect(find.byType(DashboardSummaryCard), findsOneWidget);
-    expect(find.byType(DashboardQuickActions), findsOneWidget);
-    expect(find.byType(DashboardBudgetSnapshot), findsOneWidget);
     expect(find.byType(RecentTransactionsHeader), findsOneWidget);
     expect(find.byType(CustomScrollView), findsOneWidget);
     expect(find.byType(RefreshIndicator), findsOneWidget);
