@@ -1,7 +1,7 @@
 class BudgetModel {
   const BudgetModel({
     required this.id,
-    this.userId = 'default_user',
+    this.userId = '',
     this.walletId = '',
     required this.categoryId,
     required this.amount,
@@ -65,7 +65,7 @@ class BudgetModel {
   factory BudgetModel.fromMap(Map<String, dynamic> map) {
     return BudgetModel(
       id: map['id'] as String,
-      userId: (map['user_id'] as String?) ?? 'default_user',
+      userId: (map['user_id'] as String?) ?? '',
       walletId: (map['wallet_id'] as String?) ?? '',
       categoryId: map['category_id'] as String,
       amount: (map['amount'] as num).toDouble(),
@@ -78,7 +78,7 @@ class BudgetModel {
   factory BudgetModel.fromFirestore(Map<String, dynamic> data, String docId) {
     return BudgetModel(
       id: (data['id'] as String?) ?? docId,
-      userId: (data['userId'] as String?) ?? 'default_user',
+      userId: (data['userId'] as String?) ?? '',
       walletId: (data['walletId'] as String?) ?? '',
       categoryId: (data['categoryId'] as String?) ?? '',
       amount: ((data['amount'] as num?) ?? 0).toDouble(),

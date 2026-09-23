@@ -41,6 +41,7 @@ class AuthUiState {
     this.isBiometricMode = false,
     this.didPromptBiometric = false,
     this.biometricType,
+    this.isRecoveringPin = false,
   });
 
   final String pin;
@@ -52,6 +53,7 @@ class AuthUiState {
   final bool isBiometricMode;
   final bool didPromptBiometric;
   final BiometricType? biometricType;
+  final bool isRecoveringPin;
 
   AuthUiState copyWith({
     String? pin,
@@ -66,6 +68,7 @@ class AuthUiState {
     bool? didPromptBiometric,
     BiometricType? biometricType,
     bool clearBiometricType = false,
+    bool? isRecoveringPin,
   }) {
     return AuthUiState(
       pin: pin ?? this.pin,
@@ -77,6 +80,7 @@ class AuthUiState {
       isBiometricMode: isBiometricMode ?? this.isBiometricMode,
       didPromptBiometric: didPromptBiometric ?? this.didPromptBiometric,
       biometricType: clearBiometricType ? null : biometricType ?? this.biometricType,
+      isRecoveringPin: isRecoveringPin ?? this.isRecoveringPin,
     );
   }
 }

@@ -29,6 +29,16 @@ abstract final class AppStrings {
   static const String unlockWithFace = 'Unlock with Face';
   static const String pinCooldown =
       'Too many attempts. Try again in 30 seconds.';
+  static const String pinRecoveryInProgress = 'Verifying your device and account...';
+  static const String pinRecoverySuccess = 'PIN reset verified. Create a new PIN.';
+  static const String pinRecoveryDeviceFailed =
+      'Device verification was cancelled or failed.';
+  static const String pinRecoveryGoogleFailed =
+      'Google account verification failed.';
+  static const String pinRecoveryResetFailed =
+      'PIN could not be reset. Your existing PIN is still active.';
+  static const String pinRecoveryIncorrectEmail =
+      'Incorrect email. Please select the Google account used for this app.';
   static const String protectAppTitle = 'Protect your app';
   static const String protectAppBody =
       'Lock Expense Tracker with a PIN. You can also unlock with biometrics. You can skip and enable this later in Settings.';
@@ -89,8 +99,6 @@ abstract final class AppStrings {
   static const String logout = 'Log out';
   static const String logoutConfirmation =
       'You will be signed out of Google. Your offline data stays on this device, isolated to your account.';
-  static const String guestLogoutWarning =
-      'Guest data is stored only on this device and will be deleted if you log out. Sign in with Google to keep this wallet and its history.';
   static const String signInWithGoogle = 'Sign in with Google';
   static const String exportData = 'Export data';
   static const String backupSuccess = 'Backup exported successfully';

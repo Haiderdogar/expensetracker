@@ -1,7 +1,7 @@
 class TransactionModel {
   const TransactionModel({
     required this.id,
-    this.userId = 'default_user',
+    this.userId = '',
     required this.title,
     required this.amount,
     required this.type,
@@ -83,7 +83,7 @@ class TransactionModel {
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
     return TransactionModel(
       id: map['id'] as String,
-      userId: (map['user_id'] as String?) ?? 'default_user',
+      userId: (map['user_id'] as String?) ?? '',
       title: (map['title'] as String?) ?? (map['subcategory'] as String?) ?? '',
       amount: (map['amount'] as num).toDouble(),
       type: map['type'] as String,
@@ -102,8 +102,9 @@ class TransactionModel {
   ) {
     return TransactionModel(
       id: docId,
-      userId: 'default_user',
-      title: (data['title'] as String?) ?? (data['subcategory'] as String?) ?? '',
+      userId: '',
+      title:
+          (data['title'] as String?) ?? (data['subcategory'] as String?) ?? '',
       amount: ((data['amount'] as num?) ?? 0).toDouble(),
       type: (data['type'] as String?) ?? 'expense',
       categoryId: (data['categoryId'] as String?) ?? '',

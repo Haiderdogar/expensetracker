@@ -24,7 +24,14 @@ abstract final class AppStartupConfiguration {
 }
 
 /// The only state machine that selects the application's startup destination.
-enum AppFlow { onboarding, login, walletSetup, securitySetup, lockScreen, dashboard }
+enum AppFlow {
+  onboarding,
+  login,
+  walletSetup,
+  securitySetup,
+  lockScreen,
+  dashboard,
+}
 
 @Riverpod(keepAlive: true)
 class AppStartupController extends _$AppStartupController {
@@ -34,7 +41,8 @@ class AppStartupController extends _$AppStartupController {
     if (!await storage.hasSeenIntroOnboarding()) return AppFlow.onboarding;
 
     final authStatus = await ref.watch(authControllerProvider.future);
-    if (authStatus != AuthStatus.authenticated && authStatus != AuthStatus.pinLocked) {
+    if (authStatus != AuthStatus.authenticated &&
+        authStatus != AuthStatus.pinLocked) {
       return AppFlow.login;
     }
 
@@ -42,18 +50,38 @@ class AppStartupController extends _$AppStartupController {
     if (user == null || user.uid.isEmpty) return AppFlow.login;
 
     final syncRepository = ref.read(syncRepositoryProvider);
-    // A newly signed-in account may have its wallet only in Firestore. Bring
-    // its wallet records into the local-first store before making the flow
-    // decision; offline starts retain their already-local wallet state.
-    await syncRepository.reconcileWithRemote(user.uid);
-    final hasWallet = await syncRepository.hasWalletForUser(user.uid);
+    final hadLocalWallet = await syncRepository.hasWalletForUser(user.uid);
+    var hasWallet = hadLocalWallet;
+
+    if (hasWallet) {
+      // Existing local data can be displayed immediately. Any pending local
+      // changes are synchronized without delaying the first dashboard frame.
+      unawaited(syncRepository.reconcileWithRemote(user.uid));
+    } else {
+      // A new installation has no local wallet yet. Restore the account before
+      // routing so an existing remote wallet is never replaced by wallet setup.
+      final restored = await syncRepository.reconcileWithRemote(user.uid);
+      hasWallet = await syncRepository.hasWalletForUser(user.uid);
+      if (!restored && !hasWallet) {
+        throw StateError('Unable to restore the account from Firestore.');
+      }
+
+      if (!hadLocalWallet &&
+          hasWallet &&
+          !await storage.isLockPromptCompleted(user.uid)) {
+        await storage.setSecuritySetupPending(user.uid, true);
+      }
+    }
+
     if (!hasWallet) return AppFlow.walletSetup;
 
     if (await storage.isSecuritySetupPending(user.uid)) {
       return AppFlow.securitySetup;
     }
 
-    return authStatus == AuthStatus.pinLocked ? AppFlow.lockScreen : AppFlow.dashboard;
+    return authStatus == AuthStatus.pinLocked
+        ? AppFlow.lockScreen
+        : AppFlow.dashboard;
   }
 }
 
@@ -65,7 +93,9 @@ class AppStartupScreen extends ConsumerWidget {
   void _removeNativeSplash() {
     if (_nativeSplashRemoved) return;
     _nativeSplashRemoved = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) => FlutterNativeSplash.remove());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => FlutterNativeSplash.remove(),
+    );
   }
 
   @override
@@ -103,6 +133,7 @@ class AppStartupScreen extends ConsumerWidget {
           AppFlow.dashboard => const AppShell(),
         };
       },
+      skipLoadingOnRefresh: true,
     );
   }
 }
@@ -112,7 +143,13 @@ class _StartupLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Scaffold(
-    body: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))),
+    body: Center(
+      child: SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2.5),
+      ),
+    ),
   );
 }
 
@@ -134,7 +171,11 @@ class _StartupError extends StatelessWidget {
             const SizedBox(height: 16),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded), label: const Text('Retry')),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
           ],
         ),
       ),

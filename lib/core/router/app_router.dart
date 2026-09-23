@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../../features/app_lock/screens/auth_screen.dart';
+import '../../features/app_lock/screens/lock_setup_screen.dart';
 import '../../app/app_startup.dart';
 import '../../models/note_model.dart';
 import '../../models/transaction_model.dart';
@@ -16,6 +17,7 @@ import '../../views/transactions/add_transaction_screen.dart';
 abstract final class AppRoutes {
   static const bootstrap = '/';
   static const pinSetup = '/pin-setup';
+  static const securitySetup = '/security-setup';
   static const pinVerify = '/pin-verify';
   static const logoutVerify = '/logout-verify';
   static const shell = '/app';
@@ -30,21 +32,52 @@ abstract final class AppRoutes {
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.bootstrap,
   routes: [
-    GoRoute(path: AppRoutes.bootstrap, builder: (_, _) => const AppStartupScreen()),
-    GoRoute(path: AppRoutes.pinSetup, builder: (_, _) => const AuthScreen(isSetup: true, offerBiometricAfterSetup: true)),
-    GoRoute(path: AppRoutes.pinVerify, builder: (_, _) => const AuthScreen(verifyOnly: true)),
-    GoRoute(path: AppRoutes.logoutVerify, builder: (_, _) => const AuthScreen(verifyOnly: true, isLogoutConfirmation: true)),
+    GoRoute(
+      path: AppRoutes.bootstrap,
+      builder: (_, _) => const AppStartupScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.pinSetup,
+      builder: (_, _) =>
+          const AuthScreen(isSetup: true, offerBiometricAfterSetup: true),
+    ),
+    GoRoute(
+      path: AppRoutes.securitySetup,
+      builder: (_, _) => const LockSetupScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.pinVerify,
+      builder: (_, _) => const AuthScreen(verifyOnly: true),
+    ),
+    GoRoute(
+      path: AppRoutes.logoutVerify,
+      builder: (_, _) =>
+          const AuthScreen(verifyOnly: true, isLogoutConfirmation: true),
+    ),
     GoRoute(path: AppRoutes.shell, builder: (_, _) => const AppShell()),
-    GoRoute(path: AppRoutes.profile, builder: (_, _) => const ProfileViewScreen()),
-    GoRoute(path: AppRoutes.categories, builder: (_, _) => const CategoryManagementScreen()),
+    GoRoute(
+      path: AppRoutes.profile,
+      builder: (_, _) => const ProfileViewScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.categories,
+      builder: (_, _) => const CategoryManagementScreen(),
+    ),
     GoRoute(path: AppRoutes.notes, builder: (_, _) => const NotesScreen()),
-    GoRoute(path: AppRoutes.noteEditor, builder: (_, state) => NoteEditorScreen(note: state.extra as NoteModel?)),
-    GoRoute(path: AppRoutes.settings, builder: (_, _) => const SettingsScreen()),
+    GoRoute(
+      path: AppRoutes.noteEditor,
+      builder: (_, state) => NoteEditorScreen(note: state.extra as NoteModel?),
+    ),
+    GoRoute(
+      path: AppRoutes.settings,
+      builder: (_, _) => const SettingsScreen(),
+    ),
     GoRoute(
       path: AppRoutes.transactionEditor,
       builder: (_, state) {
         final extra = state.extra;
-        if (extra is TransactionModel) return AddTransactionScreen(transaction: extra);
+        if (extra is TransactionModel)
+          return AddTransactionScreen(transaction: extra);
         return AddTransactionScreen(initialType: extra as String?);
       },
     ),

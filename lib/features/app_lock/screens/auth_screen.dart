@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:expensetracker/features/app_lock/providers/auth_flow.dart';
 import 'package:expensetracker/features/app_lock/providers/auth_ui_providers.dart';
 import 'package:expensetracker/features/app_lock/widgets/auth_header.dart';
-import 'package:expensetracker/features/app_lock/widgets/auth_keypad.dart';
 import 'package:expensetracker/features/app_lock/widgets/auth_pin_input.dart';
 
 class AuthScreen extends StatelessWidget {
@@ -78,22 +77,20 @@ class _AuthScreenBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final keypadHeight =
-            (constraints.maxHeight * 0.44).clamp(320.0, 420.0).toDouble();
         return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight > 40
+                  ? constraints.maxHeight - 40
+                  : 0,
+            ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Column(
-                  children: [
-                    AuthHeader(config: config),
-                    const SizedBox(height: 16),
-                    AuthPinInput(config: config),
-                  ],
-                ),
-                AuthKeypad(config: config, height: keypadHeight),
+                AuthHeader(config: config),
+                const SizedBox(height: 18),
+                AuthPinInput(config: config),
               ],
             ),
           ),

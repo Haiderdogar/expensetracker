@@ -125,9 +125,6 @@ class DatabaseHelper {
         'value': const Uuid().v4(),
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
-    if (oldVersion < 6) {
-      await _seedMissingDefaultCategories(db, 'default_user');
-    }
     if (oldVersion < 7) {
       // Add sync queue table
       await db.execute(DatabaseTables.createSyncQueue);
@@ -394,81 +391,6 @@ class DatabaseHelper {
     }
   }
 
-  /// Moves all records from the local guest partition to an authenticated
-  /// account while preserving every record ID and account-scoped setting.
-  Future<void> migrateGuestData(String userId) async {
-    if (userId.isEmpty || userId == 'default_user') {
-      throw ArgumentError.value(
-        userId,
-        'userId',
-        'An authenticated user is required',
-      );
-    }
-
-    final db = await database;
-    await db.transaction((txn) async {
-      for (final table in [
-        DatabaseTables.transactions,
-        DatabaseTables.budgets,
-        DatabaseTables.notes,
-        DatabaseTables.categories,
-        DatabaseTables.wallets,
-      ]) {
-        await txn.update(
-          table,
-          {'user_id': userId, 'is_synced': 0},
-          where: 'user_id = ?',
-          whereArgs: ['default_user'],
-        );
-      }
-
-      final guestSettings = await txn.query(
-        DatabaseTables.settings,
-        where: 'key LIKE ?',
-        whereArgs: ['%_default_user'],
-      );
-      for (final setting in guestSettings) {
-        final key = setting['key'] as String;
-        await txn.insert(DatabaseTables.settings, {
-          'key': key.replaceFirst('_default_user', '_$userId'),
-          'value': setting['value'],
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
-      }
-    });
-  }
-
-  /// Removes only guest account data. Installation identity and global
-  /// preferences intentionally remain intact.
-  Future<void> clearGuestData() async {
-    final db = await database;
-    await db.transaction((txn) async {
-      for (final table in [
-        DatabaseTables.transactions,
-        DatabaseTables.budgets,
-        DatabaseTables.notes,
-        DatabaseTables.categories,
-        DatabaseTables.wallets,
-      ]) {
-        await txn.delete(
-          table,
-          where: 'user_id = ?',
-          whereArgs: ['default_user'],
-        );
-      }
-
-      await txn.delete(
-        DatabaseTables.syncQueue,
-        where: 'user_id = ?',
-        whereArgs: ['default_user'],
-      );
-      await txn.delete(
-        DatabaseTables.settings,
-        where: 'key LIKE ?',
-        whereArgs: ['%_default_user'],
-      );
-    });
-  }
-
   Future<void> _seedDefaultCategories(
     Database db,
     String userId, {
@@ -551,7 +473,7 @@ class DatabaseHelper {
     required String? email,
     required String? photoUrl,
   }) async {
-    if (userId.isEmpty || userId == 'default_user') {
+    if (userId.isEmpty) {
       throw ArgumentError.value(
         userId,
         'userId',

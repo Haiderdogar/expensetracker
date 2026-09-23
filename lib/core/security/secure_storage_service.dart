@@ -23,7 +23,7 @@ class SecureStorageService {
   static const String loginEmailKey = 'login_email';
   static const String loginAtKey = 'login_at';
 
-  static const Duration loginValidity = Duration(days: 30);
+  static const Duration loginValidity = Duration(days: 60);
 
   String _accountKey(String key, String? userId) =>
       userId == null || userId.isEmpty ? key : '${key}_$userId';
@@ -210,9 +210,23 @@ class SecureStorageService {
     }
   }
 
+  Future<void> resetPinSecurity([String? userId]) async {
+    try {
+      await Future.wait([
+        _storage.delete(key: _accountKey(pinKey, userId)),
+        _storage.delete(key: _accountKey(pinEnabledKey, userId)),
+        _storage.delete(key: _accountKey(biometricKey, userId)),
+      ]);
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
+
   Future<bool> isPinEnabled([String? userId]) async {
     try {
-      final value = await _storage.read(key: _accountKey(pinEnabledKey, userId));
+      final value = await _storage.read(
+        key: _accountKey(pinEnabledKey, userId),
+      );
       return value == 'true';
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -252,7 +266,9 @@ class SecureStorageService {
 
   Future<bool> isLockPromptCompleted([String? userId]) async {
     try {
-      final value = await _storage.read(key: _accountKey(lockPromptKey, userId));
+      final value = await _storage.read(
+        key: _accountKey(lockPromptKey, userId),
+      );
       if (value == 'true') return true;
       return await isPinEnabled(userId) && await hasPin(userId);
     } catch (e) {
@@ -271,8 +287,7 @@ class SecureStorageService {
     }
   }
 
-  Future<String?> readSavedLoginUserId() =>
-      _storage.read(key: loginUserIdKey);
+  Future<String?> readSavedLoginUserId() => _storage.read(key: loginUserIdKey);
 
   Future<void> clearLegacySecurity() async {
     try {
@@ -330,7 +345,8 @@ class SecureStorageService {
   /// Google account cannot inherit it.
   Future<bool> isSecuritySetupPending(String userId) async {
     try {
-      return await _storage.read(key: '${securitySetupPendingKey}_$userId') == 'true';
+      return await _storage.read(key: '${securitySetupPendingKey}_$userId') ==
+          'true';
     } catch (e) {
       throw ErrorHandler.from(e);
     }

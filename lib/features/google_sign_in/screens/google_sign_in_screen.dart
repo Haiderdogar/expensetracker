@@ -218,8 +218,7 @@ class _GoogleSignInButton extends ConsumerStatefulWidget {
       _GoogleSignInButtonState();
 }
 
-class _GoogleSignInButtonState
-    extends ConsumerState<_GoogleSignInButton> {
+class _GoogleSignInButtonState extends ConsumerState<_GoogleSignInButton> {
   bool _isSigningIn = false;
 
   @override
@@ -243,8 +242,7 @@ class _GoogleSignInButtonState
          * as Wi-Fi/mobile is available. It does not guarantee actual
          * internet access.
          */
-        final hasInternet =
-            await InternetConnection().hasInternetAccess;
+        final hasInternet = await InternetConnection().hasInternetAccess;
 
         if (!hasInternet) {
           if (!context.mounted) {
@@ -268,7 +266,9 @@ class _GoogleSignInButtonState
         /*
          * Start Google authentication.
          *
-         * The native Google account chooser will appear here.
+         * The native Google account chooser appears here. No Flutter dialog
+         * is pushed so the chooser is the only account-selection UI and this
+         * screen remains underneath it.
          */
         final result = await ref
             .read(authControllerProvider.notifier)
@@ -292,10 +292,8 @@ class _GoogleSignInButtonState
          * Open wallet and currency setup immediately after authentication.
          */
         if (result == GoogleSignInResult.success) {
-          // Authentication has persisted successfully. The startup controller
-          // now checks this Firebase user's wallet before choosing a screen.
-          ref.invalidate(appStartupControllerProvider);
-          return;
+           ref.invalidate(appStartupControllerProvider);
+           return;
         }
 
         String message;
@@ -313,7 +311,9 @@ class _GoogleSignInButtonState
 
           case GoogleSignInResult.failed:
             message =
-                ref.read(authControllerProvider.notifier).lastGoogleSignInError ??
+                ref
+                    .read(authControllerProvider.notifier)
+                    .lastGoogleSignInError ??
                 'Google Sign-In failed. Please try again.';
 
           case GoogleSignInResult.success:
@@ -370,33 +370,29 @@ class _GoogleSignInButtonState
           ),
         ),
         onPressed: isLoading ? null : handleGoogleSignIn,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          child: isLoading
-              ? const SizedBox(
-                  key: ValueKey('loading'),
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.white,
-                  ),
-                )
-              : const Row(
-                  key: ValueKey('login'),
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.account_circle_rounded, size: 25),
-                    SizedBox(width: 11),
-                    Text(
-                      'Continue with Google',
-                      style: TextStyle(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.white,
                 ),
+              )
+            else
+              const Icon(Icons.account_circle_rounded, size: 25),
+            const SizedBox(width: 11),
+            Text(
+              isLoading ? 'Signing in...' : 'Continue with Google',
+              style: const TextStyle(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
       ),
     );

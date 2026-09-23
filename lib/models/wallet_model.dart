@@ -1,7 +1,7 @@
 class WalletModel {
   const WalletModel({
     required this.id,
-    this.userId = 'default_user',
+    this.userId = '',
     required this.name,
     required this.balance,
     this.isSynced = false,
@@ -53,7 +53,7 @@ class WalletModel {
   factory WalletModel.fromMap(Map<String, dynamic> map) {
     return WalletModel(
       id: map['id'] as String,
-      userId: (map['user_id'] as String?) ?? 'default_user',
+      userId: (map['user_id'] as String?) ?? '',
       name: map['name'] as String,
       balance: (map['balance'] as num).toDouble(),
       isSynced: (map['is_synced'] as int?) == 1,
@@ -64,7 +64,7 @@ class WalletModel {
   factory WalletModel.fromFirestore(Map<String, dynamic> data, String docId) {
     return WalletModel(
       id: (data['id'] as String?) ?? docId,
-      userId: (data['userId'] as String?) ?? 'default_user',
+      userId: (data['userId'] as String?) ?? '',
       name: (data['name'] as String?) ?? 'Main Wallet',
       balance: ((data['balance'] as num?) ?? 0).toDouble(),
       isSynced: true,

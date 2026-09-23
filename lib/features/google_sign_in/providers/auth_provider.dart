@@ -12,12 +12,7 @@ import '../../../providers/database_provider.dart';
 
 part 'auth_provider.g.dart';
 
-enum AuthStatus {
-  loading,
-  unauthenticated,
-  authenticated,
-  pinLocked,
-}
+enum AuthStatus { loading, unauthenticated, authenticated, pinLocked }
 
 enum GoogleSignInResult {
   success,
@@ -25,6 +20,12 @@ enum GoogleSignInResult {
   configurationError,
   failed,
   noInternet,
+}
+
+enum PinRecoveryResult {
+  success,
+  incorrectEmail,
+  failed,
 }
 
 const _resumeLockAfter = Duration(seconds: 30);
@@ -58,7 +59,7 @@ User? currentUser(Ref ref) {
 String currentUserId(Ref ref) {
   final user = ref.watch(currentUserProvider);
 
-  return user?.uid ?? 'default_user';
+  return user?.uid ?? '';
 }
 
 @Riverpod(keepAlive: true)
@@ -191,8 +192,6 @@ class AuthController extends _$AuthController {
     _isGoogleSignInInProgress = true;
     _lastGoogleSignInError = null;
 
-    state = const AsyncLoading();
-
     try {
       /*
        * GoogleSignInService initializes the singleton GoogleSignIn
@@ -296,7 +295,10 @@ class AuthController extends _$AuthController {
        * Startup listens to this authentication state and selects the next
        * account-specific flow.
        */
-      state = const AsyncData(AuthStatus.authenticated);
+      final hasLocalLock = await storage.hasConfiguredPinLock(user.uid);
+      state = AsyncData(
+        hasLocalLock ? AuthStatus.pinLocked : AuthStatus.authenticated,
+      );
 
       return GoogleSignInResult.success;
     } on GoogleSignInException catch (e) {
@@ -492,8 +494,7 @@ class AuthController extends _$AuthController {
       }
     }
 
-    await storage.deletePin(userId);
-    await storage.setBiometricEnabled(false, userId);
+    await storage.resetPinSecurity(userId);
 
     ref.invalidate(pinEnabledProvider);
     ref.invalidate(biometricEnabledProvider);
@@ -501,6 +502,72 @@ class AuthController extends _$AuthController {
     state = const AsyncData(AuthStatus.authenticated);
 
     return true;
+  }
+
+  Future<bool?> authenticateWithDeviceCredential() async {
+    final auth = LocalAuthentication();
+
+    try {
+      if (!await auth.isDeviceSupported()) return null;
+      return await auth.authenticate(
+        localizedReason: 'Verify your device to reset the Expense Tracker PIN',
+        biometricOnly: false,
+        persistAcrossBackgrounding: true,
+      );
+    } on LocalAuthException catch (e) {
+      debugPrint('[AuthController] Device authentication failed: $e');
+      return switch (e.code) {
+        LocalAuthExceptionCode.noCredentialsSet ||
+        LocalAuthExceptionCode.noBiometricHardware ||
+        LocalAuthExceptionCode.noBiometricsEnrolled => null,
+        _ => false,
+      };
+    } catch (e) {
+      debugPrint('[AuthController] Device authentication unavailable: $e');
+      return null;
+    }
+  }
+
+  Future<PinRecoveryResult> reauthenticateForPinReset() async {
+    final expectedUser = FirebaseAuth.instance.currentUser;
+    if (expectedUser == null) return PinRecoveryResult.failed;
+    final expectedUserId = expectedUser.uid;
+    final expectedEmail = expectedUser.email?.trim().toLowerCase();
+
+    try {
+      await GoogleSignInService.ensureInitialized();
+      final googleUser = await GoogleSignIn.instance
+          .authenticate()
+          .timeout(const Duration(seconds: 30));
+      final selectedEmail = googleUser.email.trim().toLowerCase();
+      if (expectedEmail == null ||
+          expectedEmail.isEmpty ||
+          selectedEmail != expectedEmail) {
+        return PinRecoveryResult.incorrectEmail;
+      }
+
+      final idToken = googleUser.authentication.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        return PinRecoveryResult.failed;
+      }
+
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final result = await expectedUser.reauthenticateWithCredential(
+        credential,
+      );
+      return result.user?.uid == expectedUserId
+          ? PinRecoveryResult.success
+          : PinRecoveryResult.incorrectEmail;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[AuthController] PIN recovery re-auth failed: ${e.code}');
+      return PinRecoveryResult.failed;
+    } on GoogleSignInException catch (e) {
+      debugPrint('[AuthController] PIN recovery Google auth failed: ${e.code}');
+      return PinRecoveryResult.failed;
+    } catch (e) {
+      debugPrint('[AuthController] PIN recovery failed: $e');
+      return PinRecoveryResult.failed;
+    }
   }
 
   Future<void> lock() async {
@@ -650,14 +717,14 @@ class AuthController extends _$AuthController {
 @riverpod
 Future<bool> pinEnabled(Ref ref) async {
   final userId = ref.watch(currentUserIdProvider);
-  if (userId == 'default_user') return false;
+  if (userId.isEmpty) return false;
   return ref.read(secureStorageProvider).hasConfiguredPinLock(userId);
 }
 
 @riverpod
 Future<bool> biometricEnabled(Ref ref) async {
   final userId = ref.watch(currentUserIdProvider);
-  if (userId == 'default_user') return false;
+  if (userId.isEmpty) return false;
   return ref.read(secureStorageProvider).hasConfiguredBiometricLock(userId);
 }
 

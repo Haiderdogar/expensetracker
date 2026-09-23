@@ -1,7 +1,7 @@
 class NoteModel {
   const NoteModel({
     required this.id,
-    this.userId = 'default_user',
+    this.userId = '',
     this.walletId = '',
     required this.title,
     required this.content,
@@ -64,7 +64,7 @@ class NoteModel {
 
   factory NoteModel.fromMap(Map<String, dynamic> map) => NoteModel(
         id: map['id'] as String,
-        userId: (map['user_id'] as String?) ?? 'default_user',
+        userId: (map['user_id'] as String?) ?? '',
         walletId: (map['wallet_id'] as String?) ?? '',
         title: map['title'] as String,
         content: map['content'] as String,
@@ -76,7 +76,7 @@ class NoteModel {
   factory NoteModel.fromFirestore(Map<String, dynamic> data, String docId) =>
       NoteModel(
         id: (data['id'] as String?) ?? docId,
-        userId: (data['userId'] as String?) ?? 'default_user',
+        userId: (data['userId'] as String?) ?? '',
          walletId: (data['walletId'] as String?) ?? '',
         title: (data['title'] as String?) ?? '',
         content: (data['content'] as String?) ?? '',

@@ -1,7 +1,7 @@
 class CategoryModel {
   const CategoryModel({
     required this.id,
-    this.userId = 'default_user',
+    this.userId = '',
     this.walletId = '',
     required this.name,
     required this.type,
@@ -69,7 +69,7 @@ class CategoryModel {
   factory CategoryModel.fromMap(Map<String, dynamic> map) {
     return CategoryModel(
       id: map['id'] as String,
-      userId: (map['user_id'] as String?) ?? 'default_user',
+      userId: (map['user_id'] as String?) ?? '',
       walletId: (map['wallet_id'] as String?) ?? '',
       name: map['name'] as String,
       type: map['type'] as String,
@@ -83,7 +83,7 @@ class CategoryModel {
   factory CategoryModel.fromFirestore(Map<String, dynamic> data, String docId) {
     return CategoryModel(
       id: docId,
-      userId: 'default_user',
+      userId: '',
       walletId: '',
       name: (data['name'] as String?) ?? '',
       type: (data['type'] as String?) ?? 'expense',

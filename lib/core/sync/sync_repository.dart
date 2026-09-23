@@ -35,6 +35,9 @@ class SyncRepository {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isSyncing = false;
   bool _syncRequested = false;
+  Future<bool>? _initialReconcile;
+
+  static const _initialSyncPrefix = 'initial_remote_sync_';
 
   Future<bool> isOnline() async {
     try {
@@ -52,7 +55,7 @@ class SyncRepository {
     ) {
       if (results.any((r) => r != ConnectivityResult.none)) {
         final userId = getUserId();
-        if (userId.isNotEmpty && userId != 'default_user') {
+        if (userId.isNotEmpty) {
           unawaited(syncPending(userId));
         }
       }
@@ -91,11 +94,10 @@ class SyncRepository {
     required String id,
     required Map<String, dynamic> sqliteRow,
     required Map<String, dynamic> firestoreData,
+    bool waitForRemote = true,
   }) async {
     _validateLocalUserRecord(userId, sqliteRow['user_id']);
-    if (userId != 'default_user') {
-      _validateAuthenticatedUserId(userId);
-    }
+    _validateAuthenticatedUserId(userId);
     final db = await _dbHelper.database;
     await db.insert(
       table,
@@ -103,8 +105,34 @@ class SyncRepository {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    // Guest data is intentionally local-only.
-    if (userId == 'default_user') return;
+    if (!waitForRemote) {
+      unawaited(
+        _pushUpsert(
+          table: table,
+          userId: userId,
+          id: id,
+          sqliteRow: sqliteRow,
+          firestoreData: firestoreData,
+        ),
+      );
+      return;
+    }
+    await _pushUpsert(
+      table: table,
+      userId: userId,
+      id: id,
+      sqliteRow: sqliteRow,
+      firestoreData: firestoreData,
+    );
+  }
+
+  Future<void> _pushUpsert({
+    required String table,
+    required String userId,
+    required String id,
+    required Map<String, dynamic> sqliteRow,
+    required Map<String, dynamic> firestoreData,
+  }) async {
     if (table != DatabaseTables.categories &&
         table != DatabaseTables.transactions) {
       _validateRemoteUserRecord(userId, firestoreData['userId']);
@@ -112,6 +140,7 @@ class SyncRepository {
 
     if (!await isOnline()) return;
     try {
+      final db = await _dbHelper.database;
       final walletId =
           (firestoreData['walletId'] as String?) ??
           (sqliteRow['wallet_id'] as String?);
@@ -138,9 +167,7 @@ class SyncRepository {
     required String id,
   }) async {
     _validateLocalUserId(userId);
-    if (userId != 'default_user') {
-      _validateAuthenticatedUserId(userId);
-    }
+    _validateAuthenticatedUserId(userId);
     final db = await _dbHelper.database;
     final existing = await db.query(
       table,
@@ -159,8 +186,6 @@ class SyncRepository {
       where: 'id = ? AND user_id = ?',
       whereArgs: [id, userId],
     );
-
-    if (userId == 'default_user') return;
 
     await db.insert(DatabaseTables.syncQueue, {
       'id': const Uuid().v4(),
@@ -247,7 +272,7 @@ class SyncRepository {
   }
 
   void _validateAuthenticatedUserId(String userId) {
-    if (userId.isEmpty || userId == 'default_user') {
+    if (userId.isEmpty) {
       throw ArgumentError.value(
         userId,
         'userId',
@@ -256,7 +281,9 @@ class SyncRepository {
     }
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser == null || firebaseUser.uid != userId) {
-      throw StateError('The active Firebase user does not match the local account');
+      throw StateError(
+        'The active Firebase user does not match the local account',
+      );
     }
   }
 
@@ -334,6 +361,7 @@ class SyncRepository {
       id: model.id,
       sqliteRow: model.toMap(),
       firestoreData: model.toFirestore(),
+      waitForRemote: false,
     );
   }
 
@@ -343,9 +371,7 @@ class SyncRepository {
     double delta,
   ) async {
     _validateLocalUserId(userId);
-    if (userId != 'default_user') {
-      _validateAuthenticatedUserId(userId);
-    }
+    _validateAuthenticatedUserId(userId);
     final db = await _dbHelper.database;
     final updated = await db.rawUpdate(
       'UPDATE ${DatabaseTables.wallets} SET balance = balance + ?, is_synced = 0, updated_at = ? WHERE id = ? AND user_id = ?',
@@ -435,74 +461,6 @@ class SyncRepository {
   }
 
   String _normalizedName(String value) => value.trim().toLowerCase();
-
-  /// Uploads the guest partition under an authenticated UID before changing
-  /// local ownership. Existing documents with the same IDs are intentionally
-  /// overwritten by the guest's local state.
-  Future<void> migrateGuestData(String userId) async {
-    _validateAuthenticatedUserId(userId);
-    if (!await isOnline()) {
-      throw StateError(
-        'An internet connection is required to upgrade a guest account.',
-      );
-    }
-
-    final db = await _dbHelper.database;
-    await _migrateTable(
-      db,
-      userId,
-      DatabaseTables.categories,
-      (row) => CategoryModel.fromMap({...row, 'user_id': userId}).toFirestore(),
-    );
-    await _migrateTable(
-      db,
-      userId,
-      DatabaseTables.wallets,
-      (row) => WalletModel.fromMap({...row, 'user_id': userId}).toFirestore(),
-    );
-    await _migrateTable(
-      db,
-      userId,
-      DatabaseTables.transactions,
-      (row) =>
-          TransactionModel.fromMap({...row, 'user_id': userId}).toFirestore(),
-    );
-    await _migrateTable(
-      db,
-      userId,
-      DatabaseTables.budgets,
-      (row) => BudgetModel.fromMap({...row, 'user_id': userId}).toFirestore(),
-    );
-    await _migrateTable(
-      db,
-      userId,
-      DatabaseTables.notes,
-      (row) => NoteModel.fromMap({...row, 'user_id': userId}).toFirestore(),
-    );
-
-    await _dbHelper.migrateGuestData(userId);
-  }
-
-  Future<void> _migrateTable(
-    Database db,
-    String userId,
-    String table,
-    Map<String, dynamic> Function(Map<String, dynamic> row) toFirestore,
-  ) async {
-    final rows = await db.query(
-      table,
-      where: 'user_id = ?',
-      whereArgs: ['default_user'],
-    );
-    for (final row in rows) {
-      final id = row['id'] as String;
-      await _col(
-        userId,
-        table,
-        walletId: row['wallet_id'] as String?,
-      ).doc(id).set(toFirestore(row)).timeout(const Duration(seconds: 15));
-    }
-  }
 
   // ── Budgets ───────────────────────────────────────────────────────────────
 
@@ -598,14 +556,30 @@ class SyncRepository {
       _syncRequested = true;
       return;
     }
-    if (userId.isEmpty || userId == 'default_user') return;
+    if (userId.isEmpty) return;
     _validateAuthenticatedUserId(userId);
+    final db = await _dbHelper.database;
+    final pendingDeletes = await db.query(
+      DatabaseTables.syncQueue,
+      columns: const ['id'],
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    final pendingRows = await db.rawQuery(
+      'SELECT 1 FROM ${DatabaseTables.categories} WHERE user_id = ? AND is_synced = 0 '
+      'UNION ALL SELECT 1 FROM ${DatabaseTables.wallets} WHERE user_id = ? AND is_synced = 0 '
+      'UNION ALL SELECT 1 FROM ${DatabaseTables.transactions} WHERE user_id = ? AND is_synced = 0 '
+      'UNION ALL SELECT 1 FROM ${DatabaseTables.budgets} WHERE user_id = ? AND is_synced = 0 '
+      'UNION ALL SELECT 1 FROM ${DatabaseTables.notes} WHERE user_id = ? AND is_synced = 0 '
+      'LIMIT 1',
+      [userId, userId, userId, userId, userId],
+    );
+    if (pendingDeletes.isEmpty && pendingRows.isEmpty) return;
     if (!await isOnline()) return;
 
     _isSyncing = true;
     try {
-      final db = await _dbHelper.database;
-
       final queuedDeletes = await db.query(
         DatabaseTables.syncQueue,
         where: 'user_id = ?',
@@ -710,16 +684,42 @@ class SyncRepository {
 
   /// Pull remote documents into SQLite using last-write-wins, without
   /// overwriting newer unsynced local edits.
-  Future<void> reconcileWithRemote(
+  Future<bool> reconcileWithRemote(
     String userId, {
     bool preferLocal = false,
   }) async {
-    if (userId.isEmpty || userId == 'default_user') return;
+    if (userId.isEmpty) return false;
     _validateAuthenticatedUserId(userId);
-    if (!await isOnline()) return;
+    if (_initialReconcile != null) {
+      return await _initialReconcile!;
+    }
+    final syncKey = '$_initialSyncPrefix$userId';
+    if (await _dbHelper.getSetting(syncKey) == 'complete') {
+      await syncPending(userId);
+      return true;
+    }
+    if (!await isOnline()) return false;
 
+    final reconcile = _performInitialReconcile(
+      userId,
+      preferLocal: preferLocal,
+      syncKey: syncKey,
+    );
+    _initialReconcile = reconcile;
     try {
-      await _mergeRemote(
+      return await reconcile;
+    } finally {
+      _initialReconcile = null;
+    }
+  }
+
+  Future<bool> _performInitialReconcile(
+    String userId, {
+    required bool preferLocal,
+    required String syncKey,
+  }) async {
+    try {
+      final remoteWalletIds = await _mergeRemote(
         userId,
         DatabaseTables.wallets,
         (data, id) => WalletModel.fromFirestore(data, id).toMap(),
@@ -730,8 +730,7 @@ class SyncRepository {
           .map((row) => row['id'] as String)
           .where((id) => id.isNotEmpty)
           .toSet();
-      final remoteWallets = await _col(userId, DatabaseTables.wallets).get();
-      walletIds.addAll(remoteWallets.docs.map((doc) => doc.id));
+      walletIds.addAll(remoteWalletIds);
 
       for (final walletId in walletIds) {
         await _mergeRemote(
@@ -765,12 +764,15 @@ class SyncRepository {
       }
 
       await syncPending(userId);
+      await _dbHelper.setSetting(syncKey, 'complete');
+      return true;
     } catch (e) {
       debugPrint('[SyncRepository] Reconcile with remote failed: $e');
+      return false;
     }
   }
 
-  Future<void> _mergeRemote(
+  Future<Set<String>> _mergeRemote(
     String userId,
     String table,
     Map<String, dynamic> Function(Map<String, dynamic> data, String id)
@@ -866,5 +868,6 @@ class SyncRepository {
         );
       }
     }
+    return remoteIds;
   }
 }

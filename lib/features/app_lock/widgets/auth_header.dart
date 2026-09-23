@@ -13,19 +13,19 @@ class AuthHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-        final state = ref.watch(authUiStateProvider(config));
-        if (config.isUnlock && !state.didPromptBiometric) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) AuthFlow.startBiometric(context, ref, config);
-          });
-        }
-        final biometricMode = config.isUnlock && state.isBiometricMode;
-        final biometricIcon = state.biometricType?.name == 'face'
-            ? Icons.face_rounded
-            : Icons.fingerprint_rounded;
-        final biometricTitle = state.biometricType?.name == 'face'
-            ? AppStrings.unlockWithFace
-            : AppStrings.unlockWithFingerprint;
+    final state = ref.watch(authUiStateProvider(config));
+    if (config.isUnlock && !state.didPromptBiometric) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) AuthFlow.startBiometric(context, ref, config);
+      });
+    }
+    final biometricMode = config.isUnlock && state.isBiometricMode;
+    final biometricIcon = state.biometricType?.name == 'face'
+        ? Icons.face_rounded
+        : Icons.fingerprint_rounded;
+    final biometricTitle = state.biometricType?.name == 'face'
+        ? AppStrings.unlockWithFace
+        : AppStrings.unlockWithFingerprint;
 
         final title = config.verifyOnly
             ? 'Verify Current PIN'
@@ -43,89 +43,106 @@ class AuthHeader extends ConsumerWidget {
                         : 'Choose a 4-digit PIN to secure your data')
                     : AppStrings.unlockSubtitle;
 
-        final theme = Theme.of(context);
-        final colors = theme.colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primaryEmerald.withValues(alpha: 0.16),
+                colors.surfaceContainerHighest.withValues(alpha: 0.5),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: AppColors.primaryEmerald.withValues(alpha: 0.18),
+            ),
+          ),
           child: Column(
             children: [
-              // Security Icon / Biometric glyph
               Container(
-                width: 68,
-                height: 68,
+                width: 76,
+                height: 76,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryEmerald.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
+                  color: colors.surface,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primaryEmerald.withValues(alpha: 0.14),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Icon(
                   biometricMode
                       ? biometricIcon
                       : (config.isSetup
-                          ? Icons.shield_outlined
-                          : Icons.lock_outline_rounded),
-                  size: 32,
+                            ? Icons.shield_outlined
+                            : Icons.lock_outline_rounded),
+                  size: 36,
                   color: AppColors.primaryEmerald,
                 ),
               ),
               const SizedBox(height: 18),
 
-              // Step indicator if setting up PIN
-              if (config.isSetup) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    state.isConfirmStep ? 'STEP 2 OF 2' : 'STEP 1 OF 2',
-                    style: TextStyle(
-                      color: colors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                    ),
+              if (config.isSetup)
+                Text(
+                  state.isConfirmStep ? 'STEP 2 OF 2' : 'STEP 1 OF 2',
+                  style: TextStyle(
+                    color: colors.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
                   ),
                 ),
-                const SizedBox(height: 10),
-              ],
-
-              // Title
+              const SizedBox(height: 8),
               Text(
                 biometricMode ? biometricTitle : title,
                 style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 24,
+                  letterSpacing: -0.3,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 6),
-
-              // Subtitle
+              const SizedBox(height: 8),
               Text(
                 subtitle,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colors.onSurfaceVariant,
+                  height: 1.4,
                 ),
                 textAlign: TextAlign.center,
               ),
-
               if (biometricMode) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 18),
                 OutlinedButton.icon(
                   onPressed: () => AuthFlow.usePin(context, ref, config),
                   icon: const Icon(Icons.pin_outlined, size: 18),
                   label: const Text(AppStrings.usePin),
                   style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
               ],
             ],
           ),
-        );
+        ),
+      ],
+    );
   }
 }
