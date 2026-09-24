@@ -22,29 +22,36 @@ class WalletCurrencySetupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 10),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: MediaQuery.sizeOf(context).height - 48,
+              minHeight: MediaQuery.sizeOf(context).height - 180,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 24),
-                const _WelcomeArtwork(),
-                const SizedBox(height: 24),
-                const _OnboardingHeader(),
-                const SizedBox(height: 28),
-                const _WalletNameInput(),
-                const SizedBox(height: 24),
-                const _CurrencySelector(),
-                const SizedBox(height: 32),
-                const _OnboardingSubmitButton(),
-              ],
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _WelcomeArtwork(),
+                    const SizedBox(height: 10),
+                    const _OnboardingHeader(),
+                    const SizedBox(height: 18),
+                    const _WalletNameInput(),
+                    const SizedBox(height: 18),
+                    const _CurrencySelector(),
+                    const SizedBox(height: 30),
+                    const _OnboardingSubmitButton(),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -58,22 +65,13 @@ class _WelcomeArtwork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     return Center(
-      child: Container(
-        width: 148,
-        height: 148,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: colors.primary.withValues(alpha: 0.08),
-          shape: BoxShape.circle,
-          border: Border.all(color: colors.primary.withValues(alpha: 0.16)),
-        ),
-        child: Image.asset(
-          'assets/icon.png',
-          fit: BoxFit.contain,
-          semanticLabel: 'Expense Tracker wallet',
-        ),
+      child: Image.asset(
+        'assets/icon.png',
+        width: 180,
+        height: 180,
+        fit: BoxFit.contain,
+        semanticLabel: 'Expense Tracker wallet',
       ),
     );
   }
@@ -84,17 +82,28 @@ class _OnboardingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           AppStrings.welcome,
-          style: Theme.of(context).textTheme.headlineMedium,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.6,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           AppStrings.setupWallet,
-          style: Theme.of(context).textTheme.bodyLarge,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            height: 1.5,
+            color: colors.onSurface.withValues(alpha: 0.62),
+          ),
         ),
       ],
     );
@@ -125,6 +134,7 @@ class _CurrencySelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
     final currencySymbol = ref.watch(
       onboardingDraftProvider.select((d) => d.currencySymbol),
     );
@@ -140,25 +150,34 @@ class _CurrencySelector extends ConsumerWidget {
           style: Theme.of(context).textTheme.labelLarge,
         ),
         const SizedBox(height: 12),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Text(
-            currencySymbol,
-            style: Theme.of(context).textTheme.titleMedium,
+        Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.outlineVariant),
           ),
-          title: Text('Currency: $currencyCode'),
-          trailing: TextButton(
-            onPressed: () {
-              showAppCurrencyPicker(
-                context: context,
-                onSelect: (currency) {
-                  ref
-                      .read(onboardingDraftProvider.notifier)
-                      .setCurrency(currency.symbol, currency.code);
-                },
-              );
-            },
-            child: const Text('Change'),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            leading: Text(
+              currencySymbol,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            title: Text('Currency: $currencyCode'),
+            trailing: TextButton(
+              onPressed: () {
+                showAppCurrencyPicker(
+                  context: context,
+                  onSelect: (currency) {
+                    ref
+                        .read(onboardingDraftProvider.notifier)
+                        .setCurrency(currency.symbol, currency.code);
+                  },
+                );
+              },
+              child: const Text('Change'),
+            ),
           ),
         ),
       ],
@@ -190,42 +209,45 @@ class _OnboardingSubmitButton extends ConsumerWidget {
           showDialog<void>(
             context: context,
             barrierDismissible: false,
-            builder: (_) => const AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(24)),
-              ),
-              title: Row(
-                children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFE8F5EF),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Icon(
-                        Icons.account_balance_wallet_outlined,
-                        color: Color(0xFF087F5B),
+            builder: (dialogContext) {
+              final colors = Theme.of(dialogContext).colorScheme;
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                title: Row(
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.primary.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.account_balance_wallet_outlined,
+                          color: colors.primary,
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(child: Text('Setting up your wallet')),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Preparing your wallet and preferences...'),
-                  SizedBox(height: 20),
-                  LinearProgressIndicator(
-                    minHeight: 6,
-                    borderRadius: BorderRadius.all(Radius.circular(8)),
-                  ),
-                ],
-              ),
-            ),
+                    const SizedBox(width: 12),
+                    const Expanded(child: Text('Setting up your wallet')),
+                  ],
+                ),
+                content: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Preparing your wallet and preferences...'),
+                    SizedBox(height: 20),
+                    LinearProgressIndicator(
+                      minHeight: 6,
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         );
 

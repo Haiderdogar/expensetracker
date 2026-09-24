@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:expensetracker/core/constants/app_colors.dart';
-import 'package:expensetracker/core/constants/app_strings.dart';
 import 'package:expensetracker/features/app_lock/widgets/lock_setup_actions.dart';
 import 'package:expensetracker/features/app_lock/widgets/lock_setup_content.dart';
 
@@ -10,18 +8,46 @@ class LockSetupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(20, 48, 20, 10),
           child: Column(
             children: [
-              Spacer(),
-              Icon(Icons.shield_outlined, size: 72, color: AppColors.primaryEmerald),
-              SizedBox(height: 24),
-              LockSetupContent(),
-              Spacer(),
-              LockSetupActions(),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 460),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/lock_icon.png',
+                              width: 200,
+                              height: 200,
+                              fit: BoxFit.cover,
+                              semanticLabel: 'App lock',
+                            ),
+                            const SizedBox(height: 38),
+                            const LockSetupContent(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 34),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 460),
+                child: LockSetupActions(),
+              ),
             ],
           ),
         ),

@@ -9,7 +9,7 @@ class AnalyticsTrendSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 14),
         child: SpendingBarChart(),
       ),
     );

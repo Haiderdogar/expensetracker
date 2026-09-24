@@ -22,11 +22,11 @@ class BudgetsContent extends ConsumerWidget {
       onRefresh: () => _refresh(ref, selectedMonth),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
         children: [
           // Month Navigator (< Month Year >)
           const BudgetsMonthSelector(),
-          const SizedBox(height: 12),
+        //  const SizedBox(height: 5),
 
           // Budget Content / Progress List
           progress.when(
@@ -49,7 +49,7 @@ class BudgetsContent extends ConsumerWidget {
                     totalBudget: totalBudget,
                     totalSpent: totalSpent,
                   ),
-                  const SizedBox(height: 12),
+               //s   const SizedBox(height: 5),
                   ...items.map(
                     (item) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),

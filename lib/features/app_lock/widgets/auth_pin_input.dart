@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../google_sign_in/providers/auth_provider.dart';
 import '../providers/auth_flow.dart';
@@ -294,21 +293,19 @@ class _PinIndicators extends StatelessWidget {
                 height: boxWidth,
                 decoration: BoxDecoration(
                   color: filled
-                      ? AppColors.primaryEmerald.withValues(alpha: 0.12)
+                      ? colors.primary.withValues(alpha: 0.12)
                       : colors.surfaceContainerHighest.withValues(alpha: 0.28),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: filled
-                        ? AppColors.primaryEmerald
+                        ? colors.primary
                         : colors.outlineVariant.withValues(alpha: 0.8),
                     width: filled ? 1.8 : 1.5,
                   ),
                   boxShadow: filled
                       ? [
                           BoxShadow(
-                            color: AppColors.primaryEmerald.withValues(
-                              alpha: 0.25,
-                            ),
+                            color: colors.primary.withValues(alpha: 0.25),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -320,8 +317,8 @@ class _PinIndicators extends StatelessWidget {
                       ? Container(
                           width: 14,
                           height: 14,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primaryEmerald,
+                          decoration: BoxDecoration(
+                            color: colors.primary,
                             shape: BoxShape.circle,
                           ),
                         )

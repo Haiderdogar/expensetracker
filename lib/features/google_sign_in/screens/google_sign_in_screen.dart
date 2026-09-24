@@ -15,32 +15,17 @@ class GoogleSignInScreen extends StatelessWidget {
     final colors = theme.colorScheme;
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? const [
-                    Color(0xFF071A15),
-                    Color(0xFF0B211B),
-                    Color(0xFF0B1220),
-                  ]
-                : const [
-                    Color(0xFFEAFBF5),
-                    Color(0xFFF8FAFC),
-                    Color(0xFFF0F6FF),
-                  ],
-          ),
-        ),
+        color: theme.scaffoldBackgroundColor,
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 28, 20, 30),
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 10),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight - 58,
+                    minHeight: constraints.maxHeight - 180,
                   ),
                   child: Center(
                     child: ConstrainedBox(
@@ -48,43 +33,15 @@ class GoogleSignInScreen extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            width: 150,
-                            height: 150,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.07)
-                                  : Colors.white.withValues(alpha: 0.88),
-                              borderRadius: BorderRadius.circular(38),
-                              border: Border.all(
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.10)
-                                    : Colors.white,
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primaryEmerald.withValues(
-                                    alpha: 0.22,
-                                  ),
-                                  blurRadius: 35,
-                                  spreadRadius: 2,
-                                  offset: const Offset(0, 15),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(28),
-                              child: Image.asset(
-                                'assets/icon.png',
-                                fit: BoxFit.contain,
-                                semanticLabel: 'Expense Tracker',
-                              ),
-                            ),
+                          Image.asset(
+                            'assets/icon.png',
+                            width: 180,
+                            height: 180,
+                            fit: BoxFit.contain,
+                            semanticLabel: 'Expense Tracker',
                           ),
 
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 10),
 
                           Text(
                             'Expense Tracker',
@@ -107,21 +64,15 @@ class GoogleSignInScreen extends StatelessWidget {
                             ),
                           ),
 
-                          const SizedBox(height: 34),
+                          const SizedBox(height: 14),
 
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(18),
+                            padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.055)
-                                  : Colors.white.withValues(alpha: 0.80),
+                              color: colors.surface,
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.09)
-                                    : Colors.white.withValues(alpha: 0.95),
-                              ),
+                              border: Border.all(color: colors.outlineVariant),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(
@@ -141,7 +92,7 @@ class GoogleSignInScreen extends StatelessWidget {
                                   subtitle:
                                       'Track expenses instantly with local storage',
                                 ),
-                                _FeatureDivider(isDark: isDark),
+                                const _FeatureDivider(),
                                 _FeatureRow(
                                   icon: Icons.sync_rounded,
                                   color: AppColors.primaryEmerald,
@@ -149,7 +100,7 @@ class GoogleSignInScreen extends StatelessWidget {
                                   subtitle:
                                       'Keep your data synchronized when connected',
                                 ),
-                                _FeatureDivider(isDark: isDark),
+                                const _FeatureDivider(),
                                 _FeatureRow(
                                   icon: Icons.lock_outline_rounded,
                                   color: const Color(0xFF3B82F6),
@@ -161,7 +112,7 @@ class GoogleSignInScreen extends StatelessWidget {
                             ),
                           ),
 
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 18),
 
                           /*
                            * Only the login button is reactive.
@@ -292,8 +243,8 @@ class _GoogleSignInButtonState extends ConsumerState<_GoogleSignInButton> {
          * Open wallet and currency setup immediately after authentication.
          */
         if (result == GoogleSignInResult.success) {
-           ref.invalidate(appStartupControllerProvider);
-           return;
+          ref.invalidate(appStartupControllerProvider);
+          return;
         }
 
         String message;
@@ -357,12 +308,14 @@ class _GoogleSignInButtonState extends ConsumerState<_GoogleSignInButton> {
       height: 56,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryEmerald,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.primaryEmerald.withValues(
-            alpha: 0.55,
-          ),
-          disabledForegroundColor: Colors.white.withValues(alpha: 0.85),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          disabledBackgroundColor: Theme.of(
+            context,
+          ).colorScheme.primary.withValues(alpha: 0.55),
+          disabledForegroundColor: Theme.of(
+            context,
+          ).colorScheme.onPrimary.withValues(alpha: 0.85),
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           shape: RoundedRectangleBorder(
@@ -400,9 +353,7 @@ class _GoogleSignInButtonState extends ConsumerState<_GoogleSignInButton> {
 }
 
 class _FeatureDivider extends StatelessWidget {
-  const _FeatureDivider({required this.isDark});
-
-  final bool isDark;
+  const _FeatureDivider();
 
   @override
   Widget build(BuildContext context) {
@@ -411,9 +362,7 @@ class _FeatureDivider extends StatelessWidget {
       child: Divider(
         height: 1,
         thickness: 1,
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.07)
-            : Colors.black.withValues(alpha: 0.055),
+        color: Theme.of(context).colorScheme.outlineVariant,
       ),
     );
   }

@@ -18,52 +18,54 @@ class AnalyticsSummaryCards extends ConsumerWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
         child: Row(
           children: [
             // Total Spending Side
             Expanded(
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: AppColors.expenseRed.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_downward_rounded,
-                      color: AppColors.expenseRed,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  Row(
+                    children: [
+                      Container(
+                        width: 25,
+                        height: 25,
+                        decoration: BoxDecoration(
+                          color: AppColors.expenseRed.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_downward_rounded,
+                          color: AppColors.expenseRed,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
                           'Total Spending',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: isDark ? AppColors.gray400 : AppColors.gray600,
+                            color: isDark
+                                ? AppColors.gray400
+                                : AppColors.gray600,
                             fontWeight: FontWeight.w500,
                             fontSize: 11.5,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          Formatters.currency(summary.totalExpense, symbol: symbol),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    Formatters.currency(summary.totalExpense, symbol: symbol),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
                     ),
                   ),
                 ],
@@ -80,47 +82,49 @@ class AnalyticsSummaryCards extends ConsumerWidget {
 
             // Total Income Side
             Expanded(
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: AppColors.incomeGreen.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_upward_rounded,
-                      color: AppColors.incomeGreen,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  Row(
+                    children: [
+                      Container(
+                        width: 25,
+                        height: 25,
+                        decoration: BoxDecoration(
+                          color: AppColors.incomeGreen.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_upward_rounded,
+                          color: AppColors.incomeGreen,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
                           'Total Income',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: isDark ? AppColors.gray400 : AppColors.gray600,
+                            color: isDark
+                                ? AppColors.gray400
+                                : AppColors.gray600,
                             fontWeight: FontWeight.w500,
                             fontSize: 11.5,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          Formatters.currency(summary.totalIncome, symbol: symbol),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    Formatters.currency(summary.totalIncome, symbol: symbol),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
                     ),
                   ),
                 ],

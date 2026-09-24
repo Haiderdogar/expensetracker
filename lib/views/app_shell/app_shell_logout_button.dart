@@ -31,7 +31,7 @@ class AppShellLogoutButton extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

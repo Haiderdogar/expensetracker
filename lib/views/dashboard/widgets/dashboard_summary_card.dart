@@ -51,7 +51,7 @@ class _DashboardSummaryContent extends ConsumerWidget {
         : Formatters.currency(expense.value ?? 0, symbol: symbol);
 
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.primaryEmerald,
         borderRadius: BorderRadius.circular(22),
@@ -62,8 +62,8 @@ class _DashboardSummaryContent extends ConsumerWidget {
         boxShadow: [
           BoxShadow(
             color: AppColors.primaryEmerald.withValues(alpha: 0.28),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            blurRadius: 0,
+            offset: const Offset(0, 4),
           ),
         ],
       ),

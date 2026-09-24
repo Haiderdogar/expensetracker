@@ -22,14 +22,14 @@ class TransactionsScreen extends StatelessWidget {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: const Padding(
-        padding: EdgeInsets.only(bottom: 90),
+        padding: EdgeInsets.only(bottom: 75),
         child: TransactionsAddButton(),
       ),
       body: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TransactionsFilterPanel(),
           ),
           ActiveFilterChips(),

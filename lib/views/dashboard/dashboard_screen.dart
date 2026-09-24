@@ -41,15 +41,14 @@ class _DashboardRefreshBody extends ConsumerWidget {
         physics: AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: EdgeInsets.fromLTRB(16, 6, 16, 0),
             sliver: SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DashboardSummaryCard(),
-                  SizedBox(height: 20),
+                  SizedBox(height: 8),
                   RecentTransactionsHeader(),
-                  SizedBox(height: 12),
                 ],
               ),
             ),

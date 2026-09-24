@@ -33,7 +33,7 @@ class GlassNavbar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: RepaintBoundary(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),

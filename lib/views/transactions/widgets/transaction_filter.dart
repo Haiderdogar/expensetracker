@@ -236,7 +236,7 @@ class _UnifiedCategoryFilterSheet extends ConsumerWidget {
 
     return ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
+        maxHeight: MediaQuery.of(context).size.height * 0.80,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -251,7 +251,7 @@ class _UnifiedCategoryFilterSheet extends ConsumerWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 5),
 
           // ── Header Title ───────────────────────────────────────────────
           Padding(
@@ -280,7 +280,7 @@ class _UnifiedCategoryFilterSheet extends ConsumerWidget {
           // ── Scrollable Sections (Expense & Income) ─────────────────────
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -300,13 +300,13 @@ class _UnifiedCategoryFilterSheet extends ConsumerWidget {
                           );
                     },
                   ),
-                  const SizedBox(height: 10),
+                 // const SizedBox(height: 5),
                   if (expenseCategories.isEmpty)
                     const Text('No expense categories available.')
                   else
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: 4,
+                      runSpacing: 0,
                       children: expenseCategories.map((cat) {
                         final isSelected = draftSelected.contains(cat.id);
                         return FilterChip(
@@ -349,7 +349,7 @@ class _UnifiedCategoryFilterSheet extends ConsumerWidget {
                       }).toList(),
                     ),
 
-                  const SizedBox(height: 24),
+                 // const SizedBox(height: 5),
 
                   // ── Income Section ────────────────────────────────────────
                   _buildSectionHeader(
@@ -367,13 +367,13 @@ class _UnifiedCategoryFilterSheet extends ConsumerWidget {
                           );
                     },
                   ),
-                  const SizedBox(height: 10),
+            //      const SizedBox(height: 10),
                   if (incomeCategories.isEmpty)
                     const Text('No income categories available.')
                   else
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: 4,
+                      runSpacing: 0,
                       children: incomeCategories.map((cat) {
                         final isSelected = draftSelected.contains(cat.id);
                         return FilterChip(
@@ -415,7 +415,7 @@ class _UnifiedCategoryFilterSheet extends ConsumerWidget {
                         );
                       }).toList(),
                     ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 5),
                 ],
               ),
             ),

@@ -8,7 +8,7 @@ class BudgetsAddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 90),
+      padding: const EdgeInsets.only(bottom: 75),
       child: FloatingActionButton(
         heroTag: 'fab_budgets',
         onPressed: onPressed,

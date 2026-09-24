@@ -8,10 +8,19 @@ class LockSetupContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(AppStrings.protectAppTitle, style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
+        Text(
+          AppStrings.protectAppTitle,
+          style: Theme.of(context).textTheme.headlineMedium,
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 12),
-        Text(AppStrings.protectAppBody, style: Theme.of(context).textTheme.bodyLarge, textAlign: TextAlign.center),
+        Text(
+          AppStrings.protectAppBody,
+          style: Theme.of(context).textTheme.bodyLarge,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }

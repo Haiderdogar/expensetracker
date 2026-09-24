@@ -11,6 +11,7 @@ class AuthScreen extends StatelessWidget {
     this.isSetup = false,
     this.verifyOnly = false,
     this.offerBiometricAfterSetup = false,
+
     /// When true the screen is shown as a logout confirmation step.
     /// A clearly labelled AppBar with a cancel/back button is always shown.
     this.isLogoutConfirmation = false,
@@ -58,11 +59,9 @@ class AuthScreen extends StatelessWidget {
         // "cancelled" from a successful verification.
       },
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: appBar,
-        body: SafeArea(
-          child: _AuthScreenBody(config: config),
-        ),
+        body: SafeArea(child: _AuthScreenBody(config: config)),
       ),
     );
   }
@@ -78,20 +77,40 @@ class _AuthScreenBody extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: constraints.maxHeight > 40
                   ? constraints.maxHeight - 40
                   : 0,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AuthHeader(config: config),
-                const SizedBox(height: 18),
-                AuthPinInput(config: config),
-              ],
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AuthHeader(config: config),
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outlineVariant.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      child: AuthPinInput(config: config),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         );

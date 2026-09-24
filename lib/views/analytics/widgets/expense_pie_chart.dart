@@ -91,7 +91,7 @@ class ExpensePieChart extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
 
         if (items.isEmpty) ...[
           Container(
@@ -214,7 +214,7 @@ class ExpensePieChart extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Category Tiles
           AnalyticsCategoryList(

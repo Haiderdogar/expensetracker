@@ -41,8 +41,11 @@ class TransactionList extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline_rounded,
-                  size: 48, color: AppColors.expenseRed),
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: AppColors.expenseRed,
+              ),
               const SizedBox(height: 12),
               Text(
                 'Something went wrong',
@@ -61,7 +64,9 @@ class TransactionList extends ConsumerWidget {
       data: (items) {
         if (items.isEmpty) {
           return _EmptyState(
-            hasFilter: search.isNotEmpty || (categories != null && categories.isNotEmpty),
+            hasFilter:
+                search.isNotEmpty ||
+                (categories != null && categories.isNotEmpty),
             onResetFilters: () {
               ref.read(transactionSearchProvider.notifier).state = '';
               clearAllCategoryFilters(ref);
@@ -76,9 +81,7 @@ class TransactionList extends ConsumerWidget {
 }
 
 class _TransactionContent extends StatelessWidget {
-  const _TransactionContent({
-    required this.transactions,
-  });
+  const _TransactionContent({required this.transactions});
 
   final List<TransactionModel> transactions;
 
@@ -87,7 +90,9 @@ class _TransactionContent extends StatelessWidget {
     // Group transactions by date string (yyyy-MM-dd)
     final grouped = <String, List<TransactionModel>>{};
     for (final transaction in transactions) {
-      final key = DateFormat('yyyy-MM-dd').format(DateTime.parse(transaction.date));
+      final key = DateFormat(
+        'yyyy-MM-dd',
+      ).format(DateTime.parse(transaction.date));
       grouped.putIfAbsent(key, () => []).add(transaction);
     }
 
@@ -96,21 +101,15 @@ class _TransactionContent extends StatelessWidget {
     return CustomScrollView(
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.only(bottom: 110, top: 4),
+          padding: const EdgeInsets.only(bottom: 110),
           sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final dateKey = keys[index];
-                final dayItems = grouped[dateKey]!;
-                final dateObj = DateTime.tryParse(dateKey) ?? DateTime.now();
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final dateKey = keys[index];
+              final dayItems = grouped[dateKey]!;
+              final dateObj = DateTime.tryParse(dateKey) ?? DateTime.now();
 
-                return _DaySection(
-                  date: dateObj,
-                  transactions: dayItems,
-                );
-              },
-              childCount: keys.length,
-            ),
+              return _DaySection(date: dateObj, transactions: dayItems);
+            }, childCount: keys.length),
           ),
         ),
       ],
@@ -119,10 +118,7 @@ class _TransactionContent extends StatelessWidget {
 }
 
 class _DaySection extends ConsumerWidget {
-  const _DaySection({
-    required this.date,
-    required this.transactions,
-  });
+  const _DaySection({required this.date, required this.transactions});
 
   final DateTime date;
   final List<TransactionModel> transactions;
@@ -159,8 +155,11 @@ class _DaySection extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: (dailyNet >= 0 ? AppColors.incomeGreen : AppColors.expenseRed)
-                      .withValues(alpha: 0.1),
+                  color:
+                      (dailyNet >= 0
+                              ? AppColors.incomeGreen
+                              : AppColors.expenseRed)
+                          .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -168,7 +167,9 @@ class _DaySection extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: dailyNet >= 0 ? AppColors.incomeGreen : AppColors.expenseRed,
+                    color: dailyNet >= 0
+                        ? AppColors.incomeGreen
+                        : AppColors.expenseRed,
                   ),
                 ),
               ),
@@ -192,13 +193,16 @@ class _DaySection extends ConsumerWidget {
     BuildContext context,
     TransactionModel transaction,
   ) async {
-    final result = await context.push<String>(AppRoutes.transactionEditor, extra: transaction);
+    final result = await context.push<String>(
+      AppRoutes.transactionEditor,
+      extra: transaction,
+    );
     if (result == 'saved' && context.mounted) {
       showSuccessSnackBar(context, 'Transaction updated successfully');
     } else if (result == 'deleted' && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transaction deleted')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Transaction deleted')));
     }
   }
 
@@ -230,14 +234,10 @@ class _DaySection extends ConsumerWidget {
       }
     }
   }
-
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.hasFilter,
-    required this.onResetFilters,
-  });
+  const _EmptyState({required this.hasFilter, required this.onResetFilters});
 
   final bool hasFilter;
   final VoidCallback onResetFilters;
@@ -260,7 +260,9 @@ class _EmptyState extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                hasFilter ? Icons.search_off_rounded : Icons.receipt_long_rounded,
+                hasFilter
+                    ? Icons.search_off_rounded
+                    : Icons.receipt_long_rounded,
                 size: 38,
                 color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),
@@ -293,8 +295,10 @@ class _EmptyState extends StatelessWidget {
                 icon: const Icon(Icons.refresh_rounded, size: 18),
                 label: const Text('Reset filters'),
                 style: OutlinedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -308,8 +312,10 @@ class _EmptyState extends StatelessWidget {
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('Add transaction'),
                 style: FilledButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

@@ -77,6 +77,7 @@ class RecentTransactionsList extends ConsumerWidget {
                 transactions: grouped[dateKeys[index]]!,
                 onTransactionTap: (transaction) =>
                     _openEditor(context, ref, transaction),
+                topPadding: index == 0 ? 4 : 10,
               );
             }, childCount: dateKeys.length),
           ),
@@ -190,7 +191,10 @@ class RecentTransactionsList extends ConsumerWidget {
     }
 
     try {
-      final result = await context.push<dynamic>(AppRoutes.transactionEditor, extra: transaction);
+      final result = await context.push<dynamic>(
+        AppRoutes.transactionEditor,
+        extra: transaction,
+      );
       if (result != 'saved' && result != 'created' && result != 'deleted')
         return;
 
@@ -219,11 +223,13 @@ class _DashboardDaySection extends StatelessWidget {
     required this.date,
     required this.transactions,
     required this.onTransactionTap,
+    required this.topPadding,
   });
 
   final DateTime date;
   final List<TransactionModel> transactions;
   final ValueChanged<TransactionModel> onTransactionTap;
+  final double topPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +245,7 @@ class _DashboardDaySection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          padding: EdgeInsets.fromLTRB(20, topPadding, 20, 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

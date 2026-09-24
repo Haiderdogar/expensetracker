@@ -10,7 +10,7 @@ class AddBudgetSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
         left: 16,
         right: 16,
