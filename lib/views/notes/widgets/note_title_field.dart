@@ -26,7 +26,8 @@ class NoteTitleField extends ConsumerWidget {
       initialValue: title,
       maxLines: null,
       minLines: 1,
-      keyboardType: TextInputType.multiline,
+      textInputAction: TextInputAction.next,
+      keyboardType: TextInputType.text,
       textCapitalization: TextCapitalization.sentences,
       style: TextStyle(
         fontWeight: FontWeight.w700,

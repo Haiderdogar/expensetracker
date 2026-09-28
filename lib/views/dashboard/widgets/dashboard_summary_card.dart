@@ -51,7 +51,7 @@ class _DashboardSummaryContent extends ConsumerWidget {
         : Formatters.currency(expense.value ?? 0, symbol: symbol);
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.primaryEmerald,
         borderRadius: BorderRadius.circular(22),
@@ -109,7 +109,7 @@ class _DashboardSummaryContent extends ConsumerWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 15),
           Row(
             children: [
               DashboardStatChip(

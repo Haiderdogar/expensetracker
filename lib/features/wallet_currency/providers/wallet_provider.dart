@@ -74,9 +74,7 @@ class Wallets extends _$Wallets {
       );
       final syncRepo = ref.read(syncRepositoryProvider);
       await syncRepo.saveWallet(wallet);
-      await ref
-          .read(databaseHelperProvider)
-          .ensureWalletDefaults(userId, wallet.id);
+      await ref.read(databaseHelperProvider).ensureBuiltInCategories(userId);
       await refresh();
       return wallet;
     } catch (e) {

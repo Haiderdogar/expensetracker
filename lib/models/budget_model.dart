@@ -53,9 +53,6 @@ class BudgetModel {
       };
 
   Map<String, dynamic> toFirestore() => {
-        'id': id,
-        'userId': userId,
-        'walletId': walletId,
         'categoryId': categoryId,
         'amount': amount,
         'monthYear': monthYear,
@@ -77,9 +74,9 @@ class BudgetModel {
 
   factory BudgetModel.fromFirestore(Map<String, dynamic> data, String docId) {
     return BudgetModel(
-      id: (data['id'] as String?) ?? docId,
-      userId: (data['userId'] as String?) ?? '',
-      walletId: (data['walletId'] as String?) ?? '',
+      id: docId,
+      userId: '',
+      walletId: '',
       categoryId: (data['categoryId'] as String?) ?? '',
       amount: ((data['amount'] as num?) ?? 0).toDouble(),
       monthYear: (data['monthYear'] as String?) ?? '',

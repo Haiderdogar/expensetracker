@@ -53,9 +53,6 @@ class NoteModel {
       };
 
   Map<String, dynamic> toFirestore() => {
-        'id': id,
-        'userId': userId,
-        'walletId': walletId,
         'title': title,
         'content': content,
         'createdAt': createdAt.toUtc().toIso8601String(),
@@ -75,9 +72,9 @@ class NoteModel {
 
   factory NoteModel.fromFirestore(Map<String, dynamic> data, String docId) =>
       NoteModel(
-        id: (data['id'] as String?) ?? docId,
-        userId: (data['userId'] as String?) ?? '',
-         walletId: (data['walletId'] as String?) ?? '',
+        id: docId,
+        userId: '',
+        walletId: '',
         title: (data['title'] as String?) ?? '',
         content: (data['content'] as String?) ?? '',
         createdAt: DateTime.tryParse(data['createdAt'] as String? ?? '') ??

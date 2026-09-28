@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../security/secure_storage_service.dart';
 import '../utils/error_handler.dart';
+import '../../models/category_model.dart';
 import 'database_tables.dart';
 
 class DatabaseHelper {
@@ -266,6 +267,26 @@ class DatabaseHelper {
       );
       await db.execute('DROP TABLE IF EXISTS ${DatabaseTables.subcategories}');
     }
+    if (oldVersion < 10) {
+      await _safeAddColumn(
+        db,
+        DatabaseTables.categories,
+        'is_builtin',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.categories,
+        'is_hidden',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _safeAddColumn(
+        db,
+        DatabaseTables.categories,
+        'is_archived',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+    }
   }
 
   Future<void> _assignRecordsToFirstWallet(Database db) async {
@@ -305,19 +326,8 @@ class DatabaseHelper {
     bool createInitialWallet = false,
   }) async {
     final db = await database;
-    final existingCategories = await db.query(
-      DatabaseTables.categories,
-      columns: ['id'],
-      where: 'user_id = ?',
-      whereArgs: [userId],
-      limit: 1,
-    );
-
-    if (existingCategories.isEmpty) {
-      await _seedDefaultCategories(db, userId);
-    } else {
-      await _seedMissingDefaultCategories(db, userId);
-    }
+    await _migrateBuiltInCategories(db, userId);
+    await _seedDefaultCategories(db, userId);
 
     final existingWallets = await db.query(
       DatabaseTables.wallets,
@@ -363,7 +373,6 @@ class DatabaseHelper {
     String walletId,
   ) async {
     for (final table in [
-      DatabaseTables.categories,
       DatabaseTables.transactions,
       DatabaseTables.budgets,
       DatabaseTables.notes,
@@ -377,66 +386,112 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> ensureWalletDefaults(String userId, String walletId) async {
+  Future<void> ensureBuiltInCategories(String userId) async {
     final db = await database;
-    final existing = await db.query(
-      DatabaseTables.categories,
-      columns: ['id'],
-      where: 'user_id = ? AND wallet_id = ?',
-      whereArgs: [userId, walletId],
-      limit: 1,
-    );
-    if (existing.isEmpty) {
-      await _seedDefaultCategories(db, userId, walletId: walletId);
-    }
+    await _migrateBuiltInCategories(db, userId);
+    await _seedDefaultCategories(db, userId);
   }
 
-  Future<void> _seedDefaultCategories(
-    Database db,
-    String userId, {
-    String? walletId,
-  }) async {
-    const uuid = Uuid();
+  Future<void> _seedDefaultCategories(Database db, String userId) async {
     final now = DateTime.now().toUtc().toIso8601String();
     for (final category in DatabaseTables.defaultCategories) {
-      final categoryId = uuid.v4();
       await db.insert(DatabaseTables.categories, {
-        'id': categoryId,
+        'id': CategoryModel.builtInId(
+          userId,
+          category['type'] as String,
+          category['name'] as String,
+        ),
         'user_id': userId,
-        'wallet_id': walletId ?? '',
+        'wallet_id': '',
         'name': category['name'],
         'type': category['type'],
         'icon': category['icon'],
         'color': category['color'],
-        'is_synced': 0,
+        'is_synced': 1,
         'updated_at': now,
-      });
+        'is_builtin': 1,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 
-  Future<void> _seedMissingDefaultCategories(Database db, String userId) async {
-    const uuid = Uuid();
-    final now = DateTime.now().toUtc().toIso8601String();
-    for (final category in DatabaseTables.defaultCategories) {
-      final existing = await db.query(
-        DatabaseTables.categories,
-        columns: ['id'],
-        where: 'user_id = ? AND name = ? AND type = ?',
-        whereArgs: [userId, category['name'], category['type']],
-        limit: 1,
-      );
-      if (existing.isNotEmpty) continue;
-      await db.insert(DatabaseTables.categories, {
-        'id': uuid.v4(),
-        'user_id': userId,
-        'name': category['name'],
-        'type': category['type'],
-        'icon': category['icon'],
-        'color': category['color'],
-        'is_synced': 0,
-        'updated_at': now,
-      });
-    }
+  Future<void> _migrateBuiltInCategories(Database db, String userId) async {
+    await db.transaction((txn) async {
+      for (final category in DatabaseTables.defaultCategories) {
+        final candidates = await txn.query(
+          DatabaseTables.categories,
+          where:
+              'user_id = ? AND name = ? AND type = ? AND icon = ? AND color = ?',
+          whereArgs: [
+            userId,
+            category['name'],
+            category['type'],
+            category['icon'],
+            category['color'],
+          ],
+        );
+        if (candidates.isEmpty) continue;
+        final stableId = CategoryModel.builtInId(
+          userId,
+          category['type'] as String,
+          category['name'] as String,
+        );
+        final stableRow = await txn.query(
+          DatabaseTables.categories,
+          where: 'id = ?',
+          whereArgs: [stableId],
+          limit: 1,
+        );
+        if (stableRow.isEmpty) {
+          final source = candidates.first;
+          await txn.insert(
+            DatabaseTables.categories,
+            {
+              'id': stableId,
+              'user_id': userId,
+              'wallet_id': '',
+              'name': source['name'],
+              'type': source['type'],
+              'icon': source['icon'],
+              'color': source['color'],
+              'is_synced': 1,
+              'updated_at': source['updated_at'],
+              'is_builtin': 1,
+              'is_hidden': source['is_hidden'],
+              'is_archived': 0,
+            },
+          );
+        }
+
+        for (final candidate in candidates) {
+          final oldId = candidate['id'] as String;
+          if (oldId == stableId) {
+            await txn.update(
+              DatabaseTables.categories,
+              {'is_builtin': 1, 'wallet_id': '', 'is_synced': 1},
+              where: 'id = ? AND user_id = ?',
+              whereArgs: [stableId, userId],
+            );
+            continue;
+          }
+          for (final table in [
+            DatabaseTables.transactions,
+            DatabaseTables.budgets,
+          ]) {
+            await txn.update(
+              table,
+              {'category_id': stableId, 'is_synced': 0},
+              where: 'category_id = ? AND user_id = ?',
+              whereArgs: [oldId, userId],
+            );
+          }
+          await txn.delete(
+            DatabaseTables.categories,
+            where: 'id = ? AND user_id = ?',
+            whereArgs: [oldId, userId],
+          );
+        }
+      }
+    });
   }
 
   Future<String?> getSetting(String key) async {

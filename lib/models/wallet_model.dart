@@ -43,8 +43,6 @@ class WalletModel {
       };
 
   Map<String, dynamic> toFirestore() => {
-        'id': id,
-        'userId': userId,
         'name': name,
         'balance': balance,
         'updatedAt': updatedAt ?? DateTime.now().toUtc().toIso8601String(),
@@ -63,8 +61,8 @@ class WalletModel {
 
   factory WalletModel.fromFirestore(Map<String, dynamic> data, String docId) {
     return WalletModel(
-      id: (data['id'] as String?) ?? docId,
-      userId: (data['userId'] as String?) ?? '',
+      id: docId,
+      userId: '',
       name: (data['name'] as String?) ?? 'Main Wallet',
       balance: ((data['balance'] as num?) ?? 0).toDouble(),
       isSynced: true,

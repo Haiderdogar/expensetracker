@@ -8,7 +8,7 @@ abstract final class DatabaseTables {
   static const String syncQueue = 'sync_queue';
   static const String subcategories = 'subcategories';
 
-  static const int dbVersion = 9;
+  static const int dbVersion = 10;
 
   static const String createCategories = '''
     CREATE TABLE $categories (
@@ -20,7 +20,10 @@ abstract final class DatabaseTables {
       icon TEXT NOT NULL,
       color TEXT NOT NULL,
       is_synced INTEGER NOT NULL DEFAULT 0,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      is_builtin INTEGER NOT NULL DEFAULT 0,
+      is_hidden INTEGER NOT NULL DEFAULT 0,
+      is_archived INTEGER NOT NULL DEFAULT 0
     )
   ''';
 

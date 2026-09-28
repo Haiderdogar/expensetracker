@@ -49,9 +49,10 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icon.png"
-  # Android adaptive icon (API 26+) – blue background, white wallet foreground
-  adaptive_icon_background: "#FFFFFF"
+  # Let the home screen show through around the wallet instead of a white tile.
+  adaptive_icon_background: "#00000000"
   adaptive_icon_foreground: "assets/icon.png"
+# adaptive_icon_foreground_inset: 8
   remove_alpha_ios: true
 
 # ── Native Splash Screen ──────────────────────────────────────────────────────

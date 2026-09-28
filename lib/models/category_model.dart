@@ -1,4 +1,9 @@
 class CategoryModel {
+  static String builtInId(String userId, String type, String name) {
+    final key = name.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '_');
+    return 'builtin_${userId}_${type}_$key';
+  }
+
   const CategoryModel({
     required this.id,
     this.userId = '',
@@ -8,6 +13,9 @@ class CategoryModel {
     required this.icon,
     required this.color,
     this.isSynced = false,
+    this.isBuiltIn = false,
+    this.isHidden = false,
+    this.isArchived = false,
     this.updatedAt,
   });
 
@@ -19,6 +27,9 @@ class CategoryModel {
   final String icon;
   final String color;
   final bool isSynced;
+  final bool isBuiltIn;
+  final bool isHidden;
+  final bool isArchived;
   final String? updatedAt;
 
   bool get isIncome => type == 'income';
@@ -33,6 +44,9 @@ class CategoryModel {
     String? icon,
     String? color,
     bool? isSynced,
+    bool? isBuiltIn,
+    bool? isHidden,
+    bool? isArchived,
     String? updatedAt,
   }) {
     return CategoryModel(
@@ -44,6 +58,9 @@ class CategoryModel {
       icon: icon ?? this.icon,
       color: color ?? this.color,
       isSynced: isSynced ?? this.isSynced,
+      isBuiltIn: isBuiltIn ?? this.isBuiltIn,
+      isHidden: isHidden ?? this.isHidden,
+      isArchived: isArchived ?? this.isArchived,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -57,12 +74,18 @@ class CategoryModel {
         'icon': icon,
         'color': color,
         'is_synced': isSynced ? 1 : 0,
+        'is_builtin': isBuiltIn ? 1 : 0,
+        'is_hidden': isHidden ? 1 : 0,
+        'is_archived': isArchived ? 1 : 0,
         'updated_at': updatedAt ?? DateTime.now().toUtc().toIso8601String(),
       };
 
   Map<String, dynamic> toFirestore() => {
         'name': name,
         'type': type,
+        'icon': icon,
+        'color': color,
+        'isArchived': isArchived,
         'updatedAt': updatedAt ?? DateTime.now().toUtc().toIso8601String(),
       };
 
@@ -76,6 +99,9 @@ class CategoryModel {
       icon: map['icon'] as String,
       color: map['color'] as String,
       isSynced: (map['is_synced'] as int?) == 1,
+      isBuiltIn: (map['is_builtin'] as int?) == 1,
+      isHidden: (map['is_hidden'] as int?) == 1,
+      isArchived: (map['is_archived'] as int?) == 1,
       updatedAt: map['updated_at'] as String?,
     );
   }
@@ -90,6 +116,7 @@ class CategoryModel {
       icon: (data['icon'] as String?) ?? 'folder',
       color: (data['color'] as String?) ?? '#3B82F6',
       isSynced: true,
+      isArchived: data['isArchived'] == true,
       updatedAt: data['updatedAt'] as String?,
     );
   }

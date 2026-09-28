@@ -133,11 +133,6 @@ class SyncRepository {
     required Map<String, dynamic> sqliteRow,
     required Map<String, dynamic> firestoreData,
   }) async {
-    if (table != DatabaseTables.categories &&
-        table != DatabaseTables.transactions) {
-      _validateRemoteUserRecord(userId, firestoreData['userId']);
-    }
-
     if (!await isOnline()) return;
     try {
       final db = await _dbHelper.database;
@@ -240,19 +235,6 @@ class SyncRepository {
   void _validateLocalUserRecord(String userId, Object? localUserId) {
     _validateLocalUserId(userId);
     if (localUserId != userId) {
-      throw ArgumentError.value(
-        userId,
-        'userId',
-        'Record belongs to another user',
-      );
-    }
-  }
-
-  /// Firestore rules provide the server-side enforcement; this is a redundant
-  /// client-side guard before uploading a record.
-  void _validateRemoteUserRecord(String userId, Object? remoteUserId) {
-    _validateAuthenticatedUserId(userId);
-    if (remoteUserId != userId) {
       throw ArgumentError.value(
         userId,
         'userId',
@@ -413,24 +395,30 @@ class SyncRepository {
     String userId, {
     String? walletId,
   }) async {
-    final rows = await _queryUser(
+    _validateLocalUserId(userId);
+    final db = await _dbHelper.database;
+    final rows = await db.query(
       DatabaseTables.categories,
-      userId,
-      extraWhere: walletId == null ? null : 'wallet_id = ?',
-      extraArgs: walletId == null ? const [] : [walletId],
+      where: walletId == null
+          ? "user_id = ? AND wallet_id = ''"
+          : "user_id = ? AND (wallet_id = '' OR wallet_id = ?)",
+      whereArgs: walletId == null ? [userId] : [userId, walletId],
       orderBy: 'name ASC',
     );
-    // Defaults may have been seeded locally before the same defaults were
-    // pulled from Firestore on a second installation. Their IDs differ, but
-    // they represent the same category. The UI must never expose those as
-    // duplicate choices.
     return _uniqueBy(
       rows.map(CategoryModel.fromMap),
-      (category) => '${category.type}:${_normalizedName(category.name)}',
+      (category) => category.id,
     );
   }
 
   Future<void> saveCategory(CategoryModel category) async {
+    if (category.isBuiltIn) {
+      throw ArgumentError.value(
+        category.id,
+        'category',
+        'Built-in categories cannot be synced as user categories',
+      );
+    }
     final model = category.copyWith(
       isSynced: false,
       updatedAt: DateTime.now().toUtc().toIso8601String(),
@@ -452,6 +440,26 @@ class SyncRepository {
     );
   }
 
+  Future<bool> hasRemoteCategoryReferences(
+    String id,
+    String userId,
+    String walletId,
+  ) async {
+    _validateAuthenticatedUserId(userId);
+    for (final table in [
+      DatabaseTables.transactions,
+      DatabaseTables.budgets,
+    ]) {
+      final snapshot = await _col(
+        userId,
+        table,
+        walletId: walletId,
+      ).where('categoryId', isEqualTo: id).limit(1).get();
+      if (snapshot.docs.isNotEmpty) return true;
+    }
+    return false;
+  }
+
   List<T> _uniqueBy<T>(Iterable<T> values, String Function(T value) keyOf) {
     final seen = <String>{};
     return [
@@ -459,8 +467,6 @@ class SyncRepository {
         if (seen.add(keyOf(value))) value,
     ];
   }
-
-  String _normalizedName(String value) => value.trim().toLowerCase();
 
   // ── Budgets ───────────────────────────────────────────────────────────────
 
@@ -658,7 +664,9 @@ class SyncRepository {
   ) async {
     final rows = await db.query(
       table,
-      where: 'user_id = ? AND is_synced = 0',
+      where: table == DatabaseTables.categories
+          ? 'user_id = ? AND is_synced = 0 AND is_builtin = 0'
+          : 'user_id = ? AND is_synced = 0',
       whereArgs: [userId],
     );
     for (final row in rows) {
@@ -731,6 +739,10 @@ class SyncRepository {
           .where((id) => id.isNotEmpty)
           .toSet();
       walletIds.addAll(remoteWalletIds);
+      final legacyBuiltInIds = await _legacyBuiltInCategoryIds(
+        userId,
+        walletIds,
+      );
 
       for (final walletId in walletIds) {
         await _mergeRemote(
@@ -743,14 +755,20 @@ class SyncRepository {
         await _mergeRemote(
           userId,
           DatabaseTables.transactions,
-          (data, id) => TransactionModel.fromFirestore(data, id).toMap(),
+          (data, id) => TransactionModel.fromFirestore(
+            _mapLegacyCategoryReference(data, legacyBuiltInIds),
+            id,
+          ).toMap(),
           walletId: walletId,
           preferLocal: preferLocal,
         );
         await _mergeRemote(
           userId,
           DatabaseTables.budgets,
-          (data, id) => BudgetModel.fromFirestore(data, id).toMap(),
+          (data, id) => BudgetModel.fromFirestore(
+            _mapLegacyCategoryReference(data, legacyBuiltInIds),
+            id,
+          ).toMap(),
           walletId: walletId,
           preferLocal: preferLocal,
         );
@@ -772,6 +790,47 @@ class SyncRepository {
     }
   }
 
+  Future<Map<String, String>> _legacyBuiltInCategoryIds(
+    String userId,
+    Set<String> walletIds,
+  ) async {
+    final idMap = <String, String>{};
+    for (final walletId in walletIds) {
+      final snapshot = await _col(
+        userId,
+        DatabaseTables.categories,
+        walletId: walletId,
+      ).get().timeout(const Duration(seconds: 20));
+      for (final document in snapshot.docs) {
+        final data = document.data();
+        for (final category in DatabaseTables.defaultCategories) {
+          if (data['name'] == category['name'] &&
+              data['type'] == category['type']) {
+            idMap[document.id] = CategoryModel.builtInId(
+              userId,
+              category['type'] as String,
+              category['name'] as String,
+            );
+            break;
+          }
+        }
+      }
+    }
+    return idMap;
+  }
+
+  Map<String, dynamic> _mapLegacyCategoryReference(
+    Map<String, dynamic> data,
+    Map<String, String> legacyIds,
+  ) {
+    final mappedData = Map<String, dynamic>.from(data);
+    final categoryId = mappedData['categoryId'];
+    if (categoryId is String && legacyIds.containsKey(categoryId)) {
+      mappedData['categoryId'] = legacyIds[categoryId];
+    }
+    return mappedData;
+  }
+
   Future<Set<String>> _mergeRemote(
     String userId,
     String table,
@@ -789,6 +848,14 @@ class SyncRepository {
     final remoteIds = snap.docs.map((doc) => doc.id).toSet();
 
     for (final doc in snap.docs) {
+      if (table == DatabaseTables.categories &&
+          DatabaseTables.defaultCategories.any(
+            (category) =>
+                category['name'] == doc.data()['name'] &&
+                category['type'] == doc.data()['type'],
+          )) {
+        continue;
+      }
       // Ownership is established by the authenticated nested path. Legacy
       // payload ownership fields, when present, are still checked.
       if (doc.data()['userId'] != null && doc.data()['userId'] != userId) {
@@ -849,7 +916,11 @@ class SyncRepository {
     final localRows = await db.query(
       table,
       columns: ['id'],
-      where: walletId == null
+      where: table == DatabaseTables.categories
+          ? walletId == null
+                ? 'user_id = ? AND is_synced = 1 AND is_builtin = 0'
+                : 'user_id = ? AND wallet_id = ? AND is_synced = 1 AND is_builtin = 0'
+          : walletId == null
           ? 'user_id = ? AND is_synced = 1'
           : 'user_id = ? AND wallet_id = ? AND is_synced = 1',
       whereArgs: walletId == null ? [userId] : [userId, walletId],
@@ -859,7 +930,11 @@ class SyncRepository {
       if (!remoteIds.contains(localId)) {
         await db.delete(
           table,
-          where: walletId == null
+          where: table == DatabaseTables.categories
+              ? walletId == null
+                    ? 'id = ? AND user_id = ? AND is_synced = 1 AND is_builtin = 0'
+                    : 'id = ? AND user_id = ? AND wallet_id = ? AND is_synced = 1 AND is_builtin = 0'
+              : walletId == null
               ? 'id = ? AND user_id = ? AND is_synced = 1'
               : 'id = ? AND user_id = ? AND wallet_id = ? AND is_synced = 1',
           whereArgs: walletId == null

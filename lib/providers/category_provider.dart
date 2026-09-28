@@ -61,10 +61,13 @@ class Categories extends _$Categories {
     const uuid = Uuid();
     final userId = ref.read(currentUserIdProvider);
     final walletId = ref.read(activeWalletIdProvider);
+    if (walletId == null || walletId.isEmpty) {
+      throw AppException('Create or select a wallet before adding a category.');
+    }
     final category = CategoryModel(
       id: uuid.v4(),
       userId: userId,
-      walletId: walletId ?? '',
+      walletId: walletId,
       name: name,
       type: type,
       icon: icon,
@@ -74,33 +77,48 @@ class Categories extends _$Categories {
     return category;
   }
 
-  Future<void> delete(String id) async {
+  Future<bool> delete(String id) async {
     try {
       final db = await ref.read(databaseProvider.future);
       final userId = ref.read(currentUserIdProvider);
+      final categories = await future;
+      final category = categories.firstWhere((item) => item.id == id);
+      if (category.isBuiltIn) {
+        throw AppException('Built-in categories can be hidden, not deleted.');
+      }
+      final syncRepo = ref.read(syncRepositoryProvider);
+      final isRemoteStateKnown = await syncRepo.reconcileWithRemote(userId);
       final transactions = await db.query(
         DatabaseTables.transactions,
         columns: ['id'],
-        where: 'category_id = ? AND user_id = ?',
-        whereArgs: [id, userId],
+        where: 'category_id = ? AND user_id = ? AND wallet_id = ?',
+        whereArgs: [id, userId, category.walletId],
         limit: 1,
       );
       final budgets = await db.query(
         DatabaseTables.budgets,
         columns: ['id'],
-        where: 'category_id = ? AND user_id = ?',
-        whereArgs: [id, userId],
+        where: 'category_id = ? AND user_id = ? AND wallet_id = ?',
+        whereArgs: [id, userId, category.walletId],
         limit: 1,
       );
-      if (transactions.isNotEmpty || budgets.isNotEmpty) {
-        throw AppException(
-          'Categories used by transactions or budgets cannot be deleted.',
-        );
-      }
+      final remoteReferences = isRemoteStateKnown
+          ? await syncRepo.hasRemoteCategoryReferences(
+              id,
+              userId,
+              category.walletId,
+            )
+          : true;
 
-      final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.deleteCategory(id, userId);
+      final hasReferences =
+          remoteReferences || transactions.isNotEmpty || budgets.isNotEmpty;
+      if (hasReferences) {
+        await syncRepo.saveCategory(category.copyWith(isArchived: true));
+      } else {
+        await syncRepo.deleteCategory(id, userId);
+      }
       await refresh();
+      return hasReferences;
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -108,6 +126,9 @@ class Categories extends _$Categories {
 
   Future<void> updateCategory(CategoryModel category) async {
     try {
+      if (category.isBuiltIn) {
+        throw AppException('Built-in categories cannot be edited.');
+      }
       final userId = ref.read(currentUserIdProvider);
       final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
@@ -119,20 +140,47 @@ class Categories extends _$Categories {
       throw ErrorHandler.from(e);
     }
   }
+
+  Future<void> setBuiltInHidden(String id, {required bool hidden}) async {
+    try {
+      final userId = ref.read(currentUserIdProvider);
+      final db = await ref.read(databaseProvider.future);
+      final result = await db.update(
+        DatabaseTables.categories,
+        {'is_hidden': hidden ? 1 : 0},
+        where: 'id = ? AND user_id = ? AND is_builtin = 1',
+        whereArgs: [id, userId],
+      );
+      if (result != 1) {
+        throw StateError('The built-in category could not be updated.');
+      }
+      await refresh();
+    } catch (e) {
+      throw ErrorHandler.from(e);
+    }
+  }
 }
 
 @riverpod
 Future<List<CategoryModel>> incomeCategories(Ref ref) async {
   return ref
       .watch(categoriesProvider.future)
-      .then((list) => list.where((c) => c.isIncome).toList());
+      .then(
+        (list) => list
+            .where((c) => c.isIncome && !c.isHidden && !c.isArchived)
+            .toList(),
+      );
 }
 
 @riverpod
 Future<List<CategoryModel>> expenseCategories(Ref ref) async {
   return ref
       .watch(categoriesProvider.future)
-      .then((list) => list.where((c) => c.isExpense).toList());
+      .then(
+        (list) => list
+            .where((c) => c.isExpense && !c.isHidden && !c.isArchived)
+            .toList(),
+      );
 }
 
 @riverpod

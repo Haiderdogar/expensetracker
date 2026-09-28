@@ -47,7 +47,7 @@ class _DashboardRefreshBody extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DashboardSummaryCard(),
-                  SizedBox(height: 8),
+                  SizedBox(height: 5),
                   RecentTransactionsHeader(),
                 ],
               ),

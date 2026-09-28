@@ -25,13 +25,36 @@ class CategoryTile extends ConsumerWidget {
           category.name,
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        subtitle: Text(category.isIncome ? 'Income' : 'Expense'),
+        subtitle: Text(
+          category.isBuiltIn
+              ? category.isHidden
+                    ? 'Built-in · Hidden on this device'
+                    : 'Built-in · Shared across wallets'
+              : category.isArchived
+              ? 'Custom · Archived'
+              : category.isIncome
+              ? 'Custom · Income'
+              : 'Custom · Expense',
+        ),
         trailing: PopupMenuButton<String>(
           onSelected: (action) => _categoryAction(context, ref, action),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'edit', child: Text('Edit')),
-            PopupMenuItem(value: 'delete', child: Text('Delete')),
-          ],
+          itemBuilder: (_) => category.isBuiltIn
+              ? [
+                  PopupMenuItem(
+                    value: category.isHidden ? 'unhide' : 'hide',
+                    child: Text(category.isHidden ? 'Show category' : 'Hide on this device'),
+                  ),
+                ]
+              : [
+                  if (category.isArchived)
+                    const PopupMenuItem(
+                      value: 'restore',
+                      child: Text('Restore'),
+                    )
+                  else
+                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                ],
         ),
       ),
     );
@@ -42,6 +65,37 @@ class CategoryTile extends ConsumerWidget {
     WidgetRef ref,
     String action,
   ) async {
+    if (action == 'hide' || action == 'unhide') {
+      try {
+        await ref
+            .read(categoriesProvider.notifier)
+            .setBuiltInHidden(category.id, hidden: action == 'hide');
+        if (context.mounted) {
+          showSuccessSnackBar(
+            context,
+            action == 'hide'
+                ? 'Category hidden on this device'
+                : 'Category shown on this device',
+          );
+        }
+      } catch (error) {
+        if (context.mounted) showError(context, error);
+      }
+      return;
+    }
+    if (action == 'restore') {
+      try {
+        await ref
+            .read(categoriesProvider.notifier)
+            .updateCategory(category.copyWith(isArchived: false));
+        if (context.mounted) {
+          showSuccessSnackBar(context, 'Category restored successfully');
+        }
+      } catch (error) {
+        if (context.mounted) showError(context, error);
+      }
+      return;
+    }
     if (action == 'edit') {
       final name = await showNameDialog(
         context,
@@ -64,13 +118,20 @@ class CategoryTile extends ConsumerWidget {
     final ok = await confirmDelete(
       context,
       'Delete ${category.name}?',
-      'Transactions and budgets using this category cannot be deleted.',
+      'This will not delete any transactions or budgets. If this category is in use, it will be archived so it remains visible in your history.',
     );
     if (!ok || !context.mounted) return;
     try {
-      await ref.read(categoriesProvider.notifier).delete(category.id);
+      final wasArchived = await ref
+          .read(categoriesProvider.notifier)
+          .delete(category.id);
       if (context.mounted) {
-        showSuccessSnackBar(context, 'Category deleted successfully');
+        showSuccessSnackBar(
+          context,
+          wasArchived
+              ? 'Category archived; transaction history is preserved'
+              : 'Category deleted successfully',
+        );
       }
     } catch (error) {
       if (context.mounted) showError(context, error);

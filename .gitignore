@@ -30,8 +30,17 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+**/build/
 /coverage/
+
+# Generated iOS Flutter and CocoaPods files
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+/ios/Flutter/ephemeral/
+/ios/Pods/
+/ios/.symlinks/
+/ios/Runner.xcworkspace/xcuserdata/
+/ios/Runner.xcodeproj/xcuserdata/
 
 # Symbolication related
 app.*.symbols
@@ -39,10 +48,27 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android local configuration and build output
+/android/.gradle/
+/android/local.properties
+/android/key.properties
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local environment files (keep safe example templates)
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# Signing keys and certificates
+**/*.jks
+**/*.keystore
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.key
 
 # Firebase client configuration and local tooling credentials
 android/app/google-services.json
@@ -51,5 +77,6 @@ ios/Runner/GoogleService-Info.plist
 **/GoogleService-Info.plist
 **/*firebase-adminsdk*.json
 **/*service-account*.json
+encoded.txt
 .firebase/
 firebase-debug.log

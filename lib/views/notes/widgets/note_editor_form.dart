@@ -19,8 +19,9 @@ class NoteEditorForm extends StatelessWidget {
 
     return Form(
       key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.only(bottom: 16),
         children: [
           const SizedBox(height: 12),
           // Small text title above the title input field
@@ -53,10 +54,8 @@ class NoteEditorForm extends StatelessWidget {
               letterSpacing: 0.2,
             ),
           ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: NoteContentField(note: note),
-          ),
+          const SizedBox(height: 6          ),
+          NoteContentField(note: note),
           const SizedBox(height: 16),
           NoteEditorSaveActions(note: note, formKey: _formKey),
         ],

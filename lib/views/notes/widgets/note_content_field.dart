@@ -17,9 +17,8 @@ class NoteContentField extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
     return TextFormField(
       initialValue: content,
-      expands: true,
       maxLines: null,
-      minLines: null,
+      minLines: 12,
       textCapitalization: TextCapitalization.sentences,
       textAlignVertical: TextAlignVertical.top,
       style: TextStyle(fontSize: 15, height: 1.5, color: colors.onSurface),
