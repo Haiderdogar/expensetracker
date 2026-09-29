@@ -127,8 +127,8 @@ class BudgetsEmptyState extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 FilledButton.icon(
                   onPressed: () {
@@ -143,7 +143,7 @@ class BudgetsEmptyState extends ConsumerWidget {
                   label: const Text('Add Budget'),
                 ),
                 if (hasPrevBudgets) ...[
-                  const SizedBox(width: 10),
+                  const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: () => _copyFromLastMonth(context, ref),
                     icon: const Icon(Icons.copy_rounded, size: 16),

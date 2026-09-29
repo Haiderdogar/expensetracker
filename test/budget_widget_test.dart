@@ -3,6 +3,7 @@ import 'package:expensetracker/models/category_model.dart';
 import 'package:expensetracker/providers/budget_provider.dart';
 import 'package:expensetracker/providers/category_provider.dart';
 import 'package:expensetracker/views/budgets/budgets_screen.dart';
+import 'package:expensetracker/views/budgets/widgets/budgets_content.dart';
 import 'package:expensetracker/views/budgets/widgets/add_budget_amount_field.dart';
 import 'package:expensetracker/views/budgets/widgets/add_budget_category_selector.dart';
 import 'package:expensetracker/views/budgets/widgets/add_budget_sheet.dart';
@@ -31,6 +32,55 @@ void main() {
       expect(find.byType(BudgetsMonthSelector), findsOneWidget);
     },
   );
+
+  testWidgets('empty state actions stack without a render overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final month = DateTime(2026, 9);
+    final previousMonth = DateTime(2026, 8);
+    const previousBudget = BudgetProgress(
+      budget: BudgetModel(
+        id: 'previous-budget',
+        categoryId: 'bills',
+        amount: 180,
+        monthYear: '2026-08',
+      ),
+      spent: 80,
+      category: CategoryModel(
+        id: 'bills',
+        name: 'Bills',
+        type: 'expense',
+        icon: 'receipt',
+        color: '#3B82F6',
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          monthBudgetProgressProvider(
+            previousMonth,
+          ).overrideWith((ref) async => [previousBudget]),
+          monthBudgetProgressProvider(
+            month,
+          ).overrideWith((ref) async => <BudgetProgress>[]),
+        ],
+        child: MaterialApp(
+          home: Scaffold(body: BudgetsEmptyState(month: month)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Budget'), findsOneWidget);
+    expect(find.text('Copy Last Month'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('budget edit dialog remains laid out when keyboard is open', (
     tester,

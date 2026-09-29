@@ -100,7 +100,7 @@ class Budgets extends _$Budgets {
     final prevMonthKey = Formatters.monthYear(prevMonth);
     final targetMonthKey = Formatters.monthYear(targetMonth);
 
-    final allBudgets = await ref.read(budgetsProvider.future);
+    final allBudgets = await future;
     final prevBudgets = allBudgets
         .where((b) => b.monthYear == prevMonthKey)
         .toList();
