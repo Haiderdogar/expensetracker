@@ -8,17 +8,32 @@ class CategoryManagementScreen extends StatelessWidget {
   const CategoryManagementScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Manage categories'),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded),
-        onPressed: () => Navigator.of(context).maybePop(),
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Categories'),
+            Text(
+              'Manage your money, your way',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+            ),
+          ],
+        ),
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        backgroundColor: colors.surface,
+        surfaceTintColor: Colors.transparent,
       ),
-    ),
-    floatingActionButton: const _AddCategoryButton(),
-    body: const CategoryManagementBody(),
-  );
+      floatingActionButton: const _AddCategoryButton(),
+      body: const CategoryManagementBody(),
+    );
+  }
 }
 
 class _AddCategoryButton extends ConsumerWidget {
@@ -28,8 +43,8 @@ class _AddCategoryButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return FloatingActionButton.extended(
       onPressed: () => addCategory(context, ref),
-      icon: const Icon(Icons.add_rounded),
-      label: const Text('New category'),
+      icon: const Icon(Icons.add_rounded, size: 20),
+      label: const Text('Add category'),
     );
   }
 }

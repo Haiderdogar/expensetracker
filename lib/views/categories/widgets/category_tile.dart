@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/app_snackbars.dart';
+import '../../../core/utils/category_utils.dart';
 import '../../../models/category_model.dart';
 import '../../../providers/category_provider.dart';
 import 'category_management_dialogs.dart';
@@ -14,47 +15,125 @@ class CategoryTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = _color(category.color);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: .16),
-          child: Icon(_icon(category.icon), color: color),
+    final colorScheme = Theme.of(context).colorScheme;
+    final status = category.isHidden
+        ? 'Hidden'
+        : category.isArchived
+        ? 'Archived'
+        : category.isBuiltIn
+        ? 'Built-in'
+        : 'Custom';
+    return Material(
+      color: colorScheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 10, 6, 9),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: colorScheme.outlineVariant),
         ),
-        title: Text(
-          category.name,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        subtitle: Text(
-          category.isBuiltIn
-              ? category.isHidden
-                    ? 'Built-in · Hidden on this device'
-                    : 'Built-in · Shared across wallets'
-              : category.isArchived
-              ? 'Custom · Archived'
-              : category.isIncome
-              ? 'Custom · Income'
-              : 'Custom · Expense',
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (action) => _categoryAction(context, ref, action),
-          itemBuilder: (_) => category.isBuiltIn
-              ? [
-                  PopupMenuItem(
-                    value: category.isHidden ? 'unhide' : 'hide',
-                    child: Text(category.isHidden ? 'Show category' : 'Hide on this device'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ]
-              : [
-                  if (category.isArchived)
-                    const PopupMenuItem(
-                      value: 'restore',
-                      child: Text('Restore'),
-                    )
-                  else
-                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                ],
+                  child: Icon(
+                    categoryIconFromName(category.icon),
+                    color: color,
+                    size: 20,
+                  ),
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    iconSize: 19,
+                    tooltip: 'Category actions',
+                    onSelected: (action) =>
+                        _categoryAction(context, ref, action),
+                    itemBuilder: (_) => category.isBuiltIn
+                        ? [
+                            PopupMenuItem(
+                              value: category.isHidden ? 'unhide' : 'hide',
+                              child: Text(
+                                category.isHidden
+                                    ? 'Show category'
+                                    : 'Hide category',
+                              ),
+                            ),
+                          ]
+                        : [
+                            if (category.isArchived)
+                              const PopupMenuItem(
+                                value: 'restore',
+                                child: Text('Restore'),
+                              )
+                            else
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Text('Edit'),
+                              ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete'),
+                            ),
+                          ],
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              category.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: category.isHidden || category.isArchived
+                        ? colorScheme.onSurfaceVariant
+                        : color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    status,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+                if (category.isBuiltIn)
+                  Icon(
+                    Icons.lock_outline_rounded,
+                    size: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -137,29 +216,9 @@ class CategoryTile extends ConsumerWidget {
       if (context.mounted) showError(context, error);
     }
   }
-
 }
 
 Color _color(String value) => Color(
   0xFF000000 |
       (int.tryParse(value.replaceFirst('#', ''), radix: 16) ?? 0x2563EB),
 );
-
-IconData _icon(String icon) => switch (icon) {
-  'work' => Icons.work_outline_rounded,
-  'laptop' => Icons.laptop_mac_rounded,
-  'trending_up' => Icons.trending_up_rounded,
-  'home' => Icons.home_outlined,
-  'store' => Icons.storefront_outlined,
-  'restaurant' => Icons.restaurant_rounded,
-  'directions_car' => Icons.directions_car_rounded,
-  'shopping_bag' => Icons.shopping_bag_outlined,
-  'receipt' => Icons.receipt_long_outlined,
-  'movie' => Icons.movie_outlined,
-  'favorite' => Icons.favorite_outline_rounded,
-  'school' => Icons.school_outlined,
-  'shield' => Icons.shield_outlined,
-  'flight' => Icons.flight_outlined,
-  'spa' => Icons.spa_outlined,
-  _ => Icons.category_outlined,
-};

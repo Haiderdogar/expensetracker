@@ -21,6 +21,9 @@ class Categories extends _$Categories {
       ref.watch(localDataEpochProvider);
       final userId = ref.watch(currentUserIdProvider);
       final walletId = ref.watch(activeWalletIdProvider);
+      await ref
+          .read(databaseHelperProvider)
+          .ensureBuiltInCategories(userId);
       final syncRepo = ref.read(syncRepositoryProvider);
       return await syncRepo.getCategories(userId, walletId: walletId);
     } catch (e) {

@@ -18,17 +18,33 @@ class ProfileBody extends ConsumerWidget {
     if (draft.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-      child: Column(
-        children: [
-          ProfileHeader(draft: draft),
-          const SizedBox(height: 28),
-          ProfileForm(draft: draft),
-          const SizedBox(height: 24),
-          ProfileActions(draft: draft),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = constraints.maxWidth > 600 ? 32.0 : 18.0;
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            12,
+            horizontalPadding,
+            32,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 620),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ProfileHeader(draft: draft),
+                  const SizedBox(height: 22),
+                  ProfileForm(draft: draft),
+                  const SizedBox(height: 18),
+                  ProfileActions(draft: draft),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -66,14 +66,11 @@ flutter_native_splash:
   image_dark: assets/icon.png
 
   # Android 12+ Splash API
-  # KEY: Set background = icon's own background (#2563EB blue).
-  # Android OS always clips the icon to a circle, but when the splash background
-  # colour matches the icon background, the circle edge is invisible → flat look.
-  # Result: solid blue screen with the white wallet logo centred, no round shape.
+  # Use the same theme-specific backgrounds on Android 12+.
   android_12:
-    color: "#2563EB"
+    color: "#FFFFFF"
     image: assets/icon.png
-    color_dark: "#2563EB"
+    color_dark: "#111827"
     image_dark: assets/icon.png
 
   android: true

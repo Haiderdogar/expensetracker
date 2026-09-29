@@ -504,22 +504,29 @@ class _CategoryPickerSheet extends StatelessWidget {
               ),
             ),
             Flexible(
-              child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.92,
-                ),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  final isSelected = category.id == selectedCategoryId;
-                  return _CategoryChoiceTile(
-                    category: category,
-                    isSelected: isSelected,
-                    onTap: () => Navigator.of(context).pop(category),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossAxisCount = (constraints.maxWidth / 96)
+                      .floor()
+                      .clamp(4, 8);
+                  return GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 0.84,
+                    ),
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      final category = categories[index];
+                      final isSelected = category.id == selectedCategoryId;
+                      return _CategoryChoiceTile(
+                        category: category,
+                        isSelected: isSelected,
+                        onTap: () => Navigator.of(context).pop(category),
+                      );
+                    },
                   );
                 },
               ),
@@ -548,21 +555,21 @@ class _CategoryChoiceTile extends StatelessWidget {
 
     return Material(
       color: isSelected
-          ? colorScheme.primary.withValues(alpha: 0.08)
-          : colorScheme.surface,
-      borderRadius: BorderRadius.circular(18),
+          ? colorScheme.primaryContainer.withValues(alpha: 0.48)
+          : colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(15),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(15),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 7),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(15),
             border: Border.all(
               color: isSelected
                   ? colorScheme.primary
                   : colorScheme.outlineVariant,
-              width: isSelected ? 1.6 : 1,
+              width: isSelected ? 1.5 : 0.8,
             ),
           ),
           child: Column(
@@ -571,38 +578,40 @@ class _CategoryChoiceTile extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  _CategoryIcon(category: category, size: 48),
+                  _CategoryIcon(category: category, size: 34),
                   if (isSelected)
                     Positioned(
-                      right: -5,
-                      top: -5,
+                      right: -4,
+                      top: -4,
                       child: Container(
-                        width: 19,
-                        height: 19,
+                        width: 16,
+                        height: 16,
                         decoration: BoxDecoration(
                           color: colorScheme.primary,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: colorScheme.surface,
-                            width: 2,
+                            color: colorScheme.surfaceContainerLow,
+                            width: 1.5,
                           ),
                         ),
                         child: Icon(
                           Icons.check_rounded,
-                          size: 12,
+                          size: 10,
                           color: colorScheme.onPrimary,
                         ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 5),
               Text(
                 category.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10.5,
+                  height: 1.1,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected
                       ? colorScheme.primary

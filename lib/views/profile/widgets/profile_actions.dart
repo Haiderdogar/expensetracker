@@ -20,10 +20,13 @@ class ProfileActions extends ConsumerWidget {
         children: [
           FilledButton.icon(
             onPressed: () => _upgrade(context, ref),
-            icon: const Icon(Icons.login_rounded),
-            label: const Text('Sign in with Google'),
+            icon: const Icon(Icons.account_circle_outlined),
+            label: const Text('Connect Google account'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 15),
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _editButton(context, ref),
         ],
       );
@@ -35,24 +38,34 @@ class ProfileActions extends ConsumerWidget {
     if (!draft.isEditing) {
       return SizedBox(
         width: double.infinity,
-        child: FilledButton.icon(
+        child: OutlinedButton.icon(
           onPressed: () => ref.read(profileDraftProvider.notifier).state = draft
               .copyWith(isEditing: true),
           icon: const Icon(Icons.edit_outlined),
-          label: const Text('Edit profile'),
-          style: FilledButton.styleFrom(
+          label: const Text('Edit profile details'),
+          style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
           ),
         ),
       );
     }
-    if (!draft.hasChanges) return const SizedBox.shrink();
     return SizedBox(
       width: double.infinity,
       child: FilledButton.icon(
-        onPressed: () => _save(context, ref),
-        icon: const Icon(Icons.check_rounded),
-        label: const Text('Save changes'),
+        onPressed: draft.hasChanges ? () => _save(context, ref) : null,
+        icon: Icon(
+          draft.hasChanges ? Icons.check_rounded : Icons.edit_note_rounded,
+        ),
+        label: Text(draft.hasChanges ? 'Save changes' : 'No changes to save'),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
       ),
     );
   }
@@ -114,10 +127,11 @@ class ProfileActions extends ConsumerWidget {
         showSuccessSnackBar(context, 'Profile updated successfully');
       }
     } catch (error) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     }
   }
 }
