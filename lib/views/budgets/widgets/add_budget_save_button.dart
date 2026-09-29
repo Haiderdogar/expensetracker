@@ -41,6 +41,22 @@ class AddBudgetSaveButton extends ConsumerWidget {
 
     ref.read(addBudgetLoadingProvider.notifier).state = true;
     try {
+      final existingBudgets = await ref.read(
+        monthBudgetProgressProvider(selectedMonth).future,
+      );
+      if (existingBudgets.any(
+        (budget) => budget.budget.categoryId == categoryId,
+      )) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This category already has a budget this month'),
+            ),
+          );
+        }
+        return;
+      }
+
       await ref.read(budgetsProvider.notifier).create(
             categoryId: categoryId,
             amount: parsedAmount,
@@ -51,7 +67,7 @@ class AddBudgetSaveButton extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save budget: $e')),
+          SnackBar(content: Text('Unable to save budget: $e')),
         );
       }
     } finally {

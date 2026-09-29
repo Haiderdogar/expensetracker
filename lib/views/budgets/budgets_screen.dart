@@ -22,6 +22,7 @@ class BudgetsScreen extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => const AddBudgetSheet(),
     );
   }

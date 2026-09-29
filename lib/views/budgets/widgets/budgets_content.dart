@@ -26,21 +26,26 @@ class BudgetsContent extends ConsumerWidget {
         children: [
           // Month Navigator (< Month Year >)
           const BudgetsMonthSelector(),
-        //  const SizedBox(height: 5),
+          //  const SizedBox(height: 5),
 
           // Budget Content / Progress List
           progress.when(
             loading: () => const ShimmerList(itemCount: 3),
-            error: (error, _) => BudgetsLoadError(error: error, month: selectedMonth),
+            error: (error, _) =>
+                BudgetsLoadError(error: error, month: selectedMonth),
             data: (items) {
               if (items.isEmpty) {
                 return BudgetsEmptyState(month: selectedMonth);
               }
 
-              final totalBudget =
-                  items.fold<double>(0, (sum, item) => sum + item.budget.amount);
-              final totalSpent =
-                  items.fold<double>(0, (sum, item) => sum + item.spent);
+              final totalBudget = items.fold<double>(
+                0,
+                (sum, item) => sum + item.budget.amount,
+              );
+              final totalSpent = items.fold<double>(
+                0,
+                (sum, item) => sum + item.spent,
+              );
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -49,7 +54,7 @@ class BudgetsContent extends ConsumerWidget {
                     totalBudget: totalBudget,
                     totalSpent: totalSpent,
                   ),
-               //s   const SizedBox(height: 5),
+                  //s   const SizedBox(height: 5),
                   ...items.map(
                     (item) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -130,6 +135,7 @@ class BudgetsEmptyState extends ConsumerWidget {
                     showModalBottomSheet<void>(
                       context: context,
                       isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
                       builder: (_) => const AddBudgetSheet(),
                     );
                   },
@@ -165,9 +171,9 @@ class BudgetsEmptyState extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to copy: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to copy: $e')));
       }
     }
   }

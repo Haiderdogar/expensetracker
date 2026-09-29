@@ -68,17 +68,28 @@ class Budgets extends _$Budgets {
     required double amount,
     DateTime? month,
   }) async {
+    final m = month ?? DateTime.now();
+    final monthYear = Formatters.monthYear(m);
+    final existingBudgets = await future;
+    if (existingBudgets.any(
+      (budget) =>
+          budget.categoryId == categoryId && budget.monthYear == monthYear,
+    )) {
+      throw AppException(
+        'A budget already exists for this category and month.',
+      );
+    }
+
     const uuid = Uuid();
     final userId = ref.read(currentUserIdProvider);
     final walletId = ref.read(activeWalletIdProvider);
-    final m = month ?? DateTime.now();
     final budget = BudgetModel(
       id: uuid.v4(),
       userId: userId,
       walletId: walletId ?? '',
       categoryId: categoryId,
       amount: amount,
-      monthYear: Formatters.monthYear(m),
+      monthYear: monthYear,
     );
     await upsert(budget);
     return budget;

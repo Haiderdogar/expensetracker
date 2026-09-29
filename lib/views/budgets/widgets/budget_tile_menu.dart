@@ -30,17 +30,13 @@ class BudgetTileMenu extends ConsumerWidget {
   }
 
   Future<void> _edit(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(
-      text: progress.budget.amount.toStringAsFixed(0),
-    );
     final result = await showDialog<String>(
       context: context,
       builder: (dialogContext) => _EditBudgetDialog(
         categoryName: progress.categoryName,
-        controller: controller,
+        initialAmount: progress.budget.amount.toStringAsFixed(0),
       ),
     );
-    controller.dispose();
 
     if (result == null || result.isEmpty) return;
 
@@ -114,23 +110,45 @@ class BudgetTileMenu extends ConsumerWidget {
   }
 }
 
-class _EditBudgetDialog extends StatelessWidget {
+class _EditBudgetDialog extends StatefulWidget {
   const _EditBudgetDialog({
     required this.categoryName,
-    required this.controller,
+    required this.initialAmount,
   });
 
   final String categoryName;
-  final TextEditingController controller;
+  final String initialAmount;
+
+  @override
+  State<_EditBudgetDialog> createState() => _EditBudgetDialogState();
+}
+
+class _EditBudgetDialogState extends State<_EditBudgetDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialAmount);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Edit budget for $categoryName'),
+      scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      title: Text('Edit budget for ${widget.categoryName}'),
       content: TextField(
-        controller: controller,
+        controller: _controller,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         autofocus: true,
+        textInputAction: TextInputAction.done,
         decoration: const InputDecoration(
           hintText: 'New budget amount',
           labelText: 'Amount',
@@ -142,11 +160,10 @@ class _EditBudgetDialog extends StatelessWidget {
           child: const Text('Cancel'),
         ),
         TextButton(
-          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
           child: const Text('Save'),
         ),
       ],
     );
   }
 }
-
