@@ -71,7 +71,7 @@ class _WelcomeArtwork extends StatelessWidget {
         width: 180,
         height: 180,
         fit: BoxFit.contain,
-        semanticLabel: 'Expense Tracker wallet',
+        semanticLabel: 'Expensee wallet',
       ),
     );
   }

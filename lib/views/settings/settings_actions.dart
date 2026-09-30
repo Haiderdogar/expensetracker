@@ -67,7 +67,7 @@ class SettingsActions {
       return;
     }
     if (!await controller.promptBiometric(
-      reason: 'Confirm biometrics for Expense Tracker',
+      reason: 'Confirm biometrics for Expensee',
     )) {
       if (context.mounted) _message(context, 'Biometric setup was cancelled');
       return;

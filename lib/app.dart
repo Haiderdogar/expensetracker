@@ -7,8 +7,8 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 
-class ExpenseTrackerApp extends StatelessWidget {
-  const ExpenseTrackerApp({super.key, this.startupError});
+class ExpenseeApp extends StatelessWidget {
+  const ExpenseeApp({super.key, this.startupError});
 
   final String? startupError;
   static bool _startupConfigurationInitialized = false;
@@ -22,6 +22,8 @@ class ExpenseTrackerApp extends StatelessWidget {
     return const _AppThemeWrapper();
   }
 }
+
+typedef ExpenseTrackerApp = ExpenseeApp;
 
 class _AppThemeWrapper extends ConsumerWidget {
   const _AppThemeWrapper();

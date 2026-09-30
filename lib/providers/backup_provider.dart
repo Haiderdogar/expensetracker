@@ -49,12 +49,12 @@ class BackupService extends _$BackupService {
     final data = await exportAll();
     final json = const JsonEncoder.withIndent('  ').convert(data);
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/expense_tracker_backup.json');
+    final file = File('${dir.path}/expensee_backup.json');
     await file.writeAsString(json);
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(file.path)],
-        text: 'Expense Tracker Backup',
+        text: 'Expensee Backup',
       ),
     );
   }

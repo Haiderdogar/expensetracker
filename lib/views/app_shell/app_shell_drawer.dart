@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_strings.dart';
 import 'app_shell_drawer_header.dart';
 import 'app_shell_drawer_pages.dart';
 import 'app_shell_drawer_section_title.dart';
@@ -52,7 +53,7 @@ class AppShellDrawer extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'Expense Tracker',
+                  AppStrings.appName,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: colors.onSurface,

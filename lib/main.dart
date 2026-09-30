@@ -51,7 +51,7 @@ void main() async {
   runApp(
     UncontrolledProviderScope(
       container: container,
-      child: ExpenseTrackerApp(startupError: startupError),
+      child: ExpenseeApp(startupError: startupError),
     ),
   );
 }

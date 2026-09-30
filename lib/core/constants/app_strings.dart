@@ -1,5 +1,5 @@
 abstract final class AppStrings {
-  static const String appName = 'Expense Tracker';
+  static const String appName = 'Expensee';
   static const String dashboard = 'Dashboard';
   static const String transactions = 'Transactions';
   static const String analytics = 'Analytics';
@@ -41,7 +41,7 @@ abstract final class AppStrings {
       'Incorrect email. Please select the Google account used for this app.';
   static const String protectAppTitle = 'Protect your app';
   static const String protectAppBody =
-      'Lock Expense Tracker with a PIN. You can also unlock with biometrics. You can skip and enable this later in Settings.';
+      'Lock Expensee with a PIN. You can also unlock with biometrics. You can skip and enable this later in Settings.';
   static const String setupAppLock = 'Set up app lock';
   static const String skipForNow = 'Skip for now';
   static const String enableBiometricTitle = 'Use biometrics?';

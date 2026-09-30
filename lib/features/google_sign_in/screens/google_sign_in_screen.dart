@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_strings.dart';
 import 'package:expensetracker/app/app_startup.dart';
 import 'package:expensetracker/features/google_sign_in/providers/auth_provider.dart';
 
@@ -38,13 +39,13 @@ class GoogleSignInScreen extends StatelessWidget {
                             width: 180,
                             height: 180,
                             fit: BoxFit.contain,
-                            semanticLabel: 'Expense Tracker',
+                            semanticLabel: AppStrings.appName,
                           ),
 
                           const SizedBox(height: 10),
 
                           Text(
-                            'Expense Tracker',
+                            AppStrings.appName,
                             textAlign: TextAlign.center,
                             style: theme.textTheme.headlineMedium?.copyWith(
                               fontSize: 30,

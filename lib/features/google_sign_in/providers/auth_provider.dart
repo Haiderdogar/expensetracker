@@ -509,7 +509,7 @@ class AuthController extends _$AuthController {
     try {
       if (!await auth.isDeviceSupported()) return null;
       return await auth.authenticate(
-        localizedReason: 'Verify your device to reset the Expense Tracker PIN',
+        localizedReason: 'Verify your device to reset the Expensee PIN',
         biometricOnly: false,
         persistAcrossBackgrounding: true,
       );
@@ -655,7 +655,7 @@ class AuthController extends _$AuthController {
   }
 
   Future<bool> promptBiometric({
-    String reason = 'Unlock Expense Tracker',
+    String reason = 'Unlock Expensee',
   }) async {
     if (await preferredBiometric() == null) {
       return false;
@@ -682,7 +682,7 @@ class AuthController extends _$AuthController {
       return false;
     }
 
-    final success = await promptBiometric(reason: 'Unlock Expense Tracker');
+    final success = await promptBiometric(reason: 'Unlock Expensee');
 
     if (success) {
       state = const AsyncData(AuthStatus.authenticated);
