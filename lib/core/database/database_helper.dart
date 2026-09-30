@@ -287,6 +287,22 @@ class DatabaseHelper {
         'INTEGER NOT NULL DEFAULT 0',
       );
     }
+    if (oldVersion < 11) {
+      for (final table in [
+        DatabaseTables.categories,
+        DatabaseTables.wallets,
+        DatabaseTables.transactions,
+        DatabaseTables.budgets,
+        DatabaseTables.notes,
+      ]) {
+        await _safeAddColumn(
+          db,
+          table,
+          'is_deleted',
+          'INTEGER NOT NULL DEFAULT 0',
+        );
+      }
+    }
   }
 
   Future<void> _assignRecordsToFirstWallet(Database db) async {

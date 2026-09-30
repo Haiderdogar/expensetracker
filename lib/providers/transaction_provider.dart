@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:expensetracker/providers/database_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -37,16 +38,30 @@ class Transactions extends _$Transactions {
     try {
       final userId = ref.read(currentUserIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      final txToSave = transaction.copyWith(userId: userId);
-      await syncRepo.saveTransaction(txToSave);
+      final txToSave = transaction.copyWith(
+        userId: userId,
+        isSynced: false,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      );
 
-      final delta = transaction.isIncome
-          ? transaction.amount
-          : -transaction.amount;
-      await ref
-          .read(walletsProvider.notifier)
-          .updateBalance(transaction.walletId, delta);
-      await refresh();
+      // ── Step 1: Write to SQLite and update the manifest entry
+      //   (fast local DB write — this is what the user waits for).
+      await syncRepo.saveTransactionLocalOnly(txToSave);
+
+      // ── Step 2: Optimistic UI update — splice directly into the
+      //   current list so the screen updates instantly with no re-query.
+      final current = state.value ?? [];
+      final updated = [txToSave, ...current];
+      state = AsyncData(updated);
+
+      // ── Step 3: Update wallet balance locally and in UI.
+      final delta = transaction.isIncome ? transaction.amount : -transaction.amount;
+      unawaited(
+        ref.read(walletsProvider.notifier).updateBalance(transaction.walletId, delta),
+      );
+
+      // ── Step 4: Push to Firestore in the background — user never waits.
+      unawaited(syncRepo.pushTransactionRemote(txToSave));
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -57,31 +72,34 @@ class Transactions extends _$Transactions {
       final userId = ref.read(currentUserIdProvider);
       final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      final existingTxs = await syncRepo.getTransactions(
-        userId,
-        walletId: walletId,
+
+      // Find the old version from current state (no extra DB query needed).
+      final current = state.value ?? [];
+      final old = current.where((t) => t.id == transaction.id).firstOrNull;
+      if (old == null) throw ErrorHandler.from(Exception('Transaction not found'));
+
+      final txToSave = transaction.copyWith(
+        userId: userId,
+        walletId: walletId ?? transaction.walletId,
+        isSynced: false,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
       );
-      final existing = existingTxs
-          .where((t) => t.id == transaction.id)
-          .toList();
-      if (existing.isEmpty) throw ErrorHandler.from(Exception('not found'));
 
-      final old = existing.first;
+      // ── Step 1: Write to SQLite instantly.
+      await syncRepo.saveTransactionLocalOnly(txToSave);
+
+      // ── Step 2: Optimistic UI update — replace the old item in-place.
+      final updated = current.map((t) => t.id == txToSave.id ? txToSave : t).toList();
+      state = AsyncData(updated);
+
+      // ── Step 3: Reverse old balance effect, apply new one — both in background.
       final oldDelta = old.isIncome ? -old.amount : old.amount;
-      await ref
-          .read(walletsProvider.notifier)
-          .updateBalance(old.walletId, oldDelta);
+      unawaited(ref.read(walletsProvider.notifier).updateBalance(old.walletId, oldDelta));
+      final newDelta = transaction.isIncome ? transaction.amount : -transaction.amount;
+      unawaited(ref.read(walletsProvider.notifier).updateBalance(transaction.walletId, newDelta));
 
-      final txToSave = transaction.copyWith(userId: userId);
-      await syncRepo.saveTransaction(txToSave);
-
-      final newDelta = transaction.isIncome
-          ? transaction.amount
-          : -transaction.amount;
-      await ref
-          .read(walletsProvider.notifier)
-          .updateBalance(transaction.walletId, newDelta);
-      await refresh();
+      // ── Step 4: Push to Firestore in the background.
+      unawaited(syncRepo.pushTransactionRemote(txToSave));
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -90,23 +108,31 @@ class Transactions extends _$Transactions {
   Future<void> delete(String id) async {
     try {
       final userId = ref.read(currentUserIdProvider);
-      final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      final existingTxs = await syncRepo.getTransactions(
-        userId,
-        walletId: walletId,
-      );
-      final existing = existingTxs.where((t) => t.id == id).toList();
-      if (existing.isEmpty) return;
 
-      final old = existing.first;
+      // Find from current state — no extra DB query.
+      final current = state.value ?? [];
+      final old = current.where((t) => t.id == id).firstOrNull;
+      if (old == null) return;
+
+      // ── Step 1: Soft-delete locally (instant).
+      await syncRepo.deleteTransactionLocalOnly(id, userId);
+
+      // ── Step 2: Optimistic UI update — remove immediately.
+      state = AsyncData(current.where((t) => t.id != id).toList());
+
+      // ── Step 3: Reverse the wallet balance in the background.
       final delta = old.isIncome ? -old.amount : old.amount;
-      await ref
-          .read(walletsProvider.notifier)
-          .updateBalance(old.walletId, delta);
+      unawaited(ref.read(walletsProvider.notifier).updateBalance(old.walletId, delta));
 
-      await syncRepo.deleteTransaction(id, userId);
-      await refresh();
+      // ── Step 4: Push soft-delete to Firestore in the background.
+      unawaited(syncRepo.pushDeleteRemote(
+        table: 'transactions',
+        userId: userId,
+        id: id,
+        walletId: old.walletId,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      ));
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -137,7 +163,6 @@ class Transactions extends _$Transactions {
     await add(transaction);
     return transaction;
   }
-
 }
 
 @riverpod
@@ -186,8 +211,7 @@ Future<List<TransactionModel>> filteredTransactions(
       return false;
     }
     if (search != null && search.isNotEmpty) {
-      if (!t.title.toLowerCase().contains(search.toLowerCase()))
-        return false;
+      if (!t.title.toLowerCase().contains(search.toLowerCase())) return false;
     }
     if (month != null) {
       final d = DateTime.parse(t.date);
@@ -205,8 +229,7 @@ Future<double> currentMonthIncome(Ref ref) async {
   return all
       .where((t) {
         if (!t.isIncome) return false;
-        if (selectedWalletId != null && t.walletId != selectedWalletId)
-          return false;
+        if (selectedWalletId != null && t.walletId != selectedWalletId) return false;
         final d = DateTime.tryParse(t.date);
         if (d == null) return false;
         return d.year == now.year && d.month == now.month;
@@ -222,8 +245,7 @@ Future<double> currentMonthExpense(Ref ref) async {
   return all
       .where((t) {
         if (!t.isExpense) return false;
-        if (selectedWalletId != null && t.walletId != selectedWalletId)
-          return false;
+        if (selectedWalletId != null && t.walletId != selectedWalletId) return false;
         final d = DateTime.tryParse(t.date);
         if (d == null) return false;
         return d.year == now.year && d.month == now.month;

@@ -29,51 +29,57 @@ class BudgetsContent extends ConsumerWidget {
           //  const SizedBox(height: 5),
 
           // Budget Content / Progress List
-          progress.when(
-            loading: () => const ShimmerList(itemCount: 3),
-            error: (error, _) =>
-                BudgetsLoadError(error: error, month: selectedMonth),
-            data: (items) {
-              if (items.isEmpty) {
-                return BudgetsEmptyState(month: selectedMonth);
-              }
+          if (progress.isLoading && !progress.hasValue)
+            const ShimmerList(itemCount: 3)
+          else if (progress.hasError && !progress.hasValue)
+            BudgetsLoadError(error: progress.error!, month: selectedMonth)
+          else ...[
+            Builder(
+              builder: (context) {
+                final items = progress.value ?? [];
+                if (items.isEmpty) {
+                  return BudgetsEmptyState(month: selectedMonth);
+                }
 
-              final totalBudget = items.fold<double>(
-                0,
-                (sum, item) => sum + item.budget.amount,
-              );
-              final totalSpent = items.fold<double>(
-                0,
-                (sum, item) => sum + item.spent,
-              );
+                final totalBudget = items.fold<double>(
+                  0,
+                  (sum, item) => sum + item.budget.amount,
+                );
+                final totalSpent = items.fold<double>(
+                  0,
+                  (sum, item) => sum + item.spent,
+                );
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  BudgetSummaryCard(
-                    totalBudget: totalBudget,
-                    totalSpent: totalSpent,
-                  ),
-                  //s   const SizedBox(height: 5),
-                  ...items.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: BudgetProgressTile(progress: item),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    BudgetSummaryCard(
+                      totalBudget: totalBudget,
+                      totalSpent: totalSpent,
                     ),
-                  ),
-                ],
-              );
-            },
-          ),
+                    ...items.map(
+                      (item) => Padding(
+                        key: ValueKey(item.budget.id),
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: BudgetProgressTile(
+                          key: ValueKey('tile_${item.budget.id}'),
+                          progress: item,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
   }
 
   Future<void> _refresh(WidgetRef ref, DateTime month) async {
-    ref.invalidate(monthBudgetProgressProvider(month));
     try {
-      await ref.read(monthBudgetProgressProvider(month).future);
+      await ref.read(budgetsProvider.notifier).refresh();
     } catch (_) {}
   }
 }

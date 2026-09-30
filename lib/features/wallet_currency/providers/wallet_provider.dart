@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -75,7 +74,8 @@ class Wallets extends _$Wallets {
       final syncRepo = ref.read(syncRepositoryProvider);
       await syncRepo.saveWallet(wallet);
       await ref.read(databaseHelperProvider).ensureBuiltInCategories(userId);
-      await refresh();
+      final current = state.value ?? [];
+      state = AsyncData([...current, wallet]);
       return wallet;
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -86,10 +86,12 @@ class Wallets extends _$Wallets {
     try {
       final userId = ref.read(currentUserIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.saveWallet(
-        wallet.copyWith(userId: userId, isSynced: false),
+      final updatedWallet = wallet.copyWith(userId: userId, isSynced: false);
+      final current = state.value ?? [];
+      state = AsyncData(
+        current.map((w) => w.id == updatedWallet.id ? updatedWallet : w).toList(),
       );
-      await refresh();
+      await syncRepo.saveWallet(updatedWallet);
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -99,8 +101,16 @@ class Wallets extends _$Wallets {
     try {
       final userId = ref.read(currentUserIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
+      final current = state.value ?? [];
+      state = AsyncData(
+        current.map((w) {
+          if (w.id == walletId) {
+            return w.copyWith(balance: w.balance + delta);
+          }
+          return w;
+        }).toList(),
+      );
       await syncRepo.updateWalletBalance(walletId, userId, delta);
-      await refresh();
     } catch (e) {
       throw ErrorHandler.from(e);
     }

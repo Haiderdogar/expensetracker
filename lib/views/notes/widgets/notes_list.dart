@@ -14,27 +14,37 @@ class NotesList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-        final notes = ref.watch(notesProvider);
-        final query = ref.watch(notesSearchQueryProvider).trim().toLowerCase();
-        return notes.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => NotesMessage(
-            icon: Icons.cloud_off_rounded,
-            title: 'Notes are unavailable',
-            message: error.toString(),
-            action: TextButton.icon(
-              onPressed: () => ref.read(notesProvider.notifier).refresh(),
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Try again'),
-            ),
-          ),
-          data: (items) => _NotesContent(notes: _filter(items, query)),
-        );
+    final notes = ref.watch(notesProvider);
+    final query = ref.watch(notesSearchQueryProvider).trim().toLowerCase();
+
+    if (notes.isLoading && !notes.hasValue) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (notes.hasError && !notes.hasValue) {
+      return NotesMessage(
+        icon: Icons.cloud_off_rounded,
+        title: 'Notes are unavailable',
+        message: notes.error.toString(),
+        action: TextButton.icon(
+          onPressed: () => ref.read(notesProvider.notifier).refresh(),
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Try again'),
+        ),
+      );
+    }
+
+    final items = notes.value ?? [];
+    return _NotesContent(notes: _filter(items, query));
   }
 
   List<NoteModel> _filter(List<NoteModel> notes, String query) {
     if (query.isEmpty) return notes;
-    return notes.where((note) => note.title.toLowerCase().contains(query)).toList();
+    return notes.where((note) {
+      final matchesTitle = note.title.toLowerCase().contains(query);
+      final matchesContent = note.content.toLowerCase().contains(query);
+      return matchesTitle || matchesContent;
+    }).toList();
   }
 }
 
@@ -75,8 +85,10 @@ class _NotesContent extends StatelessWidget {
             const SizedBox(height: 12),
             ...notes.asMap().entries.map(
               (entry) => Padding(
+                key: ValueKey(entry.value.id),
                 padding: const EdgeInsets.only(bottom: 12),
                 child: NoteCard(
+                  key: ValueKey('card_${entry.value.id}'),
                   note: entry.value,
                   accent: noteAccents[entry.key % noteAccents.length],
                   onTap: () => _openEditor(context, entry.value),

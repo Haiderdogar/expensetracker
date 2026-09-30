@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -41,9 +43,11 @@ class Notes extends _$Notes {
       final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
       final now = DateTime.now();
+      
+      final current = state.value ?? [];
       final existing = id == null
           ? null
-          : await syncRepo.getNote(id, userId, walletId: walletId);
+          : current.where((n) => n.id == id).firstOrNull;
 
       final note = NoteModel(
         id: id ?? const Uuid().v4(),
@@ -56,8 +60,18 @@ class Notes extends _$Notes {
         isSynced: false,
       );
 
-      await syncRepo.saveNote(note);
-      await refresh();
+      // ── Step 1: Write to SQLite instantly.
+      await syncRepo.saveNoteLocalOnly(note);
+
+      // ── Step 2: Optimistic UI update.
+      if (existing != null) {
+        state = AsyncData(current.map((n) => n.id == note.id ? note : n).toList());
+      } else {
+        state = AsyncData([note, ...current]);
+      }
+
+      // ── Step 3: Push to Firestore in the background.
+      unawaited(syncRepo.pushNoteRemote(note));
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -67,8 +81,25 @@ class Notes extends _$Notes {
     try {
       final userId = ref.read(currentUserIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.deleteNote(id, userId);
-      await refresh();
+
+      final current = state.value ?? [];
+      final old = current.where((n) => n.id == id).firstOrNull;
+      if (old == null) return;
+
+      // ── Step 1: Soft-delete locally (instant).
+      await syncRepo.deleteNoteLocalOnly(id, userId);
+
+      // ── Step 2: Optimistic UI update.
+      state = AsyncData(current.where((n) => n.id != id).toList());
+
+      // ── Step 3: Push soft-delete to Firestore in the background.
+      unawaited(syncRepo.pushDeleteRemote(
+        table: 'notes',
+        userId: userId,
+        id: id,
+        walletId: old.walletId,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      ));
     } catch (e) {
       throw ErrorHandler.from(e);
     }

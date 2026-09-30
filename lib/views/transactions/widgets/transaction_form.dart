@@ -176,8 +176,9 @@ class TransactionForm extends ConsumerWidget {
           ),
         );
       }
-      if (context.mounted)
+      if (context.mounted) {
         Navigator.of(context).pop(transaction == null ? 'created' : 'saved');
+      }
     } catch (error) {
       if (context.mounted) _showMessage(context, error.toString());
     } finally {

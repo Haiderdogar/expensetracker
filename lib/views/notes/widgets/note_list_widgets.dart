@@ -117,7 +117,7 @@ class NotesMessage extends StatelessWidget {
               imageAsset!,
               height: 120,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Icon(
+              errorBuilder: (_, _, _) => Icon(
                 icon,
                 size: 48,
                 color: Theme.of(context).colorScheme.primary,

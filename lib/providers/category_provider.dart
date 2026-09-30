@@ -1,4 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 import '../core/database/database_tables.dart';
@@ -21,9 +22,7 @@ class Categories extends _$Categories {
       ref.watch(localDataEpochProvider);
       final userId = ref.watch(currentUserIdProvider);
       final walletId = ref.watch(activeWalletIdProvider);
-      await ref
-          .read(databaseHelperProvider)
-          .ensureBuiltInCategories(userId);
+      await ref.read(databaseHelperProvider).ensureBuiltInCategories(userId);
       final syncRepo = ref.read(syncRepositoryProvider);
       return await syncRepo.getCategories(userId, walletId: walletId);
     } catch (e) {
@@ -46,10 +45,22 @@ class Categories extends _$Categories {
       final userId = ref.read(currentUserIdProvider);
       final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      final catToSave = category.copyWith(userId: userId, walletId: walletId);
-      await syncRepo.saveCategory(catToSave);
+      final catToSave = category.copyWith(
+        userId: userId,
+        walletId: walletId,
+        isSynced: false,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      );
 
-      await refresh();
+      // ── Step 1: Write to SQLite instantly.
+      await syncRepo.saveCategoryLocalOnly(catToSave);
+
+      // ── Step 2: Optimistic UI update — add to front of list.
+      final current = state.value ?? [];
+      state = AsyncData([catToSave, ...current]);
+
+      // ── Step 3: Push to Firestore in the background.
+      unawaited(syncRepo.pushCategoryRemote(catToSave));
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -84,43 +95,58 @@ class Categories extends _$Categories {
     try {
       final db = await ref.read(databaseProvider.future);
       final userId = ref.read(currentUserIdProvider);
-      final categories = await future;
+      final categories = state.value ?? await future;
       final category = categories.firstWhere((item) => item.id == id);
+
       if (category.isBuiltIn) {
         throw AppException('Built-in categories can be hidden, not deleted.');
       }
       final syncRepo = ref.read(syncRepositoryProvider);
-      final isRemoteStateKnown = await syncRepo.reconcileWithRemote(userId);
+
+      // Check references locally only — no Firestore read needed.
       final transactions = await db.query(
         DatabaseTables.transactions,
         columns: ['id'],
-        where: 'category_id = ? AND user_id = ? AND wallet_id = ?',
+        where: 'category_id = ? AND user_id = ? AND wallet_id = ? AND is_deleted = 0',
         whereArgs: [id, userId, category.walletId],
         limit: 1,
       );
       final budgets = await db.query(
         DatabaseTables.budgets,
         columns: ['id'],
-        where: 'category_id = ? AND user_id = ? AND wallet_id = ?',
+        where: 'category_id = ? AND user_id = ? AND wallet_id = ? AND is_deleted = 0',
         whereArgs: [id, userId, category.walletId],
         limit: 1,
       );
-      final remoteReferences = isRemoteStateKnown
-          ? await syncRepo.hasRemoteCategoryReferences(
-              id,
-              userId,
-              category.walletId,
-            )
-          : true;
 
-      final hasReferences =
-          remoteReferences || transactions.isNotEmpty || budgets.isNotEmpty;
+      final hasReferences = transactions.isNotEmpty || budgets.isNotEmpty;
+
       if (hasReferences) {
-        await syncRepo.saveCategory(category.copyWith(isArchived: true));
+        // Archive instead of delete — optimistic update.
+        final archived = category.copyWith(
+          isArchived: true,
+          isSynced: false,
+          updatedAt: DateTime.now().toUtc().toIso8601String(),
+        );
+        await syncRepo.saveCategoryLocalOnly(archived);
+        final current = state.value ?? [];
+        state = AsyncData(
+          current.map((c) => c.id == id ? archived : c).toList(),
+        );
+        unawaited(syncRepo.pushCategoryRemote(archived));
       } else {
-        await syncRepo.deleteCategory(id, userId);
+        // Soft-delete locally — remove from UI instantly.
+        await syncRepo.deleteCategoryLocalOnly(id, userId);
+        final current = state.value ?? [];
+        state = AsyncData(current.where((c) => c.id != id).toList());
+        unawaited(syncRepo.pushDeleteRemote(
+          table: 'categories',
+          userId: userId,
+          id: id,
+          walletId: category.walletId,
+          updatedAt: DateTime.now().toUtc().toIso8601String(),
+        ));
       }
-      await refresh();
       return hasReferences;
     } catch (e) {
       throw ErrorHandler.from(e);
@@ -135,10 +161,24 @@ class Categories extends _$Categories {
       final userId = ref.read(currentUserIdProvider);
       final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.saveCategory(
-        category.copyWith(userId: userId, walletId: walletId),
+      final catToSave = category.copyWith(
+        userId: userId,
+        walletId: walletId,
+        isSynced: false,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
       );
-      await refresh();
+
+      // ── Step 1: Write to SQLite instantly.
+      await syncRepo.saveCategoryLocalOnly(catToSave);
+
+      // ── Step 2: Optimistic UI update.
+      final current = state.value ?? [];
+      state = AsyncData(
+        current.map((c) => c.id == catToSave.id ? catToSave : c).toList(),
+      );
+
+      // ── Step 3: Push to Firestore in the background.
+      unawaited(syncRepo.pushCategoryRemote(catToSave));
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -157,7 +197,13 @@ class Categories extends _$Categories {
       if (result != 1) {
         throw StateError('The built-in category could not be updated.');
       }
-      await refresh();
+      // Optimistic update — flip the hidden flag in state.
+      final current = state.value ?? [];
+      state = AsyncData(
+        current
+            .map((c) => c.id == id ? c.copyWith(isHidden: hidden) : c)
+            .toList(),
+      );
     } catch (e) {
       throw ErrorHandler.from(e);
     }

@@ -62,7 +62,6 @@ class AddBudgetSaveButton extends ConsumerWidget {
             amount: parsedAmount,
             month: selectedMonth,
           );
-      ref.invalidate(monthBudgetProgressProvider(selectedMonth));
       if (context.mounted) Navigator.of(context).pop();
     } catch (e) {
       if (context.mounted) {

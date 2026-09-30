@@ -118,8 +118,10 @@ class CategorySection extends StatelessWidget {
                     crossAxisSpacing: 9,
                     mainAxisExtent: 100,
                   ),
-                  itemBuilder: (context, index) =>
-                      CategoryTile(category: categories[index]),
+                  itemBuilder: (context, index) => CategoryTile(
+                    key: ValueKey(categories[index].id),
+                    category: categories[index],
+                  ),
                 );
               },
             ),

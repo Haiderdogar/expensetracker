@@ -67,7 +67,6 @@ class NoteEditorSaveActions extends ConsumerWidget {
             title: draft.title.trim(),
             content: draft.content.trim(),
           );
-      ref.invalidate(notesProvider);
       if (context.mounted) {
         Navigator.of(context).pop(note == null ? 'created' : 'updated');
       }

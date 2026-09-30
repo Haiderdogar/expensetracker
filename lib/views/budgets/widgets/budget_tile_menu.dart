@@ -54,8 +54,6 @@ class BudgetTileMenu extends ConsumerWidget {
       await ref.read(budgetsProvider.notifier).upsert(
             progress.budget.copyWith(amount: parsedAmount),
           );
-      final selectedMonth = ref.read(selectedBudgetMonthProvider);
-      ref.invalidate(monthBudgetProgressProvider(selectedMonth));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Budget updated')),
@@ -93,8 +91,6 @@ class BudgetTileMenu extends ConsumerWidget {
 
     try {
       await ref.read(budgetsProvider.notifier).delete(progress.budget.id);
-      final selectedMonth = ref.read(selectedBudgetMonthProvider);
-      ref.invalidate(monthBudgetProgressProvider(selectedMonth));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Budget deleted')),

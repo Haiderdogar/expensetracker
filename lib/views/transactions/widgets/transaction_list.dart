@@ -21,21 +21,17 @@ class TransactionList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final search = ref.watch(transactionSearchProvider);
     final categories = ref.watch(selectedCategoryFiltersProvider);
+    final transactionsAsync = ref.watch(transactionsProvider);
 
-    final transactionsAsync = ref.watch(
-      filteredTransactionsProvider(
-        type: null,
-        search: search,
-        categories: categories,
-      ),
-    );
-
-    return transactionsAsync.when(
-      loading: () => const Padding(
+    if (transactionsAsync.isLoading && !transactionsAsync.hasValue) {
+      return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: ShimmerList(),
-      ),
-      error: (error, _) => Center(
+      );
+    }
+
+    if (transactionsAsync.hasError && !transactionsAsync.hasValue) {
+      return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -53,30 +49,44 @@ class TransactionList extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                error.toString(),
+                transactionsAsync.error.toString(),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
         ),
-      ),
-      data: (items) {
-        if (items.isEmpty) {
-          return _EmptyState(
-            hasFilter:
-                search.isNotEmpty ||
-                (categories != null && categories.isNotEmpty),
-            onResetFilters: () {
-              ref.read(transactionSearchProvider.notifier).state = '';
-              clearAllCategoryFilters(ref);
-            },
-          );
-        }
+      );
+    }
 
-        return _TransactionContent(transactions: items);
-      },
-    );
+    final all = transactionsAsync.value ?? [];
+    final hasCategoryFilter = categories != null && categories.isNotEmpty;
+    final query = search.trim().toLowerCase();
+
+    // ── Local realtime search & filtering (in-memory, instant, zero latency) ──
+    final filtered = all.where((t) {
+      if (hasCategoryFilter && !categories.contains(t.categoryId)) {
+        return false;
+      }
+      if (query.isNotEmpty) {
+        final matchesTitle = t.title.toLowerCase().contains(query);
+        final matchesNote = t.note?.toLowerCase().contains(query) ?? false;
+        if (!matchesTitle && !matchesNote) return false;
+      }
+      return true;
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return _EmptyState(
+        hasFilter: search.isNotEmpty || hasCategoryFilter,
+        onResetFilters: () {
+          ref.read(transactionSearchProvider.notifier).state = '';
+          clearAllCategoryFilters(ref);
+        },
+      );
+    }
+
+    return _TransactionContent(transactions: filtered);
   }
 }
 
@@ -108,7 +118,11 @@ class _TransactionContent extends StatelessWidget {
               final dayItems = grouped[dateKey]!;
               final dateObj = DateTime.tryParse(dateKey) ?? DateTime.now();
 
-              return _DaySection(date: dateObj, transactions: dayItems);
+              return _DaySection(
+                key: ValueKey(dateKey),
+                date: dateObj,
+                transactions: dayItems,
+              );
             }, childCount: keys.length),
           ),
         ),
@@ -118,7 +132,7 @@ class _TransactionContent extends StatelessWidget {
 }
 
 class _DaySection extends ConsumerWidget {
-  const _DaySection({required this.date, required this.transactions});
+  const _DaySection({super.key, required this.date, required this.transactions});
 
   final DateTime date;
   final List<TransactionModel> transactions;
@@ -180,6 +194,7 @@ class _DaySection extends ConsumerWidget {
         // ── Transactions in this day ─────────────────────────────────
         ...transactions.map(
           (transaction) => TransactionTile(
+            key: ValueKey(transaction.id),
             transaction: transaction,
             onTap: () => _openTransaction(context, transaction),
             onDelete: () => _deleteTransaction(context, ref, transaction),

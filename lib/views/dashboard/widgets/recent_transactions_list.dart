@@ -195,10 +195,10 @@ class RecentTransactionsList extends ConsumerWidget {
         AppRoutes.transactionEditor,
         extra: transaction,
       );
-      if (result != 'saved' && result != 'created' && result != 'deleted')
+      if (result != 'saved' && result != 'created' && result != 'deleted') {
         return;
+      }
 
-      await ref.read(transactionsProvider.notifier).refresh();
       if (!context.mounted) return;
       if (result == 'created' || result == 'saved') {
         final message = result == 'created'

@@ -14,10 +14,13 @@ class CategoryManagementBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categories = ref.watch(categoriesProvider);
     final transactions = ref.watch(transactionsProvider).value ?? const [];
-    return categories.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text(ErrorHandler.message(error))),
-      data: (items) {
+    if (categories.isLoading && !categories.hasValue) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (categories.hasError && !categories.hasValue) {
+      return Center(child: Text(ErrorHandler.message(categories.error!)));
+    }
+    final items = categories.value ?? [];
         final incomeCategories = sortCategories(
           items.where((item) => item.isIncome).toList(),
           transactions,
@@ -61,8 +64,6 @@ class CategoryManagementBody extends ConsumerWidget {
             ),
           ],
         );
-      },
-    );
   }
 }
 

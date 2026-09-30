@@ -46,7 +46,6 @@ class NoteEditorDeleteButton extends ConsumerWidget {
     );
     if (confirmed != true || !context.mounted) return;
     await ref.read(notesProvider.notifier).delete(note.id);
-    ref.invalidate(notesProvider);
     if (context.mounted) Navigator.of(context).pop('deleted');
   }
 }

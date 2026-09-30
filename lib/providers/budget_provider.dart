@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -43,10 +44,29 @@ class Budgets extends _$Budgets {
       final userId = ref.read(currentUserIdProvider);
       final walletId = ref.read(activeWalletIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.saveBudget(
-        budget.copyWith(userId: userId, walletId: walletId),
+      final budgetToSave = budget.copyWith(
+        userId: userId,
+        walletId: walletId,
+        isSynced: false,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
       );
-      await refresh();
+
+      // ── Step 1: Write to SQLite instantly.
+      await syncRepo.saveBudgetLocalOnly(budgetToSave);
+
+      // ── Step 2: Optimistic UI update.
+      final current = state.value ?? [];
+      final exists = current.any((b) => b.id == budgetToSave.id);
+      if (exists) {
+        state = AsyncData(
+          current.map((b) => b.id == budgetToSave.id ? budgetToSave : b).toList(),
+        );
+      } else {
+        state = AsyncData([budgetToSave, ...current]);
+      }
+
+      // ── Step 3: Push to Firestore in the background.
+      unawaited(syncRepo.pushBudgetRemote(budgetToSave));
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -56,8 +76,26 @@ class Budgets extends _$Budgets {
     try {
       final userId = ref.read(currentUserIdProvider);
       final syncRepo = ref.read(syncRepositoryProvider);
-      await syncRepo.deleteBudget(id, userId);
-      await refresh();
+
+      // Find from current state to get walletId for remote push.
+      final current = state.value ?? [];
+      final old = current.where((b) => b.id == id).firstOrNull;
+      if (old == null) return;
+
+      // ── Step 1: Soft-delete locally (instant).
+      await syncRepo.deleteBudgetLocalOnly(id, userId);
+
+      // ── Step 2: Optimistic UI update — remove immediately.
+      state = AsyncData(current.where((b) => b.id != id).toList());
+
+      // ── Step 3: Push soft-delete to Firestore in the background.
+      unawaited(syncRepo.pushDeleteRemote(
+        table: 'budgets',
+        userId: userId,
+        id: id,
+        walletId: old.walletId,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      ));
     } catch (e) {
       throw ErrorHandler.from(e);
     }
@@ -70,7 +108,7 @@ class Budgets extends _$Budgets {
   }) async {
     final m = month ?? DateTime.now();
     final monthYear = Formatters.monthYear(m);
-    final existingBudgets = await future;
+    final existingBudgets = state.value ?? await future;
     if (existingBudgets.any(
       (budget) =>
           budget.categoryId == categoryId && budget.monthYear == monthYear,
@@ -100,7 +138,7 @@ class Budgets extends _$Budgets {
     final prevMonthKey = Formatters.monthYear(prevMonth);
     final targetMonthKey = Formatters.monthYear(targetMonth);
 
-    final allBudgets = await future;
+    final allBudgets = state.value ?? await future;
     final prevBudgets = allBudgets
         .where((b) => b.monthYear == prevMonthKey)
         .toList();

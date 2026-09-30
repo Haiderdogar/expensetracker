@@ -8,7 +8,7 @@ abstract final class DatabaseTables {
   static const String syncQueue = 'sync_queue';
   static const String subcategories = 'subcategories';
 
-  static const int dbVersion = 10;
+  static const int dbVersion = 11;
 
   static const String createCategories = '''
     CREATE TABLE $categories (
@@ -20,6 +20,7 @@ abstract final class DatabaseTables {
       icon TEXT NOT NULL,
       color TEXT NOT NULL,
       is_synced INTEGER NOT NULL DEFAULT 0,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL,
       is_builtin INTEGER NOT NULL DEFAULT 0,
       is_hidden INTEGER NOT NULL DEFAULT 0,
@@ -34,6 +35,7 @@ abstract final class DatabaseTables {
       name TEXT NOT NULL,
       balance REAL NOT NULL DEFAULT 0,
       is_synced INTEGER NOT NULL DEFAULT 0,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL
     )
   ''';
@@ -50,6 +52,7 @@ abstract final class DatabaseTables {
       date TEXT NOT NULL,
       note TEXT,
       is_synced INTEGER NOT NULL DEFAULT 0,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (category_id) REFERENCES $categories(id),
       FOREIGN KEY (wallet_id) REFERENCES $wallets(id)
@@ -66,6 +69,7 @@ abstract final class DatabaseTables {
       amount REAL NOT NULL,
       month_year TEXT NOT NULL,
       is_synced INTEGER NOT NULL DEFAULT 0,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (category_id) REFERENCES $categories(id)
     )
@@ -87,7 +91,8 @@ abstract final class DatabaseTables {
       content TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      is_synced INTEGER NOT NULL DEFAULT 0
+      is_synced INTEGER NOT NULL DEFAULT 0,
+      is_deleted INTEGER NOT NULL DEFAULT 0
     )
   ''';
 
