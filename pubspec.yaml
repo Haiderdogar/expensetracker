@@ -1,7 +1,7 @@
 name: expensetracker
 description: A production-grade expense tracker with secure PIN and offline storage.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ">=3.12.2 <4.0.0"
@@ -9,7 +9,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.3.2
   riverpod_annotation: ^4.0.3
   sqflite: ^2.4.3

@@ -1,4 +1,4 @@
-package com.example.expensetracker
+package com.haiderdogar.expensee
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
