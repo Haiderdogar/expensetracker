@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/router/app_router.dart';
 import '../../../features/google_sign_in/providers/auth_provider.dart';
 import '../../../app/app_startup.dart';
+import '../../app_shell/app_shell_providers.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/backup_provider.dart';
 import '../../../providers/budget_provider.dart';
@@ -162,72 +165,11 @@ class _SettingsAccountSectionState
     if (firstConfirmed != true || !context.mounted) return;
 
     // ── Step 2: Final type-to-confirm dialog ───────────────────────────────
-    final typeController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setS) {
-            final isMatch =
-                typeController.text.trim().toUpperCase() == 'DELETE';
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: const Text('Confirm Deletion'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Type DELETE to confirm',
-                    style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: typeController,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: InputDecoration(
-                      hintText: 'DELETE',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onChanged: (_) => setS(() {}),
-                  ),
-                ],
-              ),
-              actionsAlignment: MainAxisAlignment.center,
-              actions: [
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text(AppStrings.cancel),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: isMatch
-                        ? Theme.of(ctx).colorScheme.error
-                        : Theme.of(ctx)
-                            .colorScheme
-                            .error
-                            .withValues(alpha: 0.4),
-                  ),
-                  onPressed: isMatch ? () => Navigator.pop(ctx, true) : null,
-                  child: const Text('Delete Forever'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (ctx) => const _DeleteConfirmDialog(),
     );
-
-    typeController.dispose();
 
     if (confirmed != true || !context.mounted) return;
 
@@ -251,6 +193,9 @@ class _SettingsAccountSectionState
               backgroundColor: AppColors.incomeGreen,
             ),
           );
+          if (context.mounted) {
+            context.go(AppRoutes.bootstrap);
+          }
         case DeleteAccountResult.incorrectEmail:
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(AppStrings.deleteAccountWrongEmail)),
@@ -285,5 +230,112 @@ class _SettingsAccountSectionState
     ref.invalidate(selectedWalletIdProvider);
     ref.invalidate(currencySymbolProvider);
     ref.invalidate(currencyCodeProvider);
+    ref.invalidate(currentUserProvider);
+    ref.invalidate(currentUserIdProvider);
+    ref.invalidate(appShellProfileProvider);
+    ref.read(appShellNavigationIndexProvider.notifier).state = 0;
+    ref.read(appShellVisitedIndexesProvider.notifier).state = {0};
+  }
+}
+
+class _DeleteConfirmDialog extends StatefulWidget {
+  const _DeleteConfirmDialog();
+
+  @override
+  State<_DeleteConfirmDialog> createState() => _DeleteConfirmDialogState();
+}
+
+class _DeleteConfirmDialogState extends State<_DeleteConfirmDialog> {
+  late final TextEditingController _typeController;
+  late final FocusNode _focusNode;
+  bool _isMatch = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _typeController = TextEditingController();
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _typeController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged(String value) {
+    final matches = value.trim().toUpperCase() == 'DELETE';
+    if (_isMatch != matches) {
+      setState(() => _isMatch = matches);
+    }
+  }
+
+  void _handleConfirm() {
+    if (!_isMatch) return;
+    _focusNode.unfocus();
+    Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      title: const Text('Confirm Deletion'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Type DELETE to confirm',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _typeController,
+              focusNode: _focusNode,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              decoration: InputDecoration(
+                hintText: 'DELETE',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: _onTextChanged,
+              onSubmitted: (_) => _handleConfirm(),
+            ),
+          ],
+        ),
+      ),
+      actionsAlignment: MainAxisAlignment.center,
+      actions: [
+        OutlinedButton(
+          onPressed: () {
+            _focusNode.unfocus();
+            Navigator.of(context).pop(false);
+          },
+          child: const Text(AppStrings.cancel),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: _isMatch
+                ? colors.error
+                : colors.error.withValues(alpha: 0.4),
+          ),
+          onPressed: _isMatch ? _handleConfirm : null,
+          child: const Text('Delete Forever'),
+        ),
+      ],
+    );
   }
 }

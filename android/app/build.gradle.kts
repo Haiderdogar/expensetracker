@@ -15,6 +15,33 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+fun signingValue(environmentName: String, propertyName: String): String? =
+    System.getenv(environmentName)?.takeIf { it.isNotBlank() }
+        ?: keystoreProperties.getProperty(propertyName)?.takeIf { it.isNotBlank() }
+
+val releaseKeyAlias = signingValue("ANDROID_KEY_ALIAS", "keyAlias")
+val releaseKeyPassword = signingValue("ANDROID_KEY_PASSWORD", "keyPassword")
+val releaseStorePassword = signingValue("ANDROID_STORE_PASSWORD", "storePassword")
+val releaseStoreFilePath = signingValue("ANDROID_UPLOAD_STORE_FILE", "storeFile")
+val releaseStoreFile = releaseStoreFilePath?.let { rootProject.file(it) }
+val hasReleaseSigning = releaseKeyAlias != null &&
+    releaseKeyPassword != null &&
+    releaseStorePassword != null &&
+    releaseStoreFile?.isFile == true
+
+val releaseBuildRequested = gradle.startParameter.taskNames.any { taskName ->
+    when (taskName.substringAfterLast(':')) {
+        "assembleRelease", "bundleRelease" -> true
+        else -> false
+    }
+}
+if (releaseBuildRequested && !hasReleaseSigning) {
+    throw GradleException(
+        "Android release builds require a valid upload keystore and signing credentials. " +
+            "Configure android/key.properties locally or the ANDROID_* signing variables in CI.",
+    )
+}
+
 android {
     namespace = "com.haiderdogar.expensee"
     compileSdk = 36
@@ -39,14 +66,21 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties.getProperty("keyAlias")
-            keyPassword = keystoreProperties.getProperty("keyPassword")
-            storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
-            storePassword = keystoreProperties.getProperty("storePassword")
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+            storeFile = releaseStoreFile
+            storePassword = releaseStorePassword
         }
     }
 
     buildTypes {
+        debug {
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -54,11 +88,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = if (keystorePropertiesFile.exists() && keystoreProperties.getProperty("storeFile") != null) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

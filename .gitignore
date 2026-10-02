@@ -80,3 +80,4 @@ ios/Runner/GoogleService-Info.plist
 encoded.txt
 .firebase/
 firebase-debug.log
+lib/firebase_options.dart

@@ -22,7 +22,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
             : null,
         title: Text(
           AppStrings.privacyPolicy,
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -42,7 +44,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               isDark: isDark,
               colors: colors,
               theme: theme,
-              content: 'We collect only the information necessary to provide '
+              content:
+                  'We collect only the information necessary to provide '
                   'you with a personalised expense‑tracking experience:\n\n'
                   '• **Account data** – Your name and email address obtained '
                   'through Google Sign-In.\n\n'
@@ -59,7 +62,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               isDark: isDark,
               colors: colors,
               theme: theme,
-              content: 'Your financial data is stored primarily on your device '
+              content:
+                  'Your financial data is stored primarily on your device '
                   'using an encrypted local database. When you are online, '
                   'data is synchronised to your private Firestore document, '
                   'which is accessible only by your authenticated account.\n\n'
@@ -74,7 +78,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               isDark: isDark,
               colors: colors,
               theme: theme,
-              content: 'We implement industry‑standard safeguards to protect '
+              content:
+                  'We implement industry‑standard safeguards to protect '
                   'your information:\n\n'
                   '• Local data is encrypted using SQLite encryption.\n\n'
                   '• Cloud data is protected by Firebase Security Rules that '
@@ -92,7 +97,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               isDark: isDark,
               colors: colors,
               theme: theme,
-              content: 'This app integrates with the following third-party '
+              content:
+                  'This app integrates with the following third-party '
                   'services, each governed by their own privacy policies:\n\n'
                   '• **Google Sign-In** – Used for account authentication.\n\n'
                   '• **Firebase / Firestore** – Used for cloud storage and '
@@ -108,7 +114,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               isDark: isDark,
               colors: colors,
               theme: theme,
-              content: 'You are in full control of your data at all times:\n\n'
+              content:
+                  'You are in full control of your data at all times:\n\n'
                   '• **Export** – Export all your data as a file from Settings.\n\n'
                   '• **Delete records** – Deleting a transaction, category, or budget '
                   'removes it from both local storage and the cloud.\n\n'
@@ -126,7 +133,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               isDark: isDark,
               colors: colors,
               theme: theme,
-              content: 'You may permanently delete your account at any time from '
+              content:
+                  'You may permanently delete your account at any time from '
                   '**Settings → Account → Delete Account**.\n\n'
                   '**What is deleted:**\n\n'
                   '• All transactions, categories, budgets, wallets, and notes '
@@ -153,7 +161,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               isDark: isDark,
               colors: colors,
               theme: theme,
-              content: 'This app is not directed at children under the age of '
+              content:
+                  'This app is not directed at children under the age of '
                   '13. We do not knowingly collect personal information from '
                   'children. If you believe a child has provided us with '
                   'personal information, please contact us so we can remove it.',
@@ -166,7 +175,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               isDark: isDark,
               colors: colors,
               theme: theme,
-              content: 'We may update this Privacy Policy from time to time. '
+              content:
+                  'We may update this Privacy Policy from time to time. '
                   'When we do, the "Effective date" at the top of the page '
                   'will be revised. Continued use of the app after changes '
                   'constitutes your acceptance of the updated policy.',
@@ -179,7 +189,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               isDark: isDark,
               colors: colors,
               theme: theme,
-              content: 'If you have any questions or concerns about this '
+              content:
+                  'If you have any questions or concerns about this '
                   'Privacy Policy or the way we handle your data, please '
                   'reach out to us at:\n\n'
                   '📧  support@expensee.app',
@@ -189,7 +200,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             // ── Footer ────────────────────────────────────────────────
             Center(
               child: Text(
-                'Effective date: 1 October 2025',
+                'Effective date: 01 October 2026',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colors.onSurfaceVariant.withValues(alpha: 0.6),
                   fontStyle: FontStyle.italic,
@@ -236,7 +247,9 @@ class _HeaderCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.primaryEmerald.withValues(alpha: isDark ? 0.22 : 0.14),
+          color: AppColors.primaryEmerald.withValues(
+            alpha: isDark ? 0.22 : 0.14,
+          ),
         ),
       ),
       child: Row(
@@ -245,7 +258,9 @@ class _HeaderCard extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: AppColors.primaryEmerald.withValues(alpha: isDark ? 0.22 : 0.12),
+              color: AppColors.primaryEmerald.withValues(
+                alpha: isDark ? 0.22 : 0.12,
+              ),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
@@ -263,7 +278,9 @@ class _HeaderCard extends StatelessWidget {
                   'Your Privacy Matters',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: isDark ? AppColors.mintAccent : AppColors.primaryEmerald,
+                    color: isDark
+                        ? AppColors.mintAccent
+                        : AppColors.primaryEmerald,
                     letterSpacing: -0.3,
                   ),
                 ),
@@ -327,14 +344,12 @@ class _PolicySection extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryEmerald.withValues(alpha: isDark ? 0.18 : 0.10),
+                    color: AppColors.primaryEmerald.withValues(
+                      alpha: isDark ? 0.18 : 0.10,
+                    ),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 18,
-                    color: AppColors.primaryEmerald,
-                  ),
+                  child: Icon(icon, size: 18, color: AppColors.primaryEmerald),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -352,7 +367,9 @@ class _PolicySection extends StatelessWidget {
             const SizedBox(height: 14),
             Divider(
               height: 1,
-              color: colors.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
+              color: colors.outlineVariant.withValues(
+                alpha: isDark ? 0.15 : 0.3,
+              ),
             ),
             const SizedBox(height: 14),
             // Section body — parse basic **bold** markdown
@@ -391,13 +408,15 @@ class _RichContent extends StatelessWidget {
     for (var i = 0; i < parts.length; i++) {
       if (i.isOdd) {
         // Bold segment
-        spans.add(TextSpan(
-          text: parts[i],
-          style: baseStyle?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: colors.onSurface,
+        spans.add(
+          TextSpan(
+            text: parts[i],
+            style: baseStyle?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.onSurface,
+            ),
           ),
-        ));
+        );
       } else {
         spans.add(TextSpan(text: parts[i]));
       }
