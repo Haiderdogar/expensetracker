@@ -37,6 +37,8 @@ class AppShellDrawerPages extends ConsumerWidget {
       DrawerItem(icon: Icons.note_alt_outlined, label: AppStrings.notes, onTap: () => openPage(AppRoutes.notes)),
       const SizedBox(height: 6),
       DrawerItem(icon: Icons.settings_outlined, label: AppStrings.settings, onTap: () => openPage(AppRoutes.settings)),
+      const SizedBox(height: 6),
+      DrawerItem(icon: Icons.shield_outlined, label: AppStrings.privacyPolicy, onTap: () => openPage(AppRoutes.privacyPolicy)),
     ]);
   }
 }

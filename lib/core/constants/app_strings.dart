@@ -7,6 +7,7 @@ abstract final class AppStrings {
   static const String settings = 'Settings';
   static const String notes = 'Notes';
   static const String profile = 'Profile';
+  static const String privacyPolicy = 'Privacy Policy';
 
   static const String totalBalance = 'Total Balance';
   static const String income = 'Income';
@@ -103,6 +104,20 @@ abstract final class AppStrings {
   static const String exportData = 'Export data';
   static const String backupSuccess = 'Backup exported successfully';
   static const String importSuccess = 'Data imported successfully';
+
+  static const String deleteAccount = 'Delete Account';
+  static const String deleteAccountConfirmTitle = 'Delete Account?';
+  static const String deleteAccountConfirmBody =
+      'This will permanently delete your account and ALL your data — '
+      'transactions, budgets, categories, and notes. '
+      'This action cannot be undone.';
+  static const String deleteAccountSuccess = 'Your account has been deleted.';
+  static const String deleteAccountFailed =
+      'Account deletion failed. Please try again.';
+  static const String deleteAccountReauthFailed =
+      'Verification failed. Please sign in with the correct Google account.';
+  static const String deleteAccountWrongEmail =
+      'Please select the same Google account used with this app.';
 
   static const String title = 'Title';
   static const String amount = 'Amount';

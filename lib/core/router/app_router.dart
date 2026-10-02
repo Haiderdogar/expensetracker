@@ -9,6 +9,7 @@ import '../../views/app_shell.dart';
 import '../../views/categories/category_management_screen.dart';
 import '../../views/notes/note_editor_screen.dart';
 import '../../views/notes/notes_screen.dart';
+import '../../views/privacy_policy/privacy_policy_screen.dart';
 import '../../views/profile/profile_view_screen.dart';
 import '../../views/settings/settings_screen.dart';
 import '../../views/transactions/add_transaction_screen.dart';
@@ -27,6 +28,7 @@ abstract final class AppRoutes {
   static const noteEditor = '/note-editor';
   static const settings = '/settings';
   static const transactionEditor = '/transaction-editor';
+  static const privacyPolicy = '/privacy-policy';
 }
 
 final GoRouter appRouter = GoRouter(
@@ -80,6 +82,10 @@ final GoRouter appRouter = GoRouter(
           return AddTransactionScreen(transaction: extra);
         return AddTransactionScreen(initialType: extra as String?);
       },
+    ),
+    GoRoute(
+      path: AppRoutes.privacyPolicy,
+      builder: (_, _) => const PrivacyPolicyScreen(),
     ),
   ],
 );

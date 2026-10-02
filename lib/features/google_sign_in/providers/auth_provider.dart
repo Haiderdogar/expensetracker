@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -23,6 +24,13 @@ enum GoogleSignInResult {
 
 enum PinRecoveryResult {
   success,
+  incorrectEmail,
+  failed,
+}
+
+enum DeleteAccountResult {
+  success,
+  reauthFailed,
   incorrectEmail,
   failed,
 }
@@ -689,6 +697,111 @@ class AuthController extends _$AuthController {
     }
 
     return success;
+  }
+
+  /// Permanently deletes the account:
+  /// 1. Re-authenticates via Google (required by Firebase for account deletion)
+  /// 2. Deletes all Firestore user data
+  /// 3. Wipes local SQLite and secure storage
+  /// 4. Deletes the Firebase Auth account
+  Future<DeleteAccountResult> deleteAccountAndData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return DeleteAccountResult.failed;
+
+    final userId = user.uid;
+    final expectedEmail = user.email?.trim().toLowerCase();
+
+    // ── Step 1: Re-authenticate via Google ─────────────────────────────
+    try {
+      await GoogleSignInService.ensureInitialized();
+      final googleUser = await GoogleSignIn.instance
+          .authenticate()
+          .timeout(const Duration(seconds: 30));
+
+      final selectedEmail = googleUser.email.trim().toLowerCase();
+      if (expectedEmail == null ||
+          expectedEmail.isEmpty ||
+          selectedEmail != expectedEmail) {
+        return DeleteAccountResult.incorrectEmail;
+      }
+
+      final idToken = googleUser.authentication.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        return DeleteAccountResult.reauthFailed;
+      }
+
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      await user.reauthenticateWithCredential(credential);
+    } on GoogleSignInException catch (e) {
+      debugPrint('[AuthController] Delete re-auth (Google) failed: ${e.code}');
+      return DeleteAccountResult.reauthFailed;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[AuthController] Delete re-auth (Firebase) failed: ${e.code}');
+      return DeleteAccountResult.reauthFailed;
+    } catch (e) {
+      debugPrint('[AuthController] Delete re-auth failed: $e');
+      return DeleteAccountResult.reauthFailed;
+    }
+
+    // ── Step 2: Delete Firestore data ──────────────────────────────────
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final collections = [
+        'transactions',
+        'categories',
+        'budgets',
+        'wallets',
+        'notes',
+        'profile',
+      ];
+      for (final col in collections) {
+        final snapshot = await firestore
+            .collection('users')
+            .doc(userId)
+            .collection(col)
+            .get();
+        final batch = firestore.batch();
+        for (final doc in snapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        if (snapshot.docs.isNotEmpty) await batch.commit();
+      }
+      // Delete the root user document itself
+      await firestore.collection('users').doc(userId).delete();
+    } catch (e) {
+      debugPrint('[AuthController] Firestore data deletion failed: $e');
+      // Non-fatal — continue with local cleanup and auth deletion
+    }
+
+    // ── Step 3: Wipe local data & credentials ──────────────────────────
+    try {
+      ref.read(syncRepositoryProvider).dispose();
+      final storage = ref.read(secureStorageProvider);
+      await storage.resetPinSecurity(userId);
+      await storage.clearLoginSession();
+      await ref.read(databaseHelperProvider).resetDatabase();
+    } catch (e) {
+      debugPrint('[AuthController] Local data wipe failed: $e');
+    }
+
+    // ── Step 4: Delete the Firebase Auth account ──────────────────────
+    try {
+      await FirebaseAuth.instance.currentUser?.delete();
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[AuthController] Firebase account deletion failed: ${e.code}');
+      return DeleteAccountResult.failed;
+    } catch (e) {
+      debugPrint('[AuthController] Firebase account deletion error: $e');
+      return DeleteAccountResult.failed;
+    }
+
+    // ── Step 5: Sign out Google ────────────────────────────────────────
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+
+    state = const AsyncData(AuthStatus.unauthenticated);
+    return DeleteAccountResult.success;
   }
 
   Future<bool> enableBiometricUnlock() async {
