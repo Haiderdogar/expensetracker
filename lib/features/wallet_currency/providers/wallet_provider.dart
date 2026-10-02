@@ -122,3 +122,4 @@ Future<double> totalBalance(Ref ref) async {
   final wallets = await ref.watch(walletsProvider.future);
   return wallets.fold<double>(0, (sum, w) => sum + w.balance);
 }
+
