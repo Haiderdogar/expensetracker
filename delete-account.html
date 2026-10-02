@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Account - Expense Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header-card h2 {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .header-card p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        section {
+            margin-bottom: 35px;
+        }
+        
+        h3 {
+            font-size: 1.5em;
+            color: #dc3545;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc3545;
+            padding-left: 15px;
+            font-weight: 600;
+        }
+        
+        p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+        
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin-bottom: 10px;
+            line-height: 1.8;
+        }
+        
+        ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        ol li {
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #856404;
+            font-weight: 500;
+        }
+        
+        .danger {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #721c24;
+            font-weight: 500;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #0c5460;
+        }
+        
+        .step-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .step-box h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        .step-box p {
+            margin-bottom: 8px;
+        }
+        
+        .highlight {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .contact-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .contact-link:hover {
+            text-decoration: underline;
+        }
+        
+        footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background: #e9ecef;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #dee2e6;
+        }
+        
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            h3 {
+                font-size: 1.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Delete Account</h1>
+            <div class="header-card">
+                <h2>⚠️ Permanent Account Deletion</h2>
+                <p>This action cannot be undone. Please read carefully before proceeding.</p>
+            </div>
+        </header>
+        
+        <div class="content">
+            <a href="privacy-policy.html" class="back-link">← Back to Privacy Policy</a>
+            
+            <section>
+                <h3>🗑️ How to Delete Your Account</h3>
+                <p>You can permanently delete your Expense Tracker account and all associated data directly from your device. Follow these steps:</p>
+                
+                <div class="step-box">
+                    <h4>Step 1: Open App Settings</h4>
+                    <p>Launch the Expense Tracker app on your device.</p>
+                    <p>Tap the <span class="highlight">⚙️ Settings icon</span> (usually at the bottom or top of the screen).</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>Step 2: Navigate to Account</h4>
+                    <p>Scroll to the bottom of the Settings menu.</p>
+                    <p>Look for the <span class="highlight">"Account"</span> section and tap it.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>Step 3: Tap Delete Account</h4>
+                    <p>At the bottom of the Account settings, you will see the <span class="highlight">"DELETE ACCOUNT"</span> button.</p>
+                    <p>Tap this button to initiate the deletion process.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>Step 4: Re-verify Your Google Account</h4>
+                    <p>For security purposes, you will be asked to <span class="highlight">re-authenticate with your Google account</span>.</p>
+                    <p>Sign in with the Google account associated with your Expense Tracker account.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>Step 5: Confirm Deletion</h4>
+                    <p>A confirmation dialog will appear asking you to type the word <span class="highlight">"DELETE"</span> (in capital letters).</p>
+                    <p>This step prevents accidental account deletion.</p>
+                    <p>Type "DELETE" exactly as shown in the text field.</p>
+                </div>
+                
+                <div class="step-box">
+                    <h4>Step 6: Final Deletion</h4>
+                    <p>After confirming with the word "DELETE", tap the <span class="highlight">"DELETE PERMANENTLY"</span> button.</p>
+                    <p>Your account will be permanently deleted.</p>
+                </div>
+            </section>
+            
+            <section>
+                <h3>💾 What Gets Deleted</h3>
+                <p>When you delete your account, the following data is permanently removed:</p>
+                <ul>
+                    <li><strong>Cloud Data (Firestore)</strong> – All transactions, categories, budgets, wallets, and notes stored in the cloud.</li>
+                    <li><strong>Authentication</strong> – Your Firebase Authentication account and Google Sign-In credentials.</li>
+                    <li><strong>Profile Information</strong> – Your Google profile information saved in the app (name, email, profile picture).</li>
+                    <li><strong>Local Device Data</strong> – All app data stored locally on your device including:
+                        <ul style="margin-top: 10px;">
+                            <li>Transaction history</li>
+                            <li>Categories and budgets</li>
+                            <li>Security credentials (PIN, biometric data)</li>
+                            <li>App preferences and settings</li>
+                        </ul>
+                    </li>
+                    <li><strong>Sync Data</strong> – All synchronization records between your device and the cloud.</li>
+                </ul>
+            </section>
+            
+            <section>
+                <h3>⚡ What Does NOT Get Deleted</h3>
+                <p>The following information may remain in certain circumstances:</p>
+                <ul>
+                    <li><strong>Google Account</strong> – Your Google account itself will NOT be deleted. Only the connection to Expense Tracker is removed.</li>
+                    <li><strong>App Installation</strong> – The app itself remains installed on your device. You will need to manually uninstall it if desired.</li>
+                    <li><strong>System Backups</strong> – If you have automatic cloud backups enabled on your device (Google Cloud Backup, iCloud, etc.), app data may persist in those backups.</li>
+                </ul>
+            </section>
+            
+            <section>
+                <h3>⚠️ Important Warnings</h3>
+                
+                <div class="danger">
+                    <strong>🚨 IRREVERSIBLE ACTION</strong>
+                    <p style="margin-top: 10px;">This action is <span class="highlight">PERMANENT AND CANNOT BE UNDONE</span>. Once your account is deleted, all your financial data will be lost forever. There is no recovery option after deletion is complete.</p>
+                </div>
+                
+                <div class="warning">
+                    <strong>💾 BACKUP RECOMMENDATION</strong>
+                    <p style="margin-top: 10px;">Before deleting your account, we strongly recommend:</p>
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        <li><strong>Export your data</strong> from Settings → Export to keep a local copy of your transactions and financial records.</li>
+                        <li><strong>Take screenshots</strong> of important information you want to retain.</li>
+                        <li><strong>Save any notes or categories</strong> separately before proceeding.</li>
+                    </ul>
+                </div>
+                
+                <div class="info">
+                    <strong>🌐 NETWORK REQUIREMENT</strong>
+                    <p style="margin-top: 10px;">A stable internet connection is required to delete your account. The app must communicate with our servers to remove your cloud data from Firebase/Firestore.</p>
+                </div>
+            </section>
+            
+            <section>
+                <h3>🆘 What If Deletion Fails?</h3>
+                <p>If you encounter an error or network issue during account deletion:</p>
+                <ul>
+                    <li>Your account and data <span class="highlight">remain intact and unchanged</span>.</li>
+                    <li>No data will be lost due to a failed deletion attempt.</li>
+                    <li>You can safely try the deletion process again.</li>
+                    <li>If the issue persists, please contact our support team at <a href="mailto:support@expensee.app" class="contact-link">support@expensee.app</a></li>
+                </ul>
+            </section>
+            
+            <section>
+                <h3>❓ Frequently Asked Questions</h3>
+                
+                <div class="step-box" style="margin-bottom: 15px;">
+                    <h4>Q: Can I recover my data after deletion?</h4>
+                    <p><strong>A:</strong> No. Account deletion is permanent and irreversible. We cannot recover deleted data. Please ensure you export your data before deletion if you need to keep any records.</p>
+                </div>
+                
+                <div class="step-box" style="margin-bottom: 15px;">
+                    <h4>Q: Will deleting the app delete my account?</h4>
+                    <p><strong>A:</strong> No. Uninstalling the app does NOT delete your account or cloud data. You must follow the Delete Account steps above to permanently remove your account.</p>
+                </div>
+                
+                <div class="step-box" style="margin-bottom: 15px;">
+                    <h4>Q: How long does it take to delete my account?</h4>
+                    <p><strong>A:</strong> Deletion is usually instant. However, it may take a few minutes for all cloud data to be completely removed from our servers. During this time, you should not log back in.</p>
+                </div>
+                
+                <div class="step-box" style="margin-bottom: 15px;">
+                    <h4>Q: What if I only want to log out instead of deleting?</h4>
+                    <p><strong>A:</strong> If you only want to stop syncing data to the cloud, simply go to Settings → Account and tap "Log Out". This will stop cloud synchronization without deleting anything. Your local data will remain on your device.</p>
+                </div>
+                
+                <div class="step-box" style="margin-bottom: 15px;">
+                    <h4>Q: Can I delete my account from the web?</h4>
+                    <p><strong>A:</strong> Account deletion can only be done from the mobile app (iOS/Android). This page provides instructions for reference only.</p>
+                </div>
+                
+                <div class="step-box" style="margin-bottom: 15px;">
+                    <h4>Q: What about my Google account?</h4>
+                    <p><strong>A:</strong> Your Google account will NOT be affected. Only your Expense Tracker account and the connection between the two will be removed.</p>
+                </div>
+            </section>
+            
+            <section>
+                <h3>📞 Need Help?</h3>
+                <p>If you have any questions or encounter issues with account deletion, please contact our support team:</p>
+                <div class="info" style="text-align: center;">
+                    <strong>Email:</strong> <a href="mailto:support@expensee.app" class="contact-link">support@expensee.app</a>
+                    <p style="margin-top: 10px; font-size: 0.95em;">We'll respond to your inquiry within 24-48 hours.</p>
+                </div>
+            </section>
+        </div>
+        
+        <footer>
+            <p><strong>Last Updated: 01 October 2026</strong></p>
+            <p style="margin-top: 10px; color: #999;">Expense Tracker - Personal Finance Management</p>
+            <p style="margin-top: 10px;"><a href="privacy-policy.html" class="contact-link">← Back to Privacy Policy</a></p>
+        </footer>
+    </div>
+</body>
+</html>

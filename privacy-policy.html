@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Expense Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header-card h2 {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .header-card p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        section {
+            margin-bottom: 35px;
+        }
+        
+        h3 {
+            font-size: 1.5em;
+            color: #667eea;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            font-weight: 600;
+        }
+        
+        p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+        
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin-bottom: 10px;
+            line-height: 1.8;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            color: #856404;
+        }
+        
+        .highlight {
+            background: #e8f4f8;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            color: #0c5460;
+        }
+        
+        footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        .contact-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .contact-link:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            h3 {
+                font-size: 1.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Privacy Policy</h1>
+            <div class="header-card">
+                <h2>🔒 Your Privacy Matters</h2>
+                <p>We are committed to protecting your personal and financial information.</p>
+            </div>
+        </header>
+        
+        <div class="content">
+            <section>
+                <h3>📋 Information We Collect</h3>
+                <p>We collect only the information necessary to provide you with a personalised expense-tracking experience:</p>
+                <ul>
+                    <li><strong>Account data</strong> – Your name and email address obtained through Google Sign-In.</li>
+                    <li><strong>Financial data</strong> – Transactions, categories, budgets, and notes that you manually enter into the app.</li>
+                    <li><strong>Device data</strong> – Anonymous crash reports and basic performance metrics to help us improve stability.</li>
+                </ul>
+            </section>
+            
+            <section>
+                <h3>💾 How We Store Your Data</h3>
+                <p>Your financial data is stored primarily on your device using an encrypted local database. When you are online, data is synchronised to your private Firestore document, which is accessible only by your authenticated account.</p>
+                <p><strong>We never sell, rent, or share your personal financial data with third parties.</strong></p>
+            </section>
+            
+            <section>
+                <h3>🔐 Data Security</h3>
+                <p>We implement industry-standard safeguards to protect your information:</p>
+                <ul>
+                    <li>Local data is encrypted using SQLite encryption.</li>
+                    <li>Cloud data is protected by Firebase Security Rules that strictly limit access to your own user ID.</li>
+                    <li>Optional PIN and biometric locks add an additional layer of protection on your device.</li>
+                </ul>
+                <div class="warning">
+                    <strong>⚠️ Security Notice:</strong> No security system is completely impenetrable, but we are committed to keeping your data as safe as possible.
+                </div>
+            </section>
+            
+            <section>
+                <h3>🔗 Third-Party Services</h3>
+                <p>This app integrates with the following third-party services, each governed by their own privacy policies:</p>
+                <ul>
+                    <li><strong>Google Sign-In</strong> – Used for account authentication.</li>
+                    <li><strong>Firebase / Firestore</strong> – Used for cloud storage and real-time synchronisation.</li>
+                    <li><strong>Firebase Crashlytics</strong> – Used for anonymous crash reporting to improve app stability.</li>
+                </ul>
+            </section>
+            
+            <section>
+                <h3>🎮 Your Rights & Control</h3>
+                <p>You are in full control of your data at all times:</p>
+                <ul>
+                    <li><strong>Export</strong> – Export all your data as a file from Settings.</li>
+                    <li><strong>Delete records</strong> – Deleting a transaction, category, or budget removes it from both local storage and the cloud.</li>
+                    <li><strong>Log out</strong> – Logging out stops cloud sync. Your local data remains on-device until you uninstall the app.</li>
+                    <li><strong>Delete Account</strong> – You can permanently delete your account and all associated data directly from Settings → Account. <a href="delete-account.html" style="color: #667eea; text-decoration: none; font-weight: 600;">See Delete Account section for full details →</a></li>
+                </ul>
+            </section>
+            
+            <section>
+                <h3>🗑️ Account Deletion</h3>
+                <p>You may permanently delete your account at any time from <strong>Settings → Account → Delete Account</strong>.</p>
+                
+                <h4 style="color: #764ba2; margin-top: 15px; margin-bottom: 10px; font-weight: 600;">What is deleted:</h4>
+                <ul>
+                    <li>All transactions, categories, budgets, wallets, and notes stored in the cloud (Firestore).</li>
+                    <li>Your Google profile information saved in the app.</li>
+                    <li>Your Firebase Authentication account.</li>
+                    <li>All local app data and security credentials (PIN, biometric) stored on your device.</li>
+                </ul>
+                
+                <h4 style="color: #764ba2; margin-top: 15px; margin-bottom: 10px; font-weight: 600;">How deletion works:</h4>
+                <p>For your security, deletion requires you to re-verify your Google account. You will also be asked to type the word "DELETE" to confirm — this prevents accidental account loss.</p>
+                
+                <div class="warning">
+                    <strong>⚠️ Irreversible Action:</strong> This action is irreversible. Once confirmed, your data cannot be recovered. We recommend exporting your data first if you wish to keep a local copy.
+                </div>
+                
+                <p>If deletion fails due to a network issue, your account and data remain intact and you may try again.</p>
+            </section>
+            
+            <section>
+                <h3>👶 Children's Privacy</h3>
+                <p>This app is not directed at children under the age of 13. We do not knowingly collect personal information from children. If you believe a child has provided us with personal information, please contact us so we can remove it.</p>
+            </section>
+            
+            <section>
+                <h3>📝 Changes to This Policy</h3>
+                <p>We may update this Privacy Policy from time to time. When we do, the "Effective date" at the top of the page will be revised. Continued use of the app after changes constitutes your acceptance of the updated policy.</p>
+            </section>
+            
+            <section>
+                <h3>📧 Contact Us</h3>
+                <p>If you have any questions or concerns about this Privacy Policy or the way we handle your data, please reach out to us at:</p>
+                <div class="highlight">
+                    <strong>Email:</strong> <a href="mailto:support@expensee.app" class="contact-link">support@expensee.app</a>
+                </div>
+            </section>
+        </div>
+        
+        <footer>
+            <p><strong>Effective date: 01 October 2026</strong></p>
+            <p style="margin-top: 10px; color: #999;">Expense Tracker - Personal Finance Management</p>
+        </footer>
+    </div>
+</body>
+</html>
