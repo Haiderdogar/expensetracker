@@ -3,12 +3,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/router/app_router.dart';
 import '../core/utils/global_keys.dart';
 import '../providers/auth_provider.dart';
 import '../providers/database_provider.dart';
+import 'app_shell/app_shell_providers.dart';
 import 'app_shell/app_shell_bottom_navigation.dart';
 import 'app_shell/app_shell_drawer.dart';
 import 'app_shell/app_shell_navigation_body.dart';
+import 'budgets/budgets_screen.dart';
+import 'budgets/widgets/budgets_add_button.dart';
+import 'dashboard/widgets/dashboard_add_transaction_button.dart';
+import 'transactions/widgets/transactions_add_button.dart';
 
 /// The application chrome. Owns the sync-on-resume lifecycle hook.
 ///
@@ -19,11 +25,9 @@ import 'app_shell/app_shell_navigation_body.dart';
 /// 1. `build()` calls zero `ref.watch()` — no provider subscriptions are
 ///    created, so no provider change can ever schedule a rebuild of this widget.
 ///
-/// 2. All scaffold children (`AppShellDrawer`, `AppShellNavigationBody`,
-///    `AppShellBottomNavigation`) are `const` — Flutter's element-tree diffing
-///    identifies them as the same instances on every build call and skips them.
-///    Each child manages its own provider subscriptions and rebuild scope
-///    independently.
+/// 2. `_AppShellScaffold` watches only the active tab. Data providers are
+///    watched in their respective feature widgets, keeping tab changes from
+///    rebuilding the lifecycle/sync owner.
 ///
 /// 3. `_syncOnResume()` uses only `ref.read()` — fire-and-forget reads that
 ///    create no subscriptions. The epoch bump via `localDataEpochProvider` is
@@ -102,14 +106,33 @@ class _AppShellState extends ConsumerState<AppShell>
     }
   }
 
-  /// build() has ZERO ref.watch() calls — this widget is rebuild-free.
-  /// Each const child owns its own rebuild scope via its own ConsumerWidget.
+  /// The lifecycle/sync owner does not subscribe to tab navigation state.
   @override
-  Widget build(BuildContext context) => Scaffold(
-    key: appShellScaffoldKey,
-    drawer: const AppShellDrawer(),
-    body: const AppShellNavigationBody(),
-    extendBody: true,
-    bottomNavigationBar: const AppShellBottomNavigation(),
-  );
+  Widget build(BuildContext context) => const _AppShellScaffold();
+}
+
+class _AppShellScaffold extends ConsumerWidget {
+  const _AppShellScaffold();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTab = ref.watch(appShellNavigationIndexProvider);
+
+    return Scaffold(
+      key: appShellScaffoldKey,
+      drawer: const AppShellDrawer(),
+      body: const AppShellNavigationBody(),
+      extendBody: true,
+      bottomNavigationBar: const AppShellBottomNavigation(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: switch (selectedTab) {
+        0 => const DashboardAddTransactionButton(),
+        1 => const TransactionsAddButton(),
+        3 => BudgetsAddButton(
+          onPressed: () => BudgetsScreen.showAddBudget(context),
+        ),
+        _ => null,
+      },
+    );
+  }
 }

@@ -32,6 +32,7 @@ dependencies:
   internet_connection_checker_plus: ^3.1.2
   go_router: ^18.0.1
   flutter_native_splash: ^2.4.5
+  android_nav_setting: ^0.0.2+1
 
 
 
@@ -55,20 +56,21 @@ flutter_launcher_icons:
 
 # ── Native Splash Screen ──────────────────────────────────────────────────────
 flutter_native_splash:
-  # Show only the themed background on Android; do not draw a splash icon.
+  # Center the app icon on a background that follows the device theme.
   color: "#FFFFFF"
+  image: assets/icon.png
 
   # Dark mode – deep navy canvas
   color_dark: "#111827"
+  image_dark: assets/icon.png
 
   # Android 12+ Splash API
-  # Android applies a device-specific mask, so use a transparent image to
-  # prevent the launcher icon from appearing while retaining the background.
+  # Android applies a device-specific mask and size to the centered icon.
   android_12:
     color: "#FFFFFF"
-    image: assets/splash_transparent.png
+    image: assets/icon.png
     color_dark: "#111827"
-    image_dark: assets/splash_transparent.png
+    image_dark: assets/icon.png
 
   android: true
   ios: false

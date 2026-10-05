@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../features/wallet_currency/providers/wallet_provider.dart';
-import 'widgets/dashboard_add_transaction_button.dart';
 import 'widgets/dashboard_app_bar.dart';
 import 'widgets/dashboard_summary_card.dart';
 import 'widgets/recent_transactions_header.dart';
@@ -17,8 +16,6 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const DashboardAppBar(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: const DashboardAddTransactionButton(),
       body: const _DashboardRefreshBody(),
     );
   }

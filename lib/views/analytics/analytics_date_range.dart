@@ -24,31 +24,21 @@ DateTimeRange analyticsDateRange(
       );
 
     case 'week':
-      // Monday as first day of week: current.weekday gives 1 (Mon) to 7 (Sun)
-      final startOfWeek = current.subtract(Duration(days: current.weekday - 1));
-      final endOfWeek = startOfWeek.add(const Duration(days: 6));
       return DateTimeRange(
-        start: startOfDay(startOfWeek),
-        end: endOfDay(endOfWeek),
+        start: startOfDay(current.subtract(const Duration(days: 6))),
+        end: endOfDay(current),
       );
 
     case 'month':
-      final startOfMonth = DateTime(current.year, current.month, 1);
-      // Day 0 of next month is the last day of current month (handles leap years & 28/30/31 days safely)
-      final endOfMonth = DateTime(current.year, current.month + 1, 0);
       return DateTimeRange(
-        start: startOfDay(startOfMonth),
-        end: endOfDay(endOfMonth),
+        start: startOfDay(current.subtract(const Duration(days: 29))),
+        end: endOfDay(current),
       );
 
     case 'quarter':
-      // Current quarter (3 months)
-      final quarterStartMonth = ((current.month - 1) ~/ 3) * 3 + 1;
-      final startOfQuarter = DateTime(current.year, quarterStartMonth, 1);
-      final endOfQuarter = DateTime(current.year, quarterStartMonth + 3, 0);
       return DateTimeRange(
-        start: startOfDay(startOfQuarter),
-        end: endOfDay(endOfQuarter),
+        start: startOfDay(current.subtract(const Duration(days: 89))),
+        end: endOfDay(current),
       );
 
     case 'custom':
