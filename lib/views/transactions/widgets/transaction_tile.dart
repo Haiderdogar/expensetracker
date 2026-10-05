@@ -18,11 +18,13 @@ class TransactionTile extends ConsumerWidget {
     required this.transaction,
     this.onTap,
     this.onDelete,
+    this.showWalletName = true,
   });
 
   final TransactionModel transaction;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+  final bool showWalletName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,7 +34,9 @@ class TransactionTile extends ConsumerWidget {
     final symbol = ref.watch(currencySymbolProvider).value ?? '\$';
 
     final category = _categoryFor(categories, transaction.categoryId);
-    final wallet = _walletFor(wallets, transaction.walletId);
+    final wallet = showWalletName
+        ? _walletFor(wallets, transaction.walletId)
+        : null;
 
     final color = category == null
         ? AppColors.gray400
@@ -178,7 +182,7 @@ class TransactionTile extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${transaction.isIncome ? '+' : '-'}${Formatters.currency(transaction.amount, symbol: symbol)}',
+                      '${transaction.isIncome ? '+' : '-'}${Formatters.dashboardCurrency(transaction.amount, symbol: symbol)}',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -217,7 +221,7 @@ class TransactionTile extends ConsumerWidget {
             builder: (ctx) => AlertDialog(
               title: const Text('Delete transaction?'),
               content: Text(
-                'Are you sure you want to delete this ${transaction.isIncome ? 'income' : 'expense'} transaction of ${Formatters.currency(transaction.amount, symbol: symbol)}?',
+                'Are you sure you want to delete this ${transaction.isIncome ? 'income' : 'expense'} transaction of ${Formatters.dashboardCurrency(transaction.amount, symbol: symbol)}?',
               ),
               actions: [
                 TextButton(

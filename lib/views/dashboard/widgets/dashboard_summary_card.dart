@@ -40,15 +40,18 @@ class _DashboardSummaryContent extends ConsumerWidget {
 
     final displayBalance = isHidden
         ? '••••••••'
-        : Formatters.currency(balance.value ?? 0, symbol: '$symbol ');
+        : Formatters.dashboardCurrency(
+            balance.value ?? 0,
+            symbol: '$symbol ',
+          );
 
     final displayIncome = isHidden
         ? '••••'
-        : Formatters.currency(income.value ?? 0, symbol: symbol);
+        : Formatters.dashboardCurrency(income.value ?? 0, symbol: symbol);
 
     final displayExpense = isHidden
         ? '••••'
-        : Formatters.currency(expense.value ?? 0, symbol: symbol);
+        : Formatters.dashboardCurrency(expense.value ?? 0, symbol: symbol);
 
     return Container(
       padding: const EdgeInsets.all(14),

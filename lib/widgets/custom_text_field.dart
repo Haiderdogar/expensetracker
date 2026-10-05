@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CustomTextField extends StatelessWidget {
   const CustomTextField({
@@ -8,6 +9,7 @@ class CustomTextField extends StatelessWidget {
     this.initialValue,
     this.hint,
     this.keyboardType,
+    this.inputFormatters,
     this.prefixIcon,
     this.prefix,
     this.suffixIcon,
@@ -22,6 +24,7 @@ class CustomTextField extends StatelessWidget {
   final String? initialValue;
   final String? hint;
   final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
   // Backwards-compatible icon parameter
   final IconData? prefixIcon;
   // New: allow a full widget prefix (e.g., currency symbol Text)
@@ -43,6 +46,7 @@ class CustomTextField extends StatelessWidget {
           TextFormField(
             controller: controller,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
             obscureText: obscureText,
             maxLines: maxLines,
             validator: validator,
@@ -57,6 +61,7 @@ class CustomTextField extends StatelessWidget {
           TextFormField(
             initialValue: initialValue,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
             obscureText: obscureText,
             maxLines: maxLines,
             validator: validator,
@@ -71,4 +76,3 @@ class CustomTextField extends StatelessWidget {
     );
   }
 }
-

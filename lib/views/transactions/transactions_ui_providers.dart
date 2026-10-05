@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../core/utils/formatters.dart';
 import '../../models/transaction_model.dart';
 
 part 'transactions_ui_providers.g.dart';
@@ -12,8 +13,9 @@ part 'transactions_ui_providers.g.dart';
 /// out of stateful widgets while still using Riverpod code generation.
 @riverpod
 TextEditingController transactionSearchTextController(Ref ref) {
-  final controller =
-      TextEditingController(text: ref.read(transactionSearchProvider));
+  final controller = TextEditingController(
+    text: ref.read(transactionSearchProvider),
+  );
   ref.onDispose(controller.dispose);
   return controller;
 }
@@ -54,8 +56,9 @@ void removeCategoryFilter(WidgetRef ref, String categoryId) {
   final current = ref.read(selectedCategoryFiltersProvider);
   if (current == null) return;
   final updated = current.where((id) => id != categoryId).toList();
-  ref.read(selectedCategoryFiltersProvider.notifier).state =
-      updated.isEmpty ? null : updated;
+  ref.read(selectedCategoryFiltersProvider.notifier).state = updated.isEmpty
+      ? null
+      : updated;
 }
 
 /// Clear all category filters belonging to a specific type ('expense' or 'income')
@@ -71,8 +74,9 @@ void clearCategoryFiltersByType(
       .map((c) => c.id as String)
       .toSet();
   final updated = current.where((id) => !typeIds.contains(id)).toList();
-  ref.read(selectedCategoryFiltersProvider.notifier).state =
-      updated.isEmpty ? null : updated;
+  ref.read(selectedCategoryFiltersProvider.notifier).state = updated.isEmpty
+      ? null
+      : updated;
 }
 
 /// Clear all category filters
@@ -105,21 +109,13 @@ class TransactionCategoryFilterDraft extends _$TransactionCategoryFilterDraft {
 
 /// Holds form state for a single transaction type (expense or income).
 class TypeDraft {
-  const TypeDraft({
-    this.categoryId,
-    this.title,
-    this.amount = '',
-  });
+  const TypeDraft({this.categoryId, this.title, this.amount = ''});
 
   final String? categoryId;
   final String? title;
   final String amount;
 
-  TypeDraft copyWith({
-    String? categoryId,
-    String? title,
-    String? amount,
-  }) {
+  TypeDraft copyWith({String? categoryId, String? title, String? amount}) {
     return TypeDraft(
       categoryId: categoryId ?? this.categoryId,
       title: title ?? this.title,
@@ -127,10 +123,10 @@ class TypeDraft {
     );
   }
 
-  TypeDraft clearCategory() => TypeDraft(amount: amount);
+  TypeDraft clearCategory() => TypeDraft(title: title, amount: amount);
 
   TypeDraft selectCategory(String id) =>
-      TypeDraft(categoryId: id, amount: amount);
+      TypeDraft(categoryId: id, title: title, amount: amount);
 }
 
 class TransactionFormDraft {
@@ -148,14 +144,18 @@ class TransactionFormDraft {
     String? initialType,
   }) {
     final type = transaction?.type ?? initialType;
-    final activeType = type == 'income' || type == 'expense' ? type! : 'expense';
+    final activeType = type == 'income' || type == 'expense'
+        ? type!
+        : 'expense';
     final catId = transaction?.categoryId.isNotEmpty == true
         ? transaction!.categoryId
         : null;
     final title = transaction?.title.isNotEmpty == true
         ? transaction!.title
         : null;
-    final amt = transaction?.amount.toString() ?? '';
+    final amt = transaction == null
+        ? ''
+        : Formatters.amountInput(transaction.amount);
 
     final expenseDraft = activeType == 'expense'
         ? TypeDraft(categoryId: catId, title: title, amount: amt)
@@ -225,11 +225,9 @@ class TransactionFormDraft {
     if (categoryId != null) active = active.copyWith(categoryId: categoryId);
     if (title != null) active = active.copyWith(title: title);
     if (amount != null) active = active.copyWith(amount: amount);
-    return draft._withActive(active).copyWith2(
-      date: date,
-      note: note,
-      isSaving: isSaving,
-    );
+    return draft
+        ._withActive(active)
+        .copyWith2(date: date, note: note, isSaving: isSaving);
   }
 
   TransactionFormDraft copyWith2({

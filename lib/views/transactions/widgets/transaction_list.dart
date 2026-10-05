@@ -132,7 +132,11 @@ class _TransactionContent extends StatelessWidget {
 }
 
 class _DaySection extends ConsumerWidget {
-  const _DaySection({super.key, required this.date, required this.transactions});
+  const _DaySection({
+    super.key,
+    required this.date,
+    required this.transactions,
+  });
 
   final DateTime date;
   final List<TransactionModel> transactions;
@@ -177,7 +181,7 @@ class _DaySection extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${dailyNet >= 0 ? '+' : ''}${Formatters.currency(dailyNet, symbol: symbol)}',
+                  '${dailyNet >= 0 ? '+' : ''}${Formatters.dashboardCurrency(dailyNet, symbol: symbol)}',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -198,6 +202,7 @@ class _DaySection extends ConsumerWidget {
             transaction: transaction,
             onTap: () => _openTransaction(context, transaction),
             onDelete: () => _deleteTransaction(context, ref, transaction),
+            showWalletName: false,
           ),
         ),
       ],

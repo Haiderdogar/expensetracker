@@ -31,12 +31,16 @@ class SettingsActions {
       onSelect: (currency) async {
         try {
           final database = ref.read(databaseHelperProvider);
-          await database.setCurrencySymbol(currency.symbol);
-          await database.setSetting('currency_code', currency.code);
+          final userId = ref.read(currentUserIdProvider);
+          await Future.wait([
+            database.setCurrencySymbol(currency.symbol, userId),
+            database.setSetting('currency_code_$userId', currency.code),
+            database.setSetting('currency_code', currency.code),
+          ]);
           ref.invalidate(currencySymbolProvider);
           ref.invalidate(currencyCodeProvider);
           if (context.mounted) {
-            _message(context, 'Currency set to ${currency.code}');
+            _message(context, 'Currency changed to ${currency.code}');
           }
         } catch (error) {
           if (context.mounted) _message(context, error.toString());

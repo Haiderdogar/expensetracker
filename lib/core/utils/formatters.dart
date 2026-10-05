@@ -6,6 +6,23 @@ abstract final class Formatters {
     return formatter.format(amount);
   }
 
+  static String dashboardCurrency(double amount, {String symbol = '\$'}) {
+    final roundedAmount = (amount * 100).round() / 100;
+    final hasFraction = roundedAmount != roundedAmount.truncateToDouble();
+    final decimalDigits = roundedAmount == 0 || hasFraction ? 2 : 0;
+    return NumberFormat.currency(
+      symbol: symbol,
+      decimalDigits: decimalDigits,
+    ).format(roundedAmount);
+  }
+
+  static String amountInput(double amount) {
+    final roundedAmount = (amount * 100).round() / 100;
+    return roundedAmount == roundedAmount.truncateToDouble()
+        ? roundedAmount.toStringAsFixed(0)
+        : roundedAmount.toStringAsFixed(2);
+  }
+
   static String date(DateTime date) => DateFormat.yMMMd().format(date);
 
   static String dateTime(DateTime date) => DateFormat.yMMMd().add_jm().format(date);

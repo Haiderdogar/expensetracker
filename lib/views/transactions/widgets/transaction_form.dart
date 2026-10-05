@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/category_utils.dart';
@@ -13,6 +14,15 @@ import '../../../features/wallet_currency/providers/wallet_provider.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
 import '../transactions_ui_providers.dart';
+
+final _amountInputFormatter = TextInputFormatter.withFunction((
+  oldValue,
+  newValue,
+) {
+  return RegExp(r'^-?\d*\.?\d{0,2}$').hasMatch(newValue.text)
+      ? newValue
+      : oldValue;
+});
 
 class TransactionForm extends ConsumerWidget {
   TransactionForm({super.key, this.transaction});
@@ -48,12 +58,16 @@ class TransactionForm extends ConsumerWidget {
             initialValue: draft.amount,
             label: AppStrings.amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [_amountInputFormatter],
             prefix: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Text(ref.watch(currencySymbolProvider).value ?? '\$'),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) return 'Required';
+              if (!RegExp(r'^-?\d*\.?\d{0,2}$').hasMatch(value)) {
+                return 'Use no more than 2 decimal places';
+              }
               if (double.tryParse(value) == null) return 'Invalid amount';
               return null;
             },

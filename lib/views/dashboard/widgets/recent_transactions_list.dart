@@ -168,7 +168,9 @@ class RecentTransactionsList extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text('Amount: ${Formatters.currency(transaction.amount)}'),
+              Text(
+                'Amount: ${Formatters.dashboardCurrency(transaction.amount)}',
+              ),
               const SizedBox(height: 4),
               Text(
                 'Date: ${Formatters.date(DateTime.parse(transaction.date))}',
@@ -259,7 +261,7 @@ class _DashboardDaySection extends StatelessWidget {
                 ),
               ),
               Text(
-                '${dailyNet >= 0 ? '+' : '-'}${Formatters.currency(dailyNet.abs())}',
+                '${dailyNet >= 0 ? '+' : '-'}${Formatters.dashboardCurrency(dailyNet.abs())}',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -275,6 +277,7 @@ class _DashboardDaySection extends StatelessWidget {
           (transaction) => TransactionTile(
             transaction: transaction,
             onTap: () => onTransactionTap(transaction),
+            showWalletName: false,
           ),
         ),
       ],

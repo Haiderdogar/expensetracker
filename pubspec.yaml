@@ -55,21 +55,20 @@ flutter_launcher_icons:
 
 # ── Native Splash Screen ──────────────────────────────────────────────────────
 flutter_native_splash:
-  # Light mode – white canvas, centered icon
+  # Show only the themed background on Android; do not draw a splash icon.
   color: "#FFFFFF"
-  image: assets/icon.png
 
-  # Dark mode – deep navy canvas, same icon
+  # Dark mode – deep navy canvas
   color_dark: "#111827"
-  image_dark: assets/icon.png
 
   # Android 12+ Splash API
-  # Use the same theme-specific backgrounds on Android 12+.
+  # Android applies a device-specific mask, so use a transparent image to
+  # prevent the launcher icon from appearing while retaining the background.
   android_12:
     color: "#FFFFFF"
-    image: assets/icon.png
+    image: assets/splash_transparent.png
     color_dark: "#111827"
-    image_dark: assets/icon.png
+    image_dark: assets/splash_transparent.png
 
   android: true
   ios: false
