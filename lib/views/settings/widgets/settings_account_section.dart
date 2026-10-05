@@ -9,7 +9,6 @@ import '../../../features/google_sign_in/providers/auth_provider.dart';
 import '../../../app/app_startup.dart';
 import '../../app_shell/app_shell_providers.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../providers/backup_provider.dart';
 import '../../../providers/budget_provider.dart';
 import '../../../providers/category_provider.dart';
 import '../../../features/wallet_currency/providers/currency_provider.dart';
@@ -226,7 +225,6 @@ class _SettingsAccountSectionState
     ref.invalidate(walletsProvider);
     ref.invalidate(budgetsProvider);
     ref.invalidate(notesProvider);
-    ref.invalidate(backupServiceProvider);
     ref.invalidate(selectedWalletIdProvider);
     ref.invalidate(currencySymbolProvider);
     ref.invalidate(currencyCodeProvider);

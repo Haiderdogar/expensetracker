@@ -7,7 +7,6 @@ import '../../core/router/app_router.dart';
 import '../../core/utils/global_keys.dart';
 import '../../app/app_startup.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/backup_provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../features/wallet_currency/providers/currency_provider.dart';
@@ -203,7 +202,6 @@ class AppShellLogoutButton extends ConsumerWidget {
     ref.invalidate(walletsProvider);
     ref.invalidate(budgetsProvider);
     ref.invalidate(notesProvider);
-    ref.invalidate(backupServiceProvider);
     ref.invalidate(selectedWalletIdProvider);
     ref.invalidate(currencySymbolProvider);
     ref.invalidate(currencyCodeProvider);

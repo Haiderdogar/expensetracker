@@ -2,25 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/constants/app_strings.dart';
 import '../../core/router/app_router.dart';
 import '../../core/utils/app_currency_picker.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/backup_provider.dart';
 import '../../features/wallet_currency/providers/currency_provider.dart';
 import '../../providers/database_provider.dart';
 
 class SettingsActions {
   const SettingsActions._();
-
-  static Future<void> exportData(BuildContext context, WidgetRef ref) async {
-    try {
-      await ref.read(backupServiceProvider.notifier).shareExport();
-      if (context.mounted) _message(context, AppStrings.backupSuccess);
-    } catch (error) {
-      if (context.mounted) _message(context, error.toString());
-    }
-  }
 
   static Future<void> chooseCurrency(
     BuildContext context,

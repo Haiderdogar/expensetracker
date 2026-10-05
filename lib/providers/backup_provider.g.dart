@@ -9,58 +9,6 @@ part of 'backup_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(BackupService)
-final backupServiceProvider = BackupServiceProvider._();
-
-final class BackupServiceProvider
-    extends $NotifierProvider<BackupService, void> {
-  BackupServiceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'backupServiceProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$backupServiceHash();
-
-  @$internal
-  @override
-  BackupService create() => BackupService();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(void value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<void>(value),
-    );
-  }
-}
-
-String _$backupServiceHash() => r'980ef83107557d04024eb277c75f4a7c55744ddb';
-
-abstract class _$BackupService extends $Notifier<void> {
-  void build();
-  @$mustCallSuper
-  @override
-  WhenComplete runBuild() {
-    final ref = this.ref as $Ref<void, void>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<void, void>,
-              void,
-              Object?,
-              Object?
-            >;
-    return element.handleCreate(ref, build);
-  }
-}
-
 @ProviderFor(expenseByCategory)
 final expenseByCategoryProvider = ExpenseByCategoryProvider._();
 

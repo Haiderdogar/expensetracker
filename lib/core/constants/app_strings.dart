@@ -101,10 +101,6 @@ abstract final class AppStrings {
   static const String logoutConfirmation =
       'You will be signed out of Google. Your offline data stays on this device, isolated to your account.';
   static const String signInWithGoogle = 'Sign in with Google';
-  static const String exportData = 'Export data';
-  static const String backupSuccess = 'Backup exported successfully';
-  static const String importSuccess = 'Data imported successfully';
-
   static const String deleteAccount = 'Delete Account';
   static const String deleteAccountConfirmTitle = 'Delete Account?';
   static const String deleteAccountConfirmBody =
