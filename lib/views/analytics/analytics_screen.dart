@@ -24,7 +24,7 @@ class AnalyticsScreen extends StatelessWidget {
         title: const Text(AppStrings.analytics),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 3, 16, 80),
+        padding: const EdgeInsets.fromLTRB(16, 3, 16, 110),
         children: const [
           _AnalyticsTimeRangeSection(),
           _AnalyticsCustomRangeSection(),

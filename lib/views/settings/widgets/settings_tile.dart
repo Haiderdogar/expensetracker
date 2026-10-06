@@ -24,14 +24,14 @@ class SettingsTile extends StatelessWidget {
     final tileColor = accentColor ?? colorScheme.primary.withValues(alpha: 0.08);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: colorScheme.surface,
               borderRadius: BorderRadius.circular(18),

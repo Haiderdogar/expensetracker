@@ -50,8 +50,9 @@ class AddBudgetCategorySelector extends ConsumerWidget {
               existingBudgetCategoryIds: existingBudgetCategoryIds,
               budgets: budgets,
               onSelect: (categoryId, hasBudget) {
-                ref.read(addBudgetCategoryProvider.notifier).state =
-                    hasBudget ? null : categoryId;
+                ref.read(addBudgetCategoryProvider.notifier).state = hasBudget
+                    ? null
+                    : categoryId;
               },
             );
           },
@@ -89,9 +90,9 @@ class _CategoryGrid extends StatelessWidget {
                 children: [
                   Text(
                     'Choose a category',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -114,7 +115,7 @@ class _CategoryGrid extends StatelessWidget {
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = (constraints.maxWidth / 82).floor().clamp(3, 6);
+            final columns = (constraints.maxWidth / 96).floor().clamp(4, 8);
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -123,7 +124,7 @@ class _CategoryGrid extends StatelessWidget {
                 crossAxisCount: columns,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
-                childAspectRatio: 0.86,
+                childAspectRatio: 0.84,
               ),
               itemBuilder: (context, index) {
                 final category = items[index];
@@ -137,8 +138,7 @@ class _CategoryGrid extends StatelessWidget {
                   category: category,
                   icon: icon,
                   color: color,
-                  isSelected:
-                      !hasBudget && selectedCategory == category.id,
+                  isSelected: !hasBudget && selectedCategory == category.id,
                   hasBudget: hasBudget,
                   onTap: () => onSelect(category.id, hasBudget),
                 );
@@ -218,7 +218,7 @@ class _BudgetCategoryTile extends StatelessWidget {
                           color: colorScheme.primary,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: colorScheme.surface,
+                            color: colorScheme.surfaceContainerLow,
                             width: 1.5,
                           ),
                         ),

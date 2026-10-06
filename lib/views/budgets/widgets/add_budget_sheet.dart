@@ -39,7 +39,7 @@ class AddBudgetSheet extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 12, 15),
+                padding: const EdgeInsets.fromLTRB(20, 8, 12, 10),
                 child: Row(
                   children: [
                     Container(
@@ -86,7 +86,7 @@ class AddBudgetSheet extends StatelessWidget {
                 child: SingleChildScrollView(
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
                   child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [AddBudgetCategorySelector()],
@@ -95,7 +95,7 @@ class AddBudgetSheet extends StatelessWidget {
               ),
               Divider(height: 1, color: colorScheme.outlineVariant),
               Padding(
-                padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+                padding: const EdgeInsets.fromLTRB(18, 5, 18, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,

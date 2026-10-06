@@ -13,7 +13,6 @@ import '../features/google_sign_in/screens/google_sign_in_screen.dart';
 import '../features/onboarding/screens/intro_onboarding_screen.dart';
 import '../features/wallet_currency/screens/wallet_currency_setup_screen.dart';
 import '../providers/database_provider.dart';
-import '../views/app_shell.dart';
 
 part 'app_startup.g.dart';
 
@@ -87,7 +86,10 @@ class AppStartupController extends _$AppStartupController {
 
 /// Displays exactly one screen from [AppFlow]. It owns no startup decisions.
 class AppStartupScreen extends ConsumerWidget {
-  const AppStartupScreen({super.key});
+  const AppStartupScreen({super.key, required this.onDashboard});
+
+  final VoidCallback onDashboard;
+
   static bool _nativeSplashRemoved = false;
 
   void _removeNativeSplash() {
@@ -130,12 +132,34 @@ class AppStartupScreen extends ConsumerWidget {
           AppFlow.walletSetup => const WalletCurrencySetupScreen(),
           AppFlow.securitySetup => const LockSetupScreen(),
           AppFlow.lockScreen => const AuthScreen(),
-          AppFlow.dashboard => const AppShell(),
+          AppFlow.dashboard => _DashboardRedirect(onRedirect: onDashboard),
         };
       },
       skipLoadingOnRefresh: true,
     );
   }
+}
+
+class _DashboardRedirect extends StatefulWidget {
+  const _DashboardRedirect({required this.onRedirect});
+
+  final VoidCallback onRedirect;
+
+  @override
+  State<_DashboardRedirect> createState() => _DashboardRedirectState();
+}
+
+class _DashboardRedirectState extends State<_DashboardRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onRedirect();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const _StartupLoading();
 }
 
 class _StartupLoading extends StatelessWidget {

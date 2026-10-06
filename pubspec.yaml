@@ -1,7 +1,7 @@
 name: expensetracker
 description: A production-grade expense tracker with secure PIN and offline storage.
 publish_to: 'none'
-version: 1.0.0+4
+version: 1.0.0+5
 
 environment:
   sdk: ">=3.12.2 <4.0.0"
@@ -62,12 +62,12 @@ flutter_native_splash:
   image_dark: assets/icon.png
 
   # Android 12+ Splash API
-  # Android applies a device-specific mask and size to the centered icon.
+  # Use a smaller, padded logo to fit Android's system splash-icon safe area.
   android_12:
     color: "#FFFFFF"
-    image: assets/icon.png
+    image: assets/splash_icon_android12.png
     color_dark: "#111827"
-    image_dark: assets/icon.png
+    image_dark: assets/splash_icon_android12.png
 
   android: true
   ios: false

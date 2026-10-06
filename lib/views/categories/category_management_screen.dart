@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'widgets/category_management_body.dart';
 import 'widgets/category_management_dialogs.dart';
@@ -25,7 +26,7 @@ class CategoryManagementScreen extends StatelessWidget {
         leading: IconButton(
           tooltip: 'Back',
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: context.pop,
         ),
         backgroundColor: colors.surface,
         surfaceTintColor: Colors.transparent,

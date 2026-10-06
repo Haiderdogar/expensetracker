@@ -111,6 +111,26 @@ class _AppShellState extends ConsumerState<AppShell>
   Widget build(BuildContext context) => const _AppShellScaffold();
 }
 
+class AppShellRoute extends StatelessWidget {
+  const AppShellRoute({
+    required this.child,
+    required this.isHome,
+    super.key,
+  });
+
+  final Widget child;
+  final bool isHome;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      const AppShell(),
+      IgnorePointer(ignoring: isHome, child: child),
+    ],
+  );
+}
+
 class _AppShellScaffold extends ConsumerWidget {
   const _AppShellScaffold();
 

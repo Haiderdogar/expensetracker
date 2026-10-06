@@ -13,7 +13,7 @@ class SettingsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 10, left: 4, top: 2),
+          padding: const EdgeInsets.only( left: 4, top: 2),
           child: Text(
             title,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(

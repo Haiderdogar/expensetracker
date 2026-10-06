@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/app_lock/screens/auth_screen.dart';
@@ -36,7 +37,9 @@ final GoRouter appRouter = GoRouter(
   routes: [
     GoRoute(
       path: AppRoutes.bootstrap,
-      builder: (_, _) => const AppStartupScreen(),
+      builder: (context, _) => AppStartupScreen(
+        onDashboard: () => context.go(AppRoutes.shell),
+      ),
     ),
     GoRoute(
       path: AppRoutes.pinSetup,
@@ -56,23 +59,38 @@ final GoRouter appRouter = GoRouter(
       builder: (_, _) =>
           const AuthScreen(verifyOnly: true, isLogoutConfirmation: true),
     ),
-    GoRoute(path: AppRoutes.shell, builder: (_, _) => const AppShell()),
-    GoRoute(
-      path: AppRoutes.profile,
-      builder: (_, _) => const ProfileViewScreen(),
+    ShellRoute(
+      builder: (_, state, child) => AppShellRoute(
+        child: child,
+        isHome: state.uri.path == AppRoutes.shell,
+      ),
+      routes: [
+        GoRoute(
+          path: AppRoutes.shell,
+          builder: (_, _) => const SizedBox.expand(),
+        ),
+        GoRoute(
+          path: AppRoutes.profile,
+          builder: (_, _) => const ProfileViewScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.categories,
+          builder: (_, _) => const CategoryManagementScreen(),
+        ),
+        GoRoute(path: AppRoutes.notes, builder: (_, _) => const NotesScreen()),
+        GoRoute(
+          path: AppRoutes.settings,
+          builder: (_, _) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: AppRoutes.privacyPolicy,
+          builder: (_, _) => const PrivacyPolicyScreen(),
+        ),
+      ],
     ),
-    GoRoute(
-      path: AppRoutes.categories,
-      builder: (_, _) => const CategoryManagementScreen(),
-    ),
-    GoRoute(path: AppRoutes.notes, builder: (_, _) => const NotesScreen()),
     GoRoute(
       path: AppRoutes.noteEditor,
       builder: (_, state) => NoteEditorScreen(note: state.extra as NoteModel?),
-    ),
-    GoRoute(
-      path: AppRoutes.settings,
-      builder: (_, _) => const SettingsScreen(),
     ),
     GoRoute(
       path: AppRoutes.transactionEditor,
@@ -82,10 +100,6 @@ final GoRouter appRouter = GoRouter(
           return AddTransactionScreen(transaction: extra);
         return AddTransactionScreen(initialType: extra as String?);
       },
-    ),
-    GoRoute(
-      path: AppRoutes.privacyPolicy,
-      builder: (_, _) => const PrivacyPolicyScreen(),
     ),
   ],
 );

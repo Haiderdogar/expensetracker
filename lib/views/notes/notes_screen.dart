@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_strings.dart';
 import 'widgets/notes_add_button.dart';
@@ -13,10 +14,10 @@ class NotesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: Navigator.canPop(context)
+        leading: context.canPop()
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => Navigator.of(context).maybePop(),
+                onPressed: context.pop,
               )
             : null,
         title: const Text(AppStrings.notes),

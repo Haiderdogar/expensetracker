@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/global_keys.dart';
@@ -15,10 +16,10 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: Navigator.canPop(context)
+        leading: context.canPop()
             ? IconButton(
                 icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => Navigator.of(context).maybePop(),
+                onPressed: context.pop,
               )
             : IconButton(
                 icon: const Icon(Icons.menu_rounded),
@@ -33,23 +34,23 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
           children: [
             const SettingsSection(
               title: AppStrings.theme,
               child: SettingsThemeSection(),
             ),
-            const SizedBox(height: 18),
+        //    const SizedBox(height: 8),
             const SettingsSection(
               title: AppStrings.security,
               child: SettingsSecuritySection(),
             ),
-            const SizedBox(height: 18),
+          //  const SizedBox(height: 18),
             const SettingsSection(
               title: 'Currency',
               child: SettingsCurrencySection(),
             ),
-            const SizedBox(height: 18),
+        //    const SizedBox(height: 18),
             const SettingsSection(
               title: 'Account',
               child: SettingsAccountSection(),
