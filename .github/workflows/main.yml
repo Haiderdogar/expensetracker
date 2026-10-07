@@ -126,13 +126,18 @@ jobs:
 
   release-play-aab:
     name: Build and publish Play Store AAB
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: validate
     runs-on: ubuntu-latest
+    concurrency:
+      group: versioned-release
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -158,24 +163,62 @@ jobs:
           printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
           printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
 
-      - name: Derive Android version from tag
+      - name: Derive Android version and release tag
+        id: version
         run: |
           python3 - <<'PY'
           import os
           import re
+          import subprocess
 
-          tag = os.environ["GITHUB_REF_NAME"]
-          match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", tag)
-          if match is None:
-              raise SystemExit("Release tags must use vMAJOR.MINOR.PATCH, for example v1.2.3.")
+          tag_pattern = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
 
-          major, minor, patch = map(int, match.groups())
+          if os.environ["GITHUB_REF"].startswith("refs/tags/"):
+              release_tag = os.environ["GITHUB_REF_NAME"]
+              match = tag_pattern.fullmatch(release_tag)
+              if match is None:
+                  raise SystemExit("Release tags must use vMAJOR.MINOR.PATCH, for example v1.2.3.")
+              major, minor, patch = map(int, match.groups())
+          else:
+              subprocess.run(["git", "fetch", "--force", "--tags", "origin"], check=True)
+              tags = subprocess.check_output(
+                  ["git", "tag", "--list", "v*"],
+                  text=True,
+              ).splitlines()
+              versions = []
+              for existing_tag in tags:
+                  match = tag_pattern.fullmatch(existing_tag)
+                  if match is not None:
+                      version = tuple(map(int, match.groups()))
+                      commit = subprocess.check_output(
+                          ["git", "rev-parse", f"{existing_tag}^{{commit}}"],
+                          text=True,
+                      ).strip()
+                      if commit == os.environ["GITHUB_SHA"]:
+                          versions.append(version)
+
+              if versions:
+                  major, minor, patch = max(versions)
+              else:
+                  stable_versions = [
+                      tuple(map(int, match.groups()))
+                      for existing_tag in tags
+                      if (match := tag_pattern.fullmatch(existing_tag)) is not None
+                  ]
+                  if not stable_versions:
+                      raise SystemExit("Cannot auto-increment: no existing stable vMAJOR.MINOR.PATCH tag was found.")
+                  major, minor, patch = max(stable_versions)
+                  patch += 1
+              release_tag = f"v{major}.{minor}.{patch}"
+
           if major > 2099 or minor > 999 or patch > 999:
               raise SystemExit("Version components exceed the supported Android version-code range.")
 
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
               env_file.write(f"APP_VERSION={major}.{minor}.{patch}\n")
               env_file.write(f"APP_BUILD_NUMBER={major * 1_000_000 + minor * 1_000 + patch + 1}\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output_file:
+              output_file.write(f"release_tag={release_tag}\n")
           PY
 
       - name: Build signed Play Store app bundle
@@ -209,6 +252,8 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.release_tag }}
+          target_commitish: ${{ github.sha }}
           files: |
             build/app/outputs/bundle/release/app-release.aab
             build/app/outputs/flutter-apk/*.apk
