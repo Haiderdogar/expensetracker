@@ -57,14 +57,14 @@ jobs:
           : "${GOOGLE_SERVICES_JSON_BASE64:?Add GOOGLE_SERVICES_JSON_BASE64 to repository Actions secrets}"
           : "${ANDROID_UPLOAD_KEYSTORE_BASE64:?Add ANDROID_UPLOAD_KEYSTORE_BASE64 to repository Actions secrets}"
           printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
-          printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+          printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
 
       - name: Build release APKs
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-          ANDROID_UPLOAD_STORE_FILE: upload-keystore.jks
+          ANDROID_UPLOAD_STORE_FILE: android/app/upload-keystore.jks
         run: |
           flutter build apk --release --split-per-abi \
             --build-number="${{ github.run_number }}"
@@ -108,7 +108,7 @@ jobs:
           : "${GOOGLE_SERVICES_JSON_BASE64:?Add GOOGLE_SERVICES_JSON_BASE64 to repository Actions secrets}"
           : "${ANDROID_UPLOAD_KEYSTORE_BASE64:?Add ANDROID_UPLOAD_KEYSTORE_BASE64 to repository Actions secrets}"
           printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
-          printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
+          printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
 
       - name: Derive Android version from tag
         run: |
@@ -135,7 +135,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-          ANDROID_UPLOAD_STORE_FILE: upload-keystore.jks
+          ANDROID_UPLOAD_STORE_FILE: android/app/upload-keystore.jks
         run: |
           flutter build appbundle --release \
             --build-name="$APP_VERSION" \
