@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +8,7 @@ import 'core/constants/app_strings.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
+import 'core/updates/flexible_update_coordinator.dart';
 
 class ExpenseeApp extends StatelessWidget {
   const ExpenseeApp({super.key, this.startupError});
@@ -25,11 +28,33 @@ class ExpenseeApp extends StatelessWidget {
 
 typedef ExpenseTrackerApp = ExpenseeApp;
 
-class _AppThemeWrapper extends ConsumerWidget {
+class _AppThemeWrapper extends ConsumerStatefulWidget {
   const _AppThemeWrapper();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AppThemeWrapper> createState() => _AppThemeWrapperState();
+}
+
+class _AppThemeWrapperState extends ConsumerState<_AppThemeWrapper> {
+  final FlexibleUpdateCoordinator _updateCoordinator =
+      FlexibleUpdateCoordinator();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_updateCoordinator.initialize());
+    });
+  }
+
+  @override
+  void dispose() {
+    unawaited(_updateCoordinator.dispose());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedMode = ref.watch(themeModeControllerProvider);
     final themeMode = switch (selectedMode) {
       AppThemeMode.light => ThemeMode.light,
@@ -43,6 +68,7 @@ class _AppThemeWrapper extends ConsumerWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
+      scaffoldMessengerKey: _updateCoordinator.scaffoldMessengerKey,
       // A stable router means theme changes cannot restart app navigation.
       routerConfig: appRouter,
     );

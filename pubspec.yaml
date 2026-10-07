@@ -30,6 +30,8 @@ dependencies:
   go_router: ^18.0.1
   flutter_native_splash: ^2.4.5
   android_nav_setting: ^0.0.2+1
+  in_app_update: ^5.0.0
+
 
 
 
