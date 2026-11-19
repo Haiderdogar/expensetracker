@@ -55,6 +55,22 @@ The Android application ID is `com.haiderdogar.expensee`. It must match the Andr
 4. Refresh the `GOOGLE_SERVICES_JSON_BASE64` GitHub secret from that downloaded file. The local file `android\app\google-services.json` is intentionally ignored by git. Never commit signing keys or passwords.
 5. Deploy Firestore rules to the same Firebase project used by the app: `firebase deploy --project expensetracker-c93d4 --only firestore:rules`. Review `firestore.rules` before deployment and confirm the signed-in user's UID-scoped reads and writes are allowed.
 
+## Google AdMob
+
+Android banner ads use Google's official `google_mobile_ads` package (`9.2.0`). The AdMob App ID is `ca-app-pub-9634940728444652~1973933277`, and the production Dashboard banner unit is `ca-app-pub-9634940728444652/3221555434`. These are public client identifiers, not passwords or authentication secrets, so they are kept in the Android manifest and central Dart configuration. No additional CI secret is required.
+
+Debug and profile builds automatically request Google's test banner unit; release builds use the production unit. This includes the release-signed APKs labelled as test APKs in GitHub Actions. To test a signed release build with Google's demo ads, use `flutter build apk --release --dart-define=ADMOB_USE_TEST_ADS=true` (upload signing must be configured). If testing the production unit instead, first register your device as an AdMob test device. See Google's [test ads guide](https://developers.google.com/admob/flutter/test-ads).
+
+The anchored adaptive banner appears above the bottom navigation only on Dashboard. Loading and failed ads reserve no space. The shell's Scaffold raises the floating action button by the visible banner's actual height and restores its position when the banner is removed. Width or orientation changes replace the ad; transient load failures retry after 30, 60, then 120 seconds while the app is in the foreground.
+
+Ads also require confirmed internet access. The existing internet checker verifies reachability rather than treating a Wi-Fi/mobile connection as proof of internet access. While the initial check is pending, offline, or monitoring has failed, no banner space is reserved. A detected disconnect disposes the current ad, cancels pending retries, and restores the floating button. Reconnection automatically requests a new ad through the consent checks. Network-interface changes trigger immediate reachability checks, with periodic checks every 10 seconds to detect an outage even when Wi-Fi stays connected. Monitoring stops in the background and starts with a fresh check on return.
+
+Before requesting ads, the app updates Google's User Messaging Platform consent information and shows any required consent form. It initializes Mobile Ads and requests banners only when `canRequestAds` permits. **Settings > Privacy > Ad privacy choices** appears when Google requires a privacy-options entry point. Opening it removes the existing banner until the consent flow finishes.
+
+In the AdMob console, configure and publish the applicable messages under **Privacy & messaging** for this app, using the published privacy-policy URL. The repository's `app-ads.txt` already matches publisher `pub-9634940728444652`; keep its publicly hosted copy current. Production ad delivery also depends on AdMob app readiness, account approval, and available ad inventory. The repository changes do not publish the updated privacy policy or change console settings. Google's [Flutter setup](https://developers.google.com/admob/flutter/quick-start), [banner](https://developers.google.com/admob/flutter/banner), and [consent](https://developers.google.com/admob/flutter/privacy) guides describe these external requirements.
+
+On an Android device, verify a test banner loads on Dashboard, the floating button clears it, and the last transaction can scroll above it. Check portrait/landscape, both system navigation modes, switching tabs and opening other pages, offline startup, Wi-Fi without internet, turning internet off while an ad is visible or loading, reconnecting without leaving Dashboard, background/resume, and returning from an ad click. Verify offline states leave no empty banner space and the floating button returns to its original position. Where consent messages apply, verify the first consent form and subsequent privacy-choice changes. Check production readiness separately with a registered test device.
+
 ## Local development and verification
 
 ```powershell

@@ -53,7 +53,12 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   '• **Financial data** – Transactions, categories, budgets, '
                   'and notes that you manually enter into the app.\n\n'
                   '• **Device data** – Anonymous crash reports and basic '
-                  'performance metrics to help us improve stability.',
+                  'performance metrics to help us improve stability.\n\n'
+                  '• **Advertising data** – Google AdMob may collect device '
+                  'identifiers, IP address, approximate location derived from '
+                  'IP address, and ad interactions to deliver and measure ads '
+                  'and help prevent fraud. Ad personalisation depends on '
+                  'applicable consent choices.',
             ),
             const SizedBox(height: 16),
 
@@ -105,7 +110,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   '• **Firebase / Firestore** – Used for cloud storage and '
                   'real-time synchronisation.\n\n'
                   '• **Firebase Crashlytics** – Used for anonymous crash '
-                  'reporting to improve app stability.',
+                  'reporting to improve app stability.\n\n'
+                  '• **Google AdMob** – Used to display and measure banner '
+                  'advertising. Google processes advertising data under its '
+                  'privacy policy: https://policies.google.com/privacy. '
+                  'Your transactions, budgets, and notes are not sent to AdMob.',
             ),
             const SizedBox(height: 16),
 
@@ -124,7 +133,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   'Your local data remains on-device until you uninstall the app.\n\n'
                   '• **Delete Account** – You can permanently delete your account '
                   'and all associated data directly from Settings → Account. '
-                  'This removes everything — see Section 5a for full details.',
+                  'This removes everything — see Section 5a for full details.\n\n'
+                  '• **Ad privacy choices** – Where required, you can review '
+                  'or change your advertising consent in Settings → Privacy → '
+                  'Ad privacy choices. A consent form is shown before ads '
+                  'when required for your location.',
             ),
             const SizedBox(height: 16),
 
@@ -201,7 +214,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             // ── Footer ────────────────────────────────────────────────
             Center(
               child: Text(
-                'Effective date: 01 October 2026',
+                'Effective date: 19 November 2026',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colors.onSurfaceVariant.withValues(alpha: 0.6),
                   fontStyle: FontStyle.italic,

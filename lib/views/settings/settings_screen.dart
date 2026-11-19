@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/global_keys.dart';
 import 'widgets/settings_account_section.dart';
+import 'widgets/settings_ad_privacy_section.dart';
 import 'widgets/settings_currency_section.dart';
 import 'widgets/settings_section.dart';
 import 'widgets/settings_security_section.dart';
@@ -55,6 +56,7 @@ class SettingsScreen extends StatelessWidget {
               title: 'Account',
               child: SettingsAccountSection(),
             ),
+            const SettingsAdPrivacySection(),
           ],
         ),
       ),

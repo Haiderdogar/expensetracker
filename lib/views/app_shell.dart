@@ -8,12 +8,13 @@ import '../core/utils/global_keys.dart';
 import '../providers/auth_provider.dart';
 import '../providers/database_provider.dart';
 import 'app_shell/app_shell_providers.dart';
-import 'app_shell/app_shell_bottom_navigation.dart';
+import 'app_shell/app_shell_bottom_bar.dart';
 import 'app_shell/app_shell_drawer.dart';
 import 'app_shell/app_shell_navigation_body.dart';
 import 'budgets/budgets_screen.dart';
 import 'budgets/widgets/budgets_add_button.dart';
 import 'dashboard/widgets/dashboard_add_transaction_button.dart';
+import 'dashboard/widgets/dashboard_banner.dart';
 import 'transactions/widgets/transactions_add_button.dart';
 
 /// The application chrome. Owns the sync-on-resume lifecycle hook.
@@ -41,7 +42,9 @@ import 'transactions/widgets/transactions_add_button.dart';
 ///    rebuild mechanism for this widget.
 /// ─────────────────────────────────────────────────────────────────────────────
 class AppShell extends ConsumerStatefulWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, this.isHome = true});
+
+  final bool isHome;
 
   @override
   ConsumerState<AppShell> createState() => _AppShellState();
@@ -108,15 +111,12 @@ class _AppShellState extends ConsumerState<AppShell>
 
   /// The lifecycle/sync owner does not subscribe to tab navigation state.
   @override
-  Widget build(BuildContext context) => const _AppShellScaffold();
+  Widget build(BuildContext context) =>
+      _AppShellScaffold(isHome: widget.isHome);
 }
 
 class AppShellRoute extends StatelessWidget {
-  const AppShellRoute({
-    required this.child,
-    required this.isHome,
-    super.key,
-  });
+  const AppShellRoute({required this.child, required this.isHome, super.key});
 
   final Widget child;
   final bool isHome;
@@ -125,14 +125,16 @@ class AppShellRoute extends StatelessWidget {
   Widget build(BuildContext context) => Stack(
     fit: StackFit.expand,
     children: [
-      const AppShell(),
+      AppShell(isHome: isHome),
       IgnorePointer(ignoring: isHome, child: child),
     ],
   );
 }
 
 class _AppShellScaffold extends ConsumerWidget {
-  const _AppShellScaffold();
+  const _AppShellScaffold({required this.isHome});
+
+  final bool isHome;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -143,7 +145,12 @@ class _AppShellScaffold extends ConsumerWidget {
       drawer: const AppShellDrawer(),
       body: const AppShellNavigationBody(),
       extendBody: true,
-      bottomNavigationBar: const AppShellBottomNavigation(),
+      // Scaffold positions the FAB above the complete bottom bar. A banner
+      // occupies space only after loading, so removal restores the usual FAB
+      // position without duplicating ad-height state or using fixed offsets.
+      bottomNavigationBar: AppShellBottomBar(
+        banner: isHome && selectedTab == 0 ? const DashboardBanner() : null,
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: switch (selectedTab) {
         0 => const DashboardAddTransactionButton(),

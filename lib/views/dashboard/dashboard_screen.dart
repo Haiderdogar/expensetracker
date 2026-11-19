@@ -24,6 +24,10 @@ class DashboardScreen extends StatelessWidget {
 class _DashboardRefreshBody extends ConsumerWidget {
   const _DashboardRefreshBody();
 
+  // Leave room for the standard 56px FAB, its 16px margin, and a 16px gap
+  // between the final transaction and the button.
+  static const _floatingActionButtonClearance = 88.0;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
@@ -34,10 +38,10 @@ class _DashboardRefreshBody extends ConsumerWidget {
           ref.read(categoriesProvider.notifier).refresh(),
         ]);
       },
-      child: const CustomScrollView(
-        physics: AlwaysScrollableScrollPhysics(),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          SliverPadding(
+          const SliverPadding(
             padding: EdgeInsets.fromLTRB(16, 6, 16, 0),
             sliver: SliverToBoxAdapter(
               child: Column(
@@ -50,9 +54,15 @@ class _DashboardRefreshBody extends ConsumerWidget {
               ),
             ),
           ),
-          RecentTransactionsList(),
+          const RecentTransactionsList(),
           SliverToBoxAdapter(
-            child: SizedBox(height: 100),
+            // The shell extends content behind its bottom bar. Its inherited
+            // bottom padding includes the actual loaded banner height.
+            child: SizedBox(
+              height:
+                  MediaQuery.paddingOf(context).bottom +
+                  _floatingActionButtonClearance,
+            ),
           ),
         ],
       ),
