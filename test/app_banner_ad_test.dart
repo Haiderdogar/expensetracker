@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:expensetracker/core/ads/ad_internet_status.dart';
 import 'package:expensetracker/core/ads/admob_config.dart';
 import 'package:expensetracker/core/ads/admob_service.dart';
-import 'package:expensetracker/views/app_shell/app_shell_bottom_bar.dart';
-import 'package:expensetracker/views/dashboard/widgets/dashboard_banner.dart';
+import 'package:expensetracker/core/ads/widgets/app_banner_ad.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,8 +38,15 @@ void main() {
         .setMockMethodCallHandler(instanceManager.channel, (call) async {
           calls.add(call);
           switch (call.method) {
-            case 'AdSize#getLargeAnchoredAdaptiveBannerAdSize':
-              return adaptiveHeight == null ? 50 : await adaptiveHeight!();
+            case 'getAdSize':
+              final ad =
+                  instanceManager.adFor(call.arguments['adId']) as BannerAd;
+              final height = adaptiveHeight == null
+                  ? 50
+                  : await adaptiveHeight!();
+              return height == null
+                  ? null
+                  : AdSize(width: ad.size.width, height: height);
             case 'loadBannerAd':
               if (throwOnLoad) {
                 throw PlatformException(code: 'load-failed');
@@ -98,39 +104,37 @@ void main() {
     child: MaterialApp(
       home: Scaffold(
         extendBody: true,
-        body: const SizedBox.expand(),
-        bottomNavigationBar: AppShellBottomBar(
-          banner: visible ? const DashboardBanner() : null,
-          navigation: const SizedBox(height: 70),
-        ),
-        floatingActionButton: const FloatingActionButton(
-          key: ValueKey('test-fab'),
-          onPressed: null,
-          child: Icon(Icons.add),
+        body: Column(
+          children: [
+            if (visible) const AppBannerAd(),
+            const Expanded(
+              child: SizedBox.expand(key: ValueKey('test-content')),
+            ),
+          ],
         ),
       ),
     ),
   );
 
-  double fabBottom(WidgetTester tester) =>
-      tester.getBottomLeft(find.byKey(const ValueKey('test-fab'))).dy;
+  double contentTop(WidgetTester tester) =>
+      tester.getTopLeft(find.byKey(const ValueKey('test-content'))).dy;
 
   Future<void> removeApp(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   }
 
-  testWidgets('loads test ads, clears FAB, collapses on failure, and retries', (
+  testWidgets('loads test ads, collapses on failure, and retries', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    final originalBottom = fabBottom(tester);
+    final originalTop = contentTop(tester);
     expect(find.byType(AdWidget), findsNothing);
     expect(loadCalls(), hasLength(1));
     expect(
       loadCalls().single.arguments['adUnitId'],
-      AdMobConfig.dashboardBannerAdUnitId,
+      AdMobConfig.bannerAdUnitId,
     );
     expect(
       loadCalls().single.arguments['adUnitId'],
@@ -141,11 +145,13 @@ void main() {
     first.listener.onAdLoaded!(first);
     await tester.pumpAndSettle();
     final bannerRect = tester.getRect(
-      find.byKey(const ValueKey('dashboard-banner')),
+      find.byKey(const ValueKey('admob-banner')),
     );
     expect(bannerRect.height, 50);
-    expect(fabBottom(tester), originalBottom - 66);
-    expect(fabBottom(tester), lessThan(bannerRect.top));
+    expect(bannerRect.width, 320);
+    expect(first.size, AdSize.banner);
+    expect(contentTop(tester), originalTop + 54);
+    expect(contentTop(tester), greaterThan(bannerRect.bottom));
 
     first.listener.onAdFailedToLoad!(
       first,
@@ -153,7 +159,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(AdWidget), findsNothing);
-    expect(fabBottom(tester), originalBottom);
+    expect(contentTop(tester), originalTop);
     expect(calls.where((call) => call.method == 'disposeAd'), hasLength(1));
     await tester.pump(const Duration(seconds: 29));
     expect(loadCalls(), hasLength(1));
@@ -168,11 +174,11 @@ void main() {
     second.listener.onAdClosed?.call(second);
     await tester.pumpAndSettle();
     expect(find.byType(AdWidget), findsOneWidget);
-    expect(fabBottom(tester), originalBottom - 66);
+    expect(contentTop(tester), originalTop + 54);
 
     await tester.pumpWidget(buildApp(visible: false));
     await tester.pumpAndSettle();
-    expect(fabBottom(tester), originalBottom);
+    expect(contentTop(tester), originalTop);
     expect(calls.where((call) => call.method == 'disposeAd'), hasLength(2));
     second.listener.onAdLoaded!(second);
     expect(tester.takeException(), isNull);
@@ -207,7 +213,7 @@ void main() {
     await removeApp(tester);
   });
 
-  testWidgets('resizes and replaces the ad when the available width changes', (
+  testWidgets('keeps the compact size when the available width changes', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -217,7 +223,7 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
     final first = lastAd();
-    expect(first.size.width, 384);
+    expect(first.size, AdSize.banner);
     first.listener.onAdLoaded!(first);
     await tester.pumpAndSettle();
 
@@ -226,21 +232,49 @@ void main() {
     expect(find.byType(AdWidget), findsNothing);
     expect(loadCalls(), hasLength(2));
     final second = lastAd();
-    expect(second.size.width, 784);
+    expect(second.size, AdSize.banner);
     first.listener.onAdLoaded!(first);
     await tester.pumpAndSettle();
     expect(find.byType(AdWidget), findsNothing);
     second.listener.onAdLoaded!(second);
     await tester.pumpAndSettle();
     expect(
-      tester.getSize(find.byKey(const ValueKey('dashboard-banner'))).width,
-      784,
+      tester.getSize(find.byKey(const ValueKey('admob-banner'))).width,
+      320,
     );
     expect(tester.takeException(), isNull);
     await removeApp(tester);
   });
 
-  testWidgets('retries transient setup failure without leaving Dashboard', (
+  testWidgets(
+    'does not request a banner when the available width is too small',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(300, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+      final originalTop = contentTop(tester);
+      expect(service.initializationCalls, 0);
+      expect(calls, isEmpty);
+      expect(find.byType(AdWidget), findsNothing);
+
+      tester.view.physicalSize = const Size(400, 800);
+      await tester.pumpAndSettle();
+      expect(loadCalls(), hasLength(1));
+      final ad = lastAd();
+      ad.listener.onAdLoaded!(ad);
+      await tester.pumpAndSettle();
+      final banner = tester.getRect(find.byKey(const ValueKey('admob-banner')));
+      expect(banner.size, const Size(320, 50));
+      expect(contentTop(tester), originalTop + 54);
+      expect(tester.takeException(), isNull);
+      await removeApp(tester);
+    },
+  );
+
+  testWidgets('retries transient setup failure without leaving the screen', (
     tester,
   ) async {
     service.allowed = false;
@@ -266,24 +300,27 @@ void main() {
     await removeApp(tester);
   });
 
-  testWidgets('missing adaptive sizes retry without reserving blank space', (
+  testWidgets('missing native sizes retry without reserving blank space', (
     tester,
   ) async {
     adaptiveHeight = () async => null;
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    expect(loadCalls(), isEmpty);
-    expect(find.byType(AdWidget), findsNothing);
-    adaptiveHeight = () async => 90;
-    await tester.pump(const Duration(seconds: 30));
+    final first = lastAd();
+    first.listener.onAdLoaded!(first);
     await tester.pumpAndSettle();
     expect(loadCalls(), hasLength(1));
+    expect(find.byType(AdWidget), findsNothing);
+    adaptiveHeight = () async => 50;
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+    expect(loadCalls(), hasLength(2));
     final ad = lastAd();
     ad.listener.onAdLoaded!(ad);
     await tester.pumpAndSettle();
     expect(
-      tester.getSize(find.byKey(const ValueKey('dashboard-banner'))).height,
-      90,
+      tester.getSize(find.byKey(const ValueKey('admob-banner'))).height,
+      50,
     );
     await removeApp(tester);
   });
@@ -303,17 +340,20 @@ void main() {
     await removeApp(tester);
   });
 
-  testWidgets('leaving Dashboard cancels a pending size request safely', (
+  testWidgets('leaving the screen cancels a pending size request safely', (
     tester,
   ) async {
     final pendingSize = Completer<int?>();
     adaptiveHeight = () => pendingSize.future;
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
+    final ad = lastAd();
+    ad.listener.onAdLoaded!(ad);
+    await tester.pumpAndSettle();
     await removeApp(tester);
     pendingSize.complete(50);
     await tester.pumpAndSettle();
-    expect(loadCalls(), isEmpty);
+    expect(loadCalls(), hasLength(1));
     expect(tester.takeException(), isNull);
   });
 
@@ -323,7 +363,7 @@ void main() {
     initialInternetStatus = null;
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    final originalBottom = fabBottom(tester);
+    final originalTop = contentTop(tester);
     expect(service.initializationCalls, 0);
     expect(calls, isEmpty);
     expect(find.byType(AdWidget), findsNothing);
@@ -334,16 +374,16 @@ void main() {
     await tester.pump(const Duration(minutes: 3));
     expect(service.initializationCalls, 0);
     expect(calls, isEmpty);
-    expect(fabBottom(tester), originalBottom);
+    expect(contentTop(tester), originalTop);
 
     setInternet(InternetStatus.connected);
     await tester.pumpAndSettle();
     expect(loadCalls(), hasLength(1));
-    expect(fabBottom(tester), originalBottom);
+    expect(contentTop(tester), originalTop);
     final ad = lastAd();
     ad.listener.onAdLoaded!(ad);
     await tester.pumpAndSettle();
-    expect(fabBottom(tester), originalBottom - 66);
+    expect(contentTop(tester), originalTop + 54);
     await removeApp(tester);
   });
 
@@ -352,7 +392,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
-      final originalBottom = fabBottom(tester);
+      final originalTop = contentTop(tester);
       final first = lastAd();
       first.listener.onAdLoaded!(first);
       await tester.pumpAndSettle();
@@ -361,7 +401,7 @@ void main() {
       setInternet(InternetStatus.disconnected);
       await tester.pumpAndSettle();
       expect(find.byType(AdWidget), findsNothing);
-      expect(fabBottom(tester), originalBottom);
+      expect(contentTop(tester), originalTop);
       expect(calls.where((call) => call.method == 'disposeAd'), hasLength(1));
       first.listener.onAdLoaded!(first);
       await tester.pump(const Duration(minutes: 3));
@@ -371,11 +411,11 @@ void main() {
       setInternet(InternetStatus.connected);
       await tester.pumpAndSettle();
       expect(loadCalls(), hasLength(2));
-      expect(fabBottom(tester), originalBottom);
+      expect(contentTop(tester), originalTop);
       final second = lastAd();
       second.listener.onAdLoaded!(second);
       await tester.pumpAndSettle();
-      expect(fabBottom(tester), originalBottom - 66);
+      expect(contentTop(tester), originalTop + 54);
 
       second.listener.onAdFailedToLoad!(
         second,
@@ -423,17 +463,20 @@ void main() {
     adaptiveHeight = () => pendingSize.future;
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
+    final ad = lastAd();
+    ad.listener.onAdLoaded!(ad);
+    await tester.pumpAndSettle();
     setInternet(InternetStatus.disconnected);
     await tester.pumpAndSettle();
     pendingSize.complete(50);
     await tester.pumpAndSettle();
-    expect(loadCalls(), isEmpty);
+    expect(loadCalls(), hasLength(1));
     expect(find.byType(AdWidget), findsNothing);
 
     adaptiveHeight = () async => 50;
     setInternet(InternetStatus.connected);
     await tester.pumpAndSettle();
-    expect(loadCalls(), hasLength(1));
+    expect(loadCalls(), hasLength(2));
     expect(tester.takeException(), isNull);
     await removeApp(tester);
   });

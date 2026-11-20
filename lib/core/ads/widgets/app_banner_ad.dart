@@ -5,27 +5,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
-import '../../../core/ads/ad_internet_status.dart';
-import '../../../core/ads/admob_config.dart';
-import '../../../core/ads/admob_service.dart';
+import '../ad_internet_status.dart';
+import '../admob_config.dart';
+import '../admob_service.dart';
 
-/// Reserves space only for a loaded ad. The shell's Scaffold positions its FAB
-/// above this widget and the navigation bar using their combined actual height.
-class DashboardBanner extends ConsumerStatefulWidget {
-  const DashboardBanner({super.key});
+/// A compact standard banner that occupies space only after loading.
+class AppBannerAd extends ConsumerStatefulWidget {
+  const AppBannerAd({super.key});
 
   @override
-  ConsumerState<DashboardBanner> createState() => _DashboardBannerState();
+  ConsumerState<AppBannerAd> createState() => _AppBannerAdState();
 }
 
-class _DashboardBannerState extends ConsumerState<DashboardBanner>
+class _AppBannerAdState extends ConsumerState<AppBannerAd>
     with WidgetsBindingObserver {
   late final AdMobService _service;
   ProviderSubscription<AsyncValue<InternetStatus>>? _internetSubscription;
   bool _hasInternet = false;
   int _internetGeneration = 0;
   BannerAd? _banner;
-  bool _loaded = false;
+  AdSize? _loadedSize;
   bool _loading = false;
   int _generation = 0;
   int _retryAttempt = 0;
@@ -86,7 +85,7 @@ class _DashboardBannerState extends ConsumerState<DashboardBanner>
     }
 
     // A fresh private checker prevents cached connectivity from a previous
-    // Dashboard visit or app session from allowing an offline ad request.
+    // screen visit or app session from allowing an offline ad request.
     ref.invalidate(adInternetStatusProvider);
     final generation = ++_internetGeneration;
     _internetSubscription = ref.listenManual(adInternetStatusProvider, (
@@ -132,7 +131,7 @@ class _DashboardBannerState extends ConsumerState<DashboardBanner>
     _retryTimer = null;
     final previous = _banner;
     _banner = null;
-    _loaded = false;
+    _loadedSize = null;
     _loading = false;
     if (previous != null) unawaited(_disposeAd(previous));
   }
@@ -141,7 +140,7 @@ class _DashboardBannerState extends ConsumerState<DashboardBanner>
     try {
       await ad.dispose();
     } catch (error) {
-      debugPrint('Dashboard banner disposal failed: $error');
+      debugPrint('Banner ad disposal failed: $error');
     }
   }
 
@@ -174,7 +173,7 @@ class _DashboardBannerState extends ConsumerState<DashboardBanner>
         _banner != null ||
         _retryTimer != null ||
         dimensions == null ||
-        dimensions.$1 <= 0) {
+        dimensions.$1 < AdSize.banner.width) {
       return;
     }
 
@@ -195,42 +194,17 @@ class _DashboardBannerState extends ConsumerState<DashboardBanner>
         return;
       }
 
-      final size =
-          await AdSize.getLargeAnchoredAdaptiveBannerAdSizeWithOrientation(
-            dimensions.$2,
-            dimensions.$1,
-          );
-      if (!_isCurrent(generation) ||
-          !_hasInternet ||
-          !_service.canRequestAds ||
-          !_isForeground) {
-        return;
-      }
-      if (size == null || size.width <= 0 || size.height <= 0) {
-        _scheduleRetry();
-        return;
-      }
-
       final banner = BannerAd(
-        adUnitId: AdMobConfig.dashboardBannerAdUnitId,
-        size: size,
+        adUnitId: AdMobConfig.bannerAdUnitId,
+        size: AdSize.banner,
         request: const AdRequest(),
         listener: BannerAdListener(
           onAdLoaded: (ad) {
-            if (!_isCurrent(generation) ||
-                !_hasInternet ||
-                !_service.canRequestAds ||
-                !identical(_banner, ad)) {
-              return;
-            }
-            setState(() {
-              _loaded = true;
-              _retryAttempt = 0;
-            });
+            unawaited(_showLoadedAd(ad as BannerAd, generation));
           },
           onAdFailedToLoad: (ad, error) {
             if (!_isCurrent(generation) || !identical(_banner, ad)) return;
-            debugPrint('Dashboard banner could not load: $error');
+            debugPrint('Banner ad could not load: $error');
             setState(_clearAd);
             _scheduleRetry();
           },
@@ -242,11 +216,44 @@ class _DashboardBannerState extends ConsumerState<DashboardBanner>
       await banner.load();
     } catch (error) {
       if (!_isCurrent(generation)) return;
-      debugPrint('Dashboard banner request failed: $error');
+      debugPrint('Banner ad request failed: $error');
       setState(_clearAd);
       _scheduleRetry();
     } finally {
       if (_isCurrent(generation)) _loading = false;
+    }
+  }
+
+  Future<void> _showLoadedAd(BannerAd ad, int generation) async {
+    bool isCurrent() =>
+        _isCurrent(generation) &&
+        _hasInternet &&
+        _service.canRequestAds &&
+        identical(_banner, ad);
+    if (!isCurrent()) return;
+
+    try {
+      // Confirm the native creative is ready before reserving its compact size.
+      final size = await ad.getPlatformAdSize();
+      if (!isCurrent()) return;
+      if (size == null ||
+          size.width <= 0 ||
+          size.height <= 0 ||
+          size.width > AdSize.banner.width ||
+          size.height > AdSize.banner.height) {
+        setState(_clearAd);
+        _scheduleRetry();
+        return;
+      }
+      setState(() {
+        _loadedSize = size;
+        _retryAttempt = 0;
+      });
+    } catch (error) {
+      if (!isCurrent()) return;
+      debugPrint('Banner ad size could not be read: $error');
+      setState(_clearAd);
+      _scheduleRetry();
     }
   }
 
@@ -275,15 +282,16 @@ class _DashboardBannerState extends ConsumerState<DashboardBanner>
     return SafeArea(
       top: false,
       bottom: false,
-      minimum: const EdgeInsets.symmetric(horizontal: 8),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth.floor();
           final orientation = MediaQuery.orientationOf(context);
           _queueDimensions(width, orientation);
           final banner = _banner;
-          if (!_hasInternet ||
-              !_loaded ||
+          final size = _loadedSize;
+          if (width < AdSize.banner.width ||
+              !_hasInternet ||
+              size == null ||
               banner == null ||
               !_service.canRequestAds ||
               _dimensions != (width, orientation)) {
@@ -293,13 +301,13 @@ class _DashboardBannerState extends ConsumerState<DashboardBanner>
           return ColoredBox(
             color: Theme.of(context).scaffoldBackgroundColor,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 2),
               child: Center(
                 heightFactor: 1,
                 child: SizedBox(
-                  key: const ValueKey('dashboard-banner'),
-                  width: banner.size.width.toDouble(),
-                  height: banner.size.height.toDouble(),
+                  key: const ValueKey('admob-banner'),
+                  width: size.width.toDouble(),
+                  height: size.height.toDouble(),
                   child: AdWidget(key: ObjectKey(banner), ad: banner),
                 ),
               ),

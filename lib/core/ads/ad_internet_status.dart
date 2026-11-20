@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 
-/// Each monitor owns its checker so resumed Dashboard sessions cannot inherit
+/// Each monitor owns its checker so resumed banner sessions cannot inherit
 /// a stale status from the app-wide InternetConnection singleton.
 final adInternetCheckerFactoryProvider = Provider<InternetConnection Function()>(
   (ref) =>

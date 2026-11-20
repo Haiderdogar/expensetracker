@@ -39,7 +39,7 @@ class AdMobService extends ChangeNotifier {
       !_isShowingPrivacyOptions;
 
   /// Call after the first frame so UMP can present any required native form.
-  /// Repeated Dashboard mounts share the same consent and initialization work.
+  /// Repeated banner mounts share the same consent and initialization work.
   Future<void> initialize() {
     if (_disposed || !isSupported) return Future<void>.value();
     if (_isShowingPrivacyOptions) {
@@ -202,7 +202,7 @@ class AdMobService extends ChangeNotifier {
   void _deferRetry() {
     if (_disposed) return;
     _retryCooldown?.cancel();
-    // Permit a later Dashboard visit to retry, without repeatedly requesting
+    // Permit a later screen visit to retry, without repeatedly requesting
     // consent or initialization during rebuilds and rapid tab changes.
     _retryCooldown = Timer(const Duration(seconds: 30), () {
       _retryCooldown = null;

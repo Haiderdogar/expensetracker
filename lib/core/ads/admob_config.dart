@@ -8,7 +8,7 @@ abstract final class AdMobConfig {
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   /// Development and profile builds must never request production ads.
-  static String get dashboardBannerAdUnitId => !kReleaseMode || _forceTestAds
+  static String get bannerAdUnitId => !kReleaseMode || _forceTestAds
       ? 'ca-app-pub-3940256099942544/9214589741'
       : 'ca-app-pub-9634940728444652/3221555434';
 }

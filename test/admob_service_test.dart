@@ -41,7 +41,7 @@ void main() {
   test('development builds use the official Android test banner', () {
     expect(AdMobConfig.isSupported, isTrue);
     expect(
-      AdMobConfig.dashboardBannerAdUnitId,
+      AdMobConfig.bannerAdUnitId,
       'ca-app-pub-3940256099942544/9214589741',
     );
   });

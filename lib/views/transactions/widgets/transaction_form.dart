@@ -84,7 +84,7 @@ class TransactionForm extends ConsumerWidget {
             onChanged: (value) =>
                 _updateDraft(ref, draft.copyWith(note: value)),
           ),
-//          const SizedBox(height: 8),
+          //          const SizedBox(height: 8),
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text('${AppStrings.date} & Time'),

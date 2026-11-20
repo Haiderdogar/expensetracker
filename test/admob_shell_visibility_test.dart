@@ -1,14 +1,14 @@
 import 'package:expensetracker/core/ads/admob_service.dart';
+import 'package:expensetracker/core/ads/widgets/app_banner_ad.dart';
 import 'package:expensetracker/features/wallet_currency/providers/wallet_provider.dart';
 import 'package:expensetracker/models/transaction_model.dart';
 import 'package:expensetracker/models/wallet_model.dart';
 import 'package:expensetracker/providers/auth_provider.dart';
 import 'package:expensetracker/providers/transaction_provider.dart';
 import 'package:expensetracker/views/app_shell.dart';
-import 'package:expensetracker/views/app_shell/app_shell_bottom_bar.dart';
+import 'package:expensetracker/views/app_shell/app_shell_bottom_navigation.dart';
 import 'package:expensetracker/views/app_shell/app_shell_providers.dart';
 import 'package:expensetracker/views/dashboard/dashboard_screen.dart';
-import 'package:expensetracker/views/dashboard/widgets/dashboard_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,7 +32,7 @@ void main() {
         .setMockMethodCallHandler(navigationChannel, null);
   });
 
-  testWidgets('banner mounts only on the active Dashboard home route', (
+  testWidgets('shell tabs and drawer routes do not mount advertising', (
     tester,
   ) async {
     // Match the existing Dashboard smoke test. Its header uses the wider Ahem
@@ -73,7 +73,8 @@ void main() {
 
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    expect(find.byType(DashboardBanner), findsOneWidget);
+    final shellState = tester.state(find.byType(AppShell));
+    expect(find.byType(AppBannerAd), findsNothing);
 
     // Check the actual shell-provided inset, rather than an independently
     // reconstructed Dashboard layout. The final spacer clears the measured
@@ -87,30 +88,33 @@ void main() {
     final spacer =
         (dashboardScroll.slivers.last as SliverToBoxAdapter).child! as SizedBox;
     final bottomBarHeight = tester
-        .getSize(find.byType(AppShellBottomBar))
+        .getSize(find.byType(AppShellBottomNavigation))
         .height;
     expect(spacer.height, bottomBarHeight + 88);
 
     for (final tab in [1, 2, 3]) {
       container.read(appShellNavigationIndexProvider.notifier).setIndex(tab);
       await tester.pumpAndSettle();
-      expect(find.byType(DashboardBanner), findsNothing);
+      expect(find.byType(AppBannerAd), findsNothing);
     }
 
     container.read(appShellNavigationIndexProvider.notifier).setIndex(0);
     await tester.pumpAndSettle();
-    expect(find.byType(DashboardBanner), findsOneWidget);
+    expect(find.byType(AppBannerAd), findsNothing);
 
     isHome = false;
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
     expect(find.text('Drawer destination'), findsOneWidget);
-    expect(find.byType(DashboardBanner), findsNothing);
+    expect(find.byType(AppBannerAd), findsNothing);
+    expect(tester.state(find.byType(AppShell)), same(shellState));
 
     isHome = true;
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    expect(find.byType(DashboardBanner), findsOneWidget);
+    expect(find.byType(AppBannerAd), findsNothing);
+    expect(tester.state(find.byType(AppShell)), same(shellState));
+    expect(service.initializationCalls, 0);
     expect(tester.takeException(), isNull);
 
     // Release widget listeners before disposing the externally owned container.
@@ -119,8 +123,15 @@ void main() {
 }
 
 class _DisabledAdMobService extends AdMobService {
+  int initializationCalls = 0;
+
   @override
   bool get isSupported => false;
+
+  @override
+  Future<void> initialize() async {
+    initializationCalls++;
+  }
 }
 
 class _EmptyWallets extends Wallets {
