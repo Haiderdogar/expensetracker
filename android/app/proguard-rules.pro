@@ -34,3 +34,9 @@
 -keepclasseswithmembernames class * {
     native <methods>;
 }
+
+# WorkManager's Room 2.2.5 database is created through reflection before Dart starts.
+# R8 full mode does not retain its no-argument constructor implicitly.
+-keep class androidx.work.impl.WorkDatabase_Impl {
+    public <init>();
+}

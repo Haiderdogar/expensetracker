@@ -4,54 +4,75 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'app.dart';
+import 'app/app_bootstrap.dart';
 import 'core/auth/google_sign_in_service.dart';
 import 'core/database/database_helper.dart';
 import 'core/security/secure_storage_service.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 
-void main() async {
+void main() {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-  String? startupError;
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    debugPrint('Firebase initialization warning: $e');
-    startupError = 'Firebase could not be initialized. Check your connection and configuration.';
-  }
-
-  try {
-    await GoogleSignInService.ensureInitialized();
-  } catch (e) {
-    debugPrint('Google Sign-In initialization warning: $e');
-    startupError ??=
-        'Google Sign-In could not be initialized. Please try again.';
-  }
-
-  final storage = SecureStorageService();
-  await DatabaseHelper.instance.initializeInstallationIdentity(storage);
-
-  final container = ProviderContainer();
-
-  // AppLifecycleListener manages background/resume lock transitions without StatefulWidget
-  AppLifecycleListener(
-    onStateChange: (state) {
-      final auth = container.read(authControllerProvider.notifier);
-      if (state == AppLifecycleState.paused) {
-        auth.onAppBackgrounded();
-      } else if (state == AppLifecycleState.resumed) {
-        auth.onAppResumed();
-      }
-    },
-  );
-
   runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: ExpenseeApp(startupError: startupError),
+    AppBootstrap(
+      initialize: _initializeApp,
+      onInitializationFailure: FlutterNativeSplash.remove,
+      child: const ProviderScope(child: _AppLifecycle()),
     ),
   );
+}
+
+Future<void> _initializeApp() async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await GoogleSignInService.ensureInitialized();
+  await DatabaseHelper.instance.initializeInstallationIdentity(
+    SecureStorageService(),
+  );
+}
+
+class _AppLifecycle extends ConsumerStatefulWidget {
+  const _AppLifecycle();
+
+  @override
+  ConsumerState<_AppLifecycle> createState() => _AppLifecycleState();
+}
+
+class _AppLifecycleState extends ConsumerState<_AppLifecycle> {
+  late final AppLifecycleListener _listener;
+
+  @override
+  void initState() {
+    super.initState();
+    _listener = AppLifecycleListener(
+      onPause: () =>
+          ref.read(authControllerProvider.notifier).onAppBackgrounded(),
+      onResume: _onResumed,
+    );
+  }
+
+  Future<void> _onResumed() async {
+    try {
+      await ref.read(authControllerProvider.notifier).onAppResumed();
+    } catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'app lifecycle',
+          context: ErrorDescription('while restoring the app lock'),
+        ),
+      );
+      if (mounted) ref.invalidate(authControllerProvider);
+    }
+  }
+
+  @override
+  void dispose() {
+    _listener.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const ExpenseeApp();
 }
